@@ -4,7 +4,7 @@ All request/response schemas following api-conventions.md
 """
 
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from pydantic import BaseModel, HttpUrl
 

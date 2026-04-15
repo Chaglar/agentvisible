@@ -1,6 +1,6 @@
 """
 AgentVisible.ai FastAPI backend
-Main application entry point with CORS, health endpoint, and scan API
+Main application entry point with CORS, health endpoint, scan API, and reports
 """
 
 import time
@@ -11,6 +11,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import ALLOWED_ORIGINS, SCANS_PER_HOUR
+from database import get_report, save_scan
 from models import APIResponse, ScanRequest, ScanResult
 from scanner.engine import run_scan
 from scanner.fetcher import is_safe_url
@@ -74,7 +75,6 @@ def check_rate_limit(client_ip: str) -> bool:
 async def scan_url(request: ScanRequest, req: Request):
     """
     Scan a URL for AI agent readiness
-
     Returns complete analysis with score, rating, and actionable fixes
     """
     try:
@@ -99,7 +99,8 @@ async def scan_url(request: ScanRequest, req: Request):
         # Run the scan
         scan_result = await run_scan(url_str)
 
-        # TODO: Store result in Supabase (Task 004)
+        # Store result in Supabase
+        await save_scan(scan_result)
 
         # Return successful response
         return APIResponse(
@@ -118,6 +119,43 @@ async def scan_url(request: ScanRequest, req: Request):
             code="SCAN_ERROR"
         )
 
+
+@app.get("/api/v1/report/{slug}", response_model=APIResponse)
+async def get_scan_report(slug: str):
+    """
+    Retrieve a stored scan report by slug
+
+    Args:
+        slug: Report identifier (generated during scan)
+
+    Returns:
+        Stored scan result or 404 if not found
+    """
+    try:
+        # Retrieve scan from database
+        scan_result = await get_report(slug)
+
+        if scan_result is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Report with slug '{slug}' not found"
+            )
+
+        return APIResponse(
+            status="ok",
+            data=scan_result.dict()
+        )
+
+    except HTTPException:
+        # Re-raise HTTP exceptions (404)
+        raise
+    except Exception as e:
+        # Handle unexpected errors
+        return APIResponse(
+            status="error",
+            message=f"Failed to retrieve report: {str(e)}",
+            code="REPORT_ERROR"
+        )
 
 # Root route for testing
 @app.get("/")
