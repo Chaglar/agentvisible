@@ -3,9 +3,12 @@ Scanner Engine - Orchestrates all scanner modules
 Runs all 5 scanner modules and calculates overall score
 """
 
+import asyncio
 import hashlib
 import re
 from datetime import datetime
+from typing import List
+from urllib.parse import urlparse
 
 import httpx
 
@@ -19,6 +22,166 @@ from scanner import (
     structured_data,
 )
 from scanner.fetcher import fetch_url
+
+
+async def run_scan(url: str) -> ScanResult:
+    """
+    Main entry point for scanning a URL
+    Orchestrates all 5 modules concurrently for optimal performance
+
+    Args:
+        url: URL to scan for AI agent readiness
+
+    Returns:
+        Complete ScanResult with analysis from all modules
+    """
+    # Fetch URL content once and share with all modules
+    async with httpx.AsyncClient(timeout=SCAN_TIMEOUT) as client:
+        html_content, response_headers, status_code = await fetch_url(url, client)
+
+    if status_code == 0 or html_content is None:
+        return _create_error_result(url, "Failed to fetch URL content")
+
+    if status_code != 200:
+        return _create_error_result(url, f"HTTP {status_code} - URL not accessible")
+
+    headers = response_headers or {}
+
+    # Run all 5 modules concurrently using asyncio.gather
+    try:
+        results = await asyncio.gather(
+            structured_data.scan(url, html_content, headers),
+            ai_crawlability.scan(url, html_content, headers),
+            content_parseability.scan(url, html_content, headers),
+            commerce_protocols.scan(url, html_content, headers),
+            agent_discovery.scan(url, html_content, headers),
+        )
+    except Exception as e:
+        return _create_error_result(url, f"Scanner error: {str(e)}")
+
+    # Calculate overall weighted score
+    overall_score = sum(result.score * result.weight for result in results)
+
+    # Determine rating based on overall score
+    rating = (
+        "Strong" if overall_score >= 75
+        else "Moderate" if overall_score >= 50
+        else "Weak" if overall_score >= 25
+        else "Critical"
+    )
+
+    # Pick top 3 fixes by severity then weight
+    top_fixes = _pick_top_fixes(results, n=3)
+
+    # Generate URL slug for report
+    slug = _make_slug(url)
+
+    return ScanResult(
+        url=url,
+        overall_score=overall_score,
+        rating=rating,
+        modules=results,
+        top_fixes=top_fixes,
+        scanned_at=datetime.utcnow(),
+        report_slug=slug
+    )
+
+
+def _pick_top_fixes(results: List[ModuleResult], n: int = 3) -> List[Check]:
+    """
+    Pick top N fixes by severity then module weight
+
+    Args:
+        results: List of ModuleResult objects
+        n: Number of top fixes to return
+
+    Returns:
+        List of top priority failed checks
+    """
+    failed_checks = []
+
+    for result in results:
+        module_weight = MODULE_WEIGHTS.get(result.module, 0.0)
+
+        for check in result.checks:
+            if not check.passed:
+                # Priority by severity first, then module weight
+                severity_weights = {'critical': 3.0, 'warning': 2.0, 'info': 1.0}
+                severity_weight = severity_weights.get(check.severity, 1.0)
+                priority_score = severity_weight * 1000 + module_weight  # Severity dominates
+
+                failed_checks.append((priority_score, check))
+
+    # Sort by priority score (descending) and take top N
+    failed_checks.sort(key=lambda x: x[0], reverse=True)
+    return [check for _, check in failed_checks[:n]]
+
+
+def _make_slug(url: str) -> str:
+    """
+    Generate a URL slug for report identification
+
+    Args:
+        url: Original URL to convert to slug
+
+    Returns:
+        URL slug like "ooow-com-au"
+    """
+    # Parse URL and extract domain
+    try:
+        parsed = urlparse(url)
+        domain = parsed.netloc or url
+
+        # Clean domain for slug
+        slug = domain.lower()
+        slug = re.sub(r'^www\.', '', slug)  # Remove www prefix
+        slug = re.sub(r'[^a-z0-9\-\.]', '', slug)  # Keep only alphanumeric, hyphens, dots
+        slug = re.sub(r'\.', '-', slug)  # Replace dots with hyphens
+        slug = re.sub(r'-+', '-', slug)  # Collapse multiple hyphens
+        slug = slug.strip('-')  # Remove leading/trailing hyphens
+
+        # Add timestamp for uniqueness
+        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        return f"{slug}-{timestamp}"
+
+    except Exception:
+        # Fallback slug
+        clean_url = re.sub(r'[^a-zA-Z0-9]', '', url.replace('https://', '').replace('http://', ''))
+        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        return f"scan-{clean_url[:20]}-{timestamp}"
+
+
+def _create_error_result(url: str, error_message: str) -> ScanResult:
+    """Create a ScanResult for error cases"""
+    error_check = Check(
+        name="URL Access",
+        passed=False,
+        severity="critical",
+        detail=error_message,
+        fix_hint="Ensure the URL is accessible and returns valid HTML content"
+    )
+
+    # Create empty module results with error
+    empty_modules = []
+    for module_name, weight in MODULE_WEIGHTS.items():
+        empty_module = ModuleResult(
+            module=module_name,
+            score=0.0,
+            weight=weight,
+            checks=[error_check],
+            summary="Could not analyze due to URL access error"
+        )
+        empty_modules.append(empty_module)
+
+    return ScanResult(
+        url=url,
+        overall_score=0.0,
+        rating="Critical",
+        modules=empty_modules,
+        top_fixes=[error_check],
+        scanned_at=datetime.utcnow(),
+        report_slug=_make_slug(url)
+    )
 
 
 class ScanEngine:
@@ -97,7 +260,7 @@ class ScanEngine:
             report_slug=report_slug
         )
 
-    def _calculate_overall_score(self, modules_results: list[ModuleResult]) -> float:
+    def _calculate_overall_score(self, modules_results: List[ModuleResult]) -> float:
         """Calculate weighted overall score from module results"""
         total_weighted_score = 0.0
 
@@ -116,7 +279,7 @@ class ScanEngine:
                 return rating
         return "Unknown"
 
-    def _get_top_fixes(self, modules_results: list[ModuleResult], max_fixes: int = 3) -> list[Check]:
+    def _get_top_fixes(self, modules_results: List[ModuleResult], max_fixes: int = 3) -> List[Check]:
         """Get the top priority failed checks across all modules"""
         failed_checks = []
 

@@ -1,3 +1,4 @@
+from typing import List
 """
 Module 5: Agent Discovery Scanner (15% weight)
 Analyzes AI plugin manifests, RSS feeds, and agent-specific content markers
@@ -65,7 +66,7 @@ def _get_base_url(url: str) -> str:
     return f"{parsed.scheme}://{parsed.netloc}"
 
 
-async def _check_ai_plugin_manifest(base_url: str, client: httpx.AsyncClient, checks: list[Check]) -> None:
+async def _check_ai_plugin_manifest(base_url: str, client: httpx.AsyncClient, checks: List[Check]) -> None:
     """Check for ChatGPT/AI plugin manifest"""
     try:
         plugin_content, status_code = await fetch_endpoint(
@@ -119,7 +120,7 @@ async def _check_ai_plugin_manifest(base_url: str, client: httpx.AsyncClient, ch
         ))
 
 
-def _check_rss_feeds(html: str, checks: list[Check]) -> None:
+def _check_rss_feeds(html: str, checks: List[Check]) -> None:
     """Check for RSS/Atom feed discovery links"""
     try:
         # Look for RSS/Atom feed link tags
@@ -161,7 +162,7 @@ def _check_rss_feeds(html: str, checks: list[Check]) -> None:
         ))
 
 
-def _extract_json_ld(html: str) -> list[dict]:
+def _extract_json_ld(html: str) -> List[dict]:
     """Extract and parse JSON-LD script tags (reuse logic from structured_data module)"""
     json_ld_data = []
 
@@ -182,7 +183,7 @@ def _extract_json_ld(html: str) -> list[dict]:
     return json_ld_data
 
 
-def _check_faq_howto_schema(json_ld_data: list[dict], checks: list[Check]) -> None:
+def _check_faq_howto_schema(json_ld_data: List[dict], checks: List[Check]) -> None:
     """Check for FAQPage and HowTo schema types"""
     target_types = {'FAQPage', 'HowTo'}
     found_types = set()
@@ -226,7 +227,7 @@ def _check_faq_howto_schema(json_ld_data: list[dict], checks: list[Check]) -> No
         ))
 
 
-def _check_organization_same_as(json_ld_data: list[dict], checks: list[Check]) -> None:
+def _check_organization_same_as(json_ld_data: List[dict], checks: List[Check]) -> None:
     """Check for Organization.sameAs social media links"""
     same_as_links = []
 
@@ -285,7 +286,7 @@ def _check_organization_same_as(json_ld_data: list[dict], checks: list[Check]) -
         ))
 
 
-def _check_ai_content_markers(html: str, checks: list[Check]) -> None:
+def _check_ai_content_markers(html: str, checks: List[Check]) -> None:
     """Check for AI-specific content markers and metadata"""
     try:
         ai_markers = {
@@ -347,7 +348,7 @@ def _check_ai_content_markers(html: str, checks: list[Check]) -> None:
         ))
 
 
-def _calculate_score(checks: list[Check]) -> float:
+def _calculate_score(checks: List[Check]) -> float:
     """Calculate module score based on passed checks"""
     if not checks:
         return 0.0
@@ -370,7 +371,7 @@ def _calculate_score(checks: list[Check]) -> float:
     return min(100.0, (passed_weight / total_weight) * 100.0)
 
 
-def _generate_summary(checks: list[Check], score: float) -> str:
+def _generate_summary(checks: List[Check], score: float) -> str:
     """Generate a summary of the agent discovery analysis"""
     passed_checks = sum(1 for check in checks if check.passed)
     total_checks = len(checks)

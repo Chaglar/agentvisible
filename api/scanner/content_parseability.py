@@ -1,3 +1,4 @@
+from typing import List
 """
 Module 3: Content Parseability Scanner (15% weight)
 Analyzes semantic HTML, heading structure, SSR detection, and content quality
@@ -49,7 +50,7 @@ async def scan(url: str, html: str, headers: dict) -> ModuleResult:
     )
 
 
-def _check_ssr_presence(html: str, checks: list[Check]) -> None:
+def _check_ssr_presence(html: str, checks: List[Check]) -> None:
     """Check if content is server-side rendered (not just client-side JS)"""
     try:
         # Strip HTML tags to get text content
@@ -84,7 +85,7 @@ def _check_ssr_presence(html: str, checks: list[Check]) -> None:
         ))
 
 
-def _check_semantic_html(html: str, checks: list[Check]) -> None:
+def _check_semantic_html(html: str, checks: List[Check]) -> None:
     """Check for semantic HTML5 elements"""
     try:
         # Count semantic elements
@@ -135,7 +136,7 @@ def _check_semantic_html(html: str, checks: list[Check]) -> None:
         ))
 
 
-def _check_heading_structure(html: str, checks: list[Check]) -> None:
+def _check_heading_structure(html: str, checks: List[Check]) -> None:
     """Check heading hierarchy and structure"""
     try:
         # Count headings by level
@@ -220,7 +221,7 @@ def _check_heading_structure(html: str, checks: list[Check]) -> None:
         ))
 
 
-def _check_content_ratio(html: str, checks: list[Check]) -> None:
+def _check_content_ratio(html: str, checks: List[Check]) -> None:
     """Check content-to-HTML ratio"""
     try:
         # Calculate total HTML size
@@ -270,7 +271,7 @@ def _check_content_ratio(html: str, checks: list[Check]) -> None:
         ))
 
 
-def _check_alt_text(html: str, checks: list[Check]) -> None:
+def _check_alt_text(html: str, checks: List[Check]) -> None:
     """Check image alt text coverage"""
     try:
         # Find all img tags
@@ -334,7 +335,7 @@ def _check_alt_text(html: str, checks: list[Check]) -> None:
         ))
 
 
-def _calculate_score(checks: list[Check]) -> float:
+def _calculate_score(checks: List[Check]) -> float:
     """Calculate module score based on passed checks"""
     if not checks:
         return 0.0
@@ -357,7 +358,7 @@ def _calculate_score(checks: list[Check]) -> float:
     return min(100.0, (passed_weight / total_weight) * 100.0)
 
 
-def _generate_summary(checks: list[Check], score: float) -> str:
+def _generate_summary(checks: List[Check], score: float) -> str:
     """Generate a summary of the parseability analysis"""
     passed_checks = sum(1 for check in checks if check.passed)
     total_checks = len(checks)

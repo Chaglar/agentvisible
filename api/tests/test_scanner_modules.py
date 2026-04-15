@@ -204,7 +204,8 @@ class TestContentParseabilityModule:
             The content needs to be longer than 500 characters to pass the SSR detection test, so I'm adding
             more text here to ensure we meet that threshold. This simulates a page that has been rendered
             on the server side rather than being populated entirely by JavaScript on the client side, which
-            is important for AI agents that may not execute JavaScript when crawling web content.</p>
+            is important for AI agents that may not execute JavaScript when crawling web content. Additional
+            content here to ensure we definitely exceed the 500 character minimum requirement for SSR detection.</p>
         </body>
         </html>
         '''

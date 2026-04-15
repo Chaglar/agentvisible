@@ -5,6 +5,7 @@ Analyzes JSON-LD, Open Graph, Twitter Cards, and schema markup
 
 import json
 import re
+from typing import List
 
 from models import Check, ModuleResult
 
@@ -53,7 +54,7 @@ async def scan(url: str, html: str, headers: dict) -> ModuleResult:
     )
 
 
-def _extract_json_ld(html: str, checks: list[Check]) -> list[dict]:
+def _extract_json_ld(html: str, checks: List[Check]) -> List[dict]:
     """Extract and parse JSON-LD script tags"""
     json_ld_data = []
 
@@ -111,7 +112,7 @@ def _extract_json_ld(html: str, checks: list[Check]) -> list[dict]:
     return json_ld_data
 
 
-def _check_open_graph(html: str, checks: list[Check]) -> None:
+def _check_open_graph(html: str, checks: List[Check]) -> None:
     """Check for Open Graph meta tags"""
     try:
         og_pattern = r'<meta\s+property=["\']og:(\w+)["\']\s+content=["\']([^"\']*)["\']'
@@ -151,7 +152,7 @@ def _check_open_graph(html: str, checks: list[Check]) -> None:
         ))
 
 
-def _check_twitter_cards(html: str, checks: list[Check]) -> None:
+def _check_twitter_cards(html: str, checks: List[Check]) -> None:
     """Check for Twitter Card meta tags"""
     try:
         twitter_pattern = r'<meta\s+name=["\']twitter:(\w+)["\']\s+content=["\']([^"\']*)["\']'
@@ -186,7 +187,7 @@ def _check_twitter_cards(html: str, checks: list[Check]) -> None:
         ))
 
 
-def _check_schema_types(json_ld_data: list[dict], checks: list[Check]) -> None:
+def _check_schema_types(json_ld_data: List[dict], checks: List[Check]) -> None:
     """Check for specific schema.org types in JSON-LD"""
     target_types = {
         'Product', 'Organization', 'LocalBusiness', 'BreadcrumbList',
@@ -233,7 +234,7 @@ def _check_schema_types(json_ld_data: list[dict], checks: list[Check]) -> None:
         ))
 
 
-def _check_review_schema(json_ld_data: list[dict], checks: list[Check]) -> None:
+def _check_review_schema(json_ld_data: List[dict], checks: List[Check]) -> None:
     """Check for review and rating schema in JSON-LD"""
     has_reviews = False
     has_aggregate_rating = False
@@ -281,7 +282,7 @@ def _check_review_schema(json_ld_data: list[dict], checks: list[Check]) -> None:
         ))
 
 
-def _check_breadcrumbs(json_ld_data: list[dict], checks: list[Check]) -> None:
+def _check_breadcrumbs(json_ld_data: List[dict], checks: List[Check]) -> None:
     """Check for BreadcrumbList schema in JSON-LD"""
     has_breadcrumbs = False
 
@@ -319,7 +320,7 @@ def _check_breadcrumbs(json_ld_data: list[dict], checks: list[Check]) -> None:
         ))
 
 
-def _calculate_score(checks: list[Check]) -> float:
+def _calculate_score(checks: List[Check]) -> float:
     """Calculate module score based on passed checks"""
     if not checks:
         return 0.0
@@ -342,7 +343,7 @@ def _calculate_score(checks: list[Check]) -> float:
     return min(100.0, (passed_weight / total_weight) * 100.0)
 
 
-def _generate_summary(checks: list[Check], score: float) -> str:
+def _generate_summary(checks: List[Check], score: float) -> str:
     """Generate a summary of the structured data analysis"""
     passed_checks = sum(1 for check in checks if check.passed)
     total_checks = len(checks)

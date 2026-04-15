@@ -1,3 +1,4 @@
+from typing import List
 """
 Module 4: Commerce Protocols Scanner (20% weight) ⭐ DIFFERENTIATOR
 Analyzes e-commerce APIs, payment schemas, and shopping platform integrations
@@ -65,7 +66,7 @@ def _get_base_url(url: str) -> str:
     return f"{parsed.scheme}://{parsed.netloc}"
 
 
-async def _check_webmcp_manifest(base_url: str, client: httpx.AsyncClient, checks: list[Check]) -> None:
+async def _check_webmcp_manifest(base_url: str, client: httpx.AsyncClient, checks: List[Check]) -> None:
     """Check for WebMCP (Web Model Context Protocol) manifest"""
     try:
         mcp_content, status_code = await fetch_endpoint(
@@ -118,7 +119,7 @@ async def _check_webmcp_manifest(base_url: str, client: httpx.AsyncClient, check
         ))
 
 
-async def _check_shopify_apis(base_url: str, client: httpx.AsyncClient, checks: list[Check]) -> None:
+async def _check_shopify_apis(base_url: str, client: httpx.AsyncClient, checks: List[Check]) -> None:
     """Check for Shopify API endpoints"""
     # Check products.json (Shopify product feed)
     try:
@@ -201,7 +202,7 @@ async def _check_shopify_apis(base_url: str, client: httpx.AsyncClient, checks: 
         ))
 
 
-async def _check_woocommerce_api(base_url: str, client: httpx.AsyncClient, checks: list[Check]) -> None:
+async def _check_woocommerce_api(base_url: str, client: httpx.AsyncClient, checks: List[Check]) -> None:
     """Check for WooCommerce REST API"""
     try:
         wc_content, status_code = await fetch_endpoint(
@@ -255,7 +256,7 @@ async def _check_woocommerce_api(base_url: str, client: httpx.AsyncClient, check
         ))
 
 
-def _check_payment_schema(html: str, checks: list[Check]) -> None:
+def _check_payment_schema(html: str, checks: List[Check]) -> None:
     """Check JSON-LD for payment and commerce schema"""
     try:
         # Extract JSON-LD blocks
@@ -325,7 +326,7 @@ def _check_payment_schema(html: str, checks: list[Check]) -> None:
         ))
 
 
-def _check_shopify_platform(html: str, checks: list[Check]) -> None:
+def _check_shopify_platform(html: str, checks: List[Check]) -> None:
     """Check for Shopify platform indicators"""
     try:
         # Check for Shopify-specific indicators
@@ -378,7 +379,7 @@ def _check_shopify_platform(html: str, checks: list[Check]) -> None:
         ))
 
 
-def _check_ecommerce_platforms(html: str, checks: list[Check]) -> None:
+def _check_ecommerce_platforms(html: str, checks: List[Check]) -> None:
     """Check for other e-commerce platform indicators"""
     platforms = {
         'WooCommerce': [r'woocommerce', r'wc-', r'/wc-api/', r'wp-content/plugins/woocommerce'],
@@ -439,7 +440,7 @@ def _find_in_json_ld(obj, key: str) -> bool:
     return False
 
 
-def _extract_payment_methods(obj) -> list[str]:
+def _extract_payment_methods(obj) -> List[str]:
     """Extract payment methods from JSON-LD data"""
     methods = []
 
@@ -459,7 +460,7 @@ def _extract_payment_methods(obj) -> list[str]:
     return methods
 
 
-def _calculate_score(checks: list[Check]) -> float:
+def _calculate_score(checks: List[Check]) -> float:
     """Calculate module score based on passed checks"""
     if not checks:
         return 0.0
@@ -482,7 +483,7 @@ def _calculate_score(checks: list[Check]) -> float:
     return min(100.0, (passed_weight / total_weight) * 100.0)
 
 
-def _generate_summary(checks: list[Check], score: float) -> str:
+def _generate_summary(checks: List[Check], score: float) -> str:
     """Generate a summary of the commerce protocols analysis"""
     passed_checks = sum(1 for check in checks if check.passed)
     total_checks = len(checks)

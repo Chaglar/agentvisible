@@ -5,6 +5,7 @@ Handles HTTP requests with safety checks for private IP ranges
 
 import ipaddress
 import socket
+from typing import Dict, Optional, Tuple
 from urllib.parse import urlparse
 
 import httpx
@@ -37,7 +38,7 @@ async def fetch_url(
     url: str,
     client: httpx.AsyncClient,
     max_size: int = MAX_HTML_SIZE
-) -> tuple[str | None, dict[str, str] | None, int]:
+) -> Tuple[Optional[str], Optional[Dict[str, str]], int]:
     """
     Fetch URL content with safety checks
 
@@ -86,7 +87,7 @@ async def fetch_endpoint(
     base_url: str,
     endpoint: str,
     client: httpx.AsyncClient
-) -> tuple[str | None, int]:
+) -> Tuple[Optional[str], int]:
     """
     Fetch a specific endpoint (robots.txt, sitemap.xml, etc.)
 

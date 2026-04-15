@@ -1,3 +1,4 @@
+from typing import List
 """
 Module 2: AI Crawlability Scanner (20% weight)
 Analyzes robots.txt, AI bot policies, sitemaps, and crawling directives
@@ -62,7 +63,7 @@ def _get_base_url(url: str) -> str:
     return f"{parsed.scheme}://{parsed.netloc}"
 
 
-async def _check_robots_txt(base_url: str, client: httpx.AsyncClient, checks: list[Check]) -> None:
+async def _check_robots_txt(base_url: str, client: httpx.AsyncClient, checks: List[Check]) -> None:
     """Check robots.txt for AI bot policies"""
     try:
         robots_content, status_code = await fetch_endpoint(base_url, "robots.txt", client)
@@ -150,7 +151,7 @@ async def _check_robots_txt(base_url: str, client: httpx.AsyncClient, checks: li
         ))
 
 
-async def _check_llms_txt(base_url: str, client: httpx.AsyncClient, checks: list[Check]) -> None:
+async def _check_llms_txt(base_url: str, client: httpx.AsyncClient, checks: List[Check]) -> None:
     """Check for llms.txt file (AI training data policy)"""
     try:
         llms_content, status_code = await fetch_endpoint(base_url, "llms.txt", client)
@@ -182,7 +183,7 @@ async def _check_llms_txt(base_url: str, client: httpx.AsyncClient, checks: list
         ))
 
 
-async def _check_llms_full_txt(base_url: str, client: httpx.AsyncClient, checks: list[Check]) -> None:
+async def _check_llms_full_txt(base_url: str, client: httpx.AsyncClient, checks: List[Check]) -> None:
     """Check for llms-full.txt file (extended AI policies)"""
     try:
         llms_full_content, status_code = await fetch_endpoint(base_url, "llms-full.txt", client)
@@ -214,7 +215,7 @@ async def _check_llms_full_txt(base_url: str, client: httpx.AsyncClient, checks:
         ))
 
 
-async def _check_sitemap(base_url: str, client: httpx.AsyncClient, checks: list[Check]) -> None:
+async def _check_sitemap(base_url: str, client: httpx.AsyncClient, checks: List[Check]) -> None:
     """Check for XML sitemap accessibility"""
     try:
         sitemap_content, status_code = await fetch_endpoint(base_url, "sitemap.xml", client)
@@ -257,7 +258,7 @@ async def _check_sitemap(base_url: str, client: httpx.AsyncClient, checks: list[
         ))
 
 
-def _check_html_robots_meta(html: str, checks: list[Check]) -> None:
+def _check_html_robots_meta(html: str, checks: List[Check]) -> None:
     """Check HTML meta robots tags"""
     try:
         robots_pattern = r'<meta\s+name=["\']robots["\']\s+content=["\']([^"\']*)["\']'
@@ -306,7 +307,7 @@ def _check_html_robots_meta(html: str, checks: list[Check]) -> None:
         ))
 
 
-def _check_robots_headers(headers: dict, checks: list[Check]) -> None:
+def _check_robots_headers(headers: dict, checks: List[Check]) -> None:
     """Check X-Robots-Tag HTTP headers"""
     try:
         x_robots_tag = headers.get('X-Robots-Tag', '').lower()
@@ -352,7 +353,7 @@ def _check_robots_headers(headers: dict, checks: list[Check]) -> None:
         ))
 
 
-def _calculate_score(checks: list[Check]) -> float:
+def _calculate_score(checks: List[Check]) -> float:
     """Calculate module score based on passed checks"""
     if not checks:
         return 0.0
@@ -375,7 +376,7 @@ def _calculate_score(checks: list[Check]) -> float:
     return min(100.0, (passed_weight / total_weight) * 100.0)
 
 
-def _generate_summary(checks: list[Check], score: float) -> str:
+def _generate_summary(checks: List[Check], score: float) -> str:
     """Generate a summary of the crawlability analysis"""
     passed_checks = sum(1 for check in checks if check.passed)
     total_checks = len(checks)

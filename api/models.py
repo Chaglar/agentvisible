@@ -4,6 +4,7 @@ All request/response schemas following api-conventions.md
 """
 
 from datetime import datetime
+from typing import List, Optional, Union
 
 from pydantic import BaseModel, HttpUrl
 
@@ -19,7 +20,7 @@ class Check(BaseModel):
     passed: bool
     severity: str  # "critical" | "warning" | "info"
     detail: str
-    fix_hint: str | None = None
+    fix_hint: Optional[str] = None
 
 
 class ModuleResult(BaseModel):
@@ -27,7 +28,7 @@ class ModuleResult(BaseModel):
     module: str
     score: float  # 0-100
     weight: float  # 0.0-1.0
-    checks: list[Check]
+    checks: List[Check]
     summary: str
 
 
@@ -36,8 +37,8 @@ class ScanResult(BaseModel):
     url: str
     overall_score: float
     rating: str  # "Strong" | "Moderate" | "Weak" | "Critical"
-    modules: list[ModuleResult]
-    top_fixes: list[Check]
+    modules: List[ModuleResult]
+    top_fixes: List[Check]
     scanned_at: datetime
     report_slug: str
 
@@ -45,6 +46,6 @@ class ScanResult(BaseModel):
 class APIResponse(BaseModel):
     """Standard API response envelope"""
     status: str  # "ok" | "error"
-    data: dict | None = None
-    message: str | None = None
-    code: str | None = None
+    data: Optional[dict] = None
+    message: Optional[str] = None
+    code: Optional[str] = None
