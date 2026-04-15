@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(**)", "Write(api/**)", "Write(web/**)", "Write(tasks/**)",
+      "Bash(python *)", "Bash(pytest *)", "Bash(ruff *)",
+      "Bash(npm *)", "Bash(npx *)", "Bash(git *)", "Bash(curl *)", "Bash(pip install *)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)", "Bash(sudo *)", "Write(.env*)", "Write(*.key)"
+    ]
+  },
+  "model": "claude-sonnet-4-20250514",
+  "permissionMode": "auto"
+}
