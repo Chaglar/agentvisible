@@ -712,16 +712,20 @@ export default function ScanPage() {
   const [comparisonUrl, setComparisonUrl] = useState('')
 
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const hasScannedRef = useRef(false)
 
   const searchParams = useSearchParams()
   const router = useRouter()
   const url = searchParams?.get('url')
 
   useEffect(() => {
+    if (hasScannedRef.current) return
     if (url && !scanResult && !isLoading) {
+      console.log('SCAN FIRED for URL:', url)
+      hasScannedRef.current = true
       performScan(url)
     }
-  }, [url, scanResult, isLoading])
+  }, [url])
 
   useEffect(() => {
     // Load explanations on mount
@@ -902,6 +906,8 @@ export default function ScanPage() {
 
   const retryScans = () => {
     if (url) {
+      hasScannedRef.current = false
+      setError(null)
       performScan(url)
     }
   }
@@ -1009,6 +1015,7 @@ export default function ScanPage() {
             secondaryCTA: {
               text: 'Wait 30 more seconds',
               action: () => {
+                hasScannedRef.current = false
                 setError(null)
                 performScan(url)
               },
