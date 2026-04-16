@@ -10,11 +10,22 @@ from typing import Dict
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from config import ALLOWED_ORIGINS, SCANS_PER_HOUR
+from fastapi.responses import StreamingResponse
+from fastapi import BackgroundTasks
+
+from config import ALLOWED_ORIGINS, SCANS_PER_HOUR, MODULE_EXPLANATIONS, CHECK_EXPLANATIONS
 from database import get_report, save_scan
 from models import APIResponse, ScanRequest, ScanResult
 from scanner.engine import run_scan
 from scanner.fetcher import is_safe_url
+from utils import (
+    generate_ai_summary,
+    generate_badge_svg,
+    get_effort_estimate,
+    get_industry_benchmark,
+    get_social_share_text,
+    detect_competitor_suggestions
+)
 
 app = FastAPI(
     title="AgentVisible API",
@@ -99,13 +110,40 @@ async def scan_url(request: ScanRequest, req: Request):
         # Run the scan
         scan_result = await run_scan(url_str)
 
+        # Generate AI summary
+        ai_summary = await generate_ai_summary(scan_result)
+
+        # Get industry benchmark
+        industry_benchmark = get_industry_benchmark(url_str)
+
+        # Add effort estimates to checks
+        for module in scan_result.modules:
+            for check in module.checks:
+                if not check.passed:
+                    check.effort_estimate = get_effort_estimate(check)
+
+        # Add social share text
+        social_share = {
+            "twitter": get_social_share_text(scan_result, "twitter"),
+            "linkedin": get_social_share_text(scan_result, "linkedin")
+        }
+
+        # Get competitor suggestions
+        competitor_suggestions = detect_competitor_suggestions(url_str)
+
         # Store result in Supabase
         await save_scan(scan_result)
 
-        # Return successful response
+        # Return enhanced response
         return APIResponse(
             status="ok",
-            data=scan_result.dict()
+            data={
+                **scan_result.dict(),
+                "ai_summary": ai_summary,
+                "industry_benchmark": industry_benchmark,
+                "social_share": social_share,
+                "competitor_suggestions": competitor_suggestions
+            }
         )
 
     except HTTPException:
@@ -156,6 +194,122 @@ async def get_scan_report(slug: str):
             message=f"Failed to retrieve report: {str(e)}",
             code="REPORT_ERROR"
         )
+
+
+@app.get("/api/v1/badge/{slug}", responses={200: {"content": {"image/svg+xml": {}}}})
+async def get_badge(slug: str):
+    """
+    Generate SVG badge for embedding on websites
+
+    Args:
+        slug: Report identifier
+
+    Returns:
+        SVG badge with score and rating
+    """
+    try:
+        # Retrieve scan from database
+        scan_result = await get_report(slug)
+
+        if scan_result is None:
+            # Return default "not found" badge
+            svg_content = generate_badge_svg(0, "Not Found")
+        else:
+            svg_content = generate_badge_svg(scan_result.overall_score, scan_result.rating)
+
+        return StreamingResponse(
+            iter([svg_content]),
+            media_type="image/svg+xml",
+            headers={
+                "Cache-Control": "public, max-age=3600",
+                "Content-Type": "image/svg+xml"
+            }
+        )
+
+    except Exception:
+        # Return error badge
+        svg_content = generate_badge_svg(0, "Error")
+        return StreamingResponse(
+            iter([svg_content]),
+            media_type="image/svg+xml"
+        )
+
+
+@app.get("/api/v1/explanations")
+async def get_explanations():
+    """
+    Get tooltip explanations for modules and checks
+
+    Returns:
+        Dict with module and check explanations
+    """
+    return APIResponse(
+        status="ok",
+        data={
+            "modules": MODULE_EXPLANATIONS,
+            "checks": CHECK_EXPLANATIONS
+        }
+    )
+
+
+@app.post("/api/v1/summary")
+async def generate_summary(request: dict):
+    """
+    Generate AI summary for existing scan result
+
+    Args:
+        request: Dict with scan_result data
+
+    Returns:
+        Generated summary text
+    """
+    try:
+        # Convert dict back to ScanResult object
+        scan_result = ScanResult(**request.get("scan_result", {}))
+
+        # Generate AI summary
+        summary = await generate_ai_summary(scan_result)
+
+        return APIResponse(
+            status="ok",
+            data={"summary": summary}
+        )
+
+    except Exception as e:
+        return APIResponse(
+            status="error",
+            message=f"Summary generation failed: {str(e)}",
+            code="SUMMARY_ERROR"
+        )
+
+
+@app.get("/api/v1/competitors/{domain}")
+async def get_competitor_suggestions(domain: str):
+    """
+    Get competitor suggestions for a domain
+
+    Args:
+        domain: Domain to get competitors for
+
+    Returns:
+        List of suggested competitor URLs
+    """
+    try:
+        url = f"https://{domain}" if not domain.startswith("http") else domain
+        suggestions = detect_competitor_suggestions(url)
+
+        return APIResponse(
+            status="ok",
+            data={"competitors": suggestions}
+        )
+
+    except Exception as e:
+        return APIResponse(
+            status="error",
+            message=f"Failed to get competitors: {str(e)}",
+            code="COMPETITOR_ERROR"
+        )
+
 
 # Root route for testing
 @app.get("/")

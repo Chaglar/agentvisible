@@ -1,7 +1,41 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+
+// Simple scan history interface
+interface ScanHistoryItem {
+  url: string
+  score: number
+  rating: string
+  timestamp: number
+  report_slug: string
+}
+
+// Utility functions
+function getScanHistory(): ScanHistoryItem[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const history = localStorage.getItem('agentvisible_scan_history')
+    return history ? JSON.parse(history) : []
+  } catch {
+    return []
+  }
+}
+
+function getTimeAgo(timestamp: number): string {
+  const now = Date.now()
+  const diff = now - timestamp
+
+  const minutes = Math.floor(diff / (1000 * 60))
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes} min ago`
+  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`
+  return `${days} day${days > 1 ? 's' : ''} ago`
+}
 
 // Icon components for the 5 categories
 function StructuredDataIcon() {
@@ -81,7 +115,12 @@ function ScoreGaugePreview() {
 
 export default function HomePage() {
   const [url, setUrl] = useState('')
+  const [scanHistory, setScanHistory] = useState<ScanHistoryItem[]>([])
   const router = useRouter()
+
+  useEffect(() => {
+    setScanHistory(getScanHistory())
+  }, [])
 
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -319,6 +358,35 @@ export default function HomePage() {
             <p className="mt-6 text-gray-dark-400">
               Free scan • No signup required • Results in 15 seconds
             </p>
+
+            {/* Recent Scans */}
+            {scanHistory.length > 0 && (
+              <div className="mt-12 max-w-2xl mx-auto">
+                <h3 className="text-lg font-bold mb-4">Recent Scans</h3>
+                <div className="space-y-2">
+                  {scanHistory.slice(0, 3).map((item, index) => (
+                    <button
+                      key={index}
+                      onClick={() => router.push(`/report/${item.report_slug}`)}
+                      className="flex items-center justify-between w-full bg-gray-dark-800 p-3 rounded-lg hover:bg-gray-dark-700 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium">{item.url}</span>
+                        <span className={`text-sm px-2 py-1 rounded ${
+                          item.score >= 75 ? 'bg-green-500/20 text-green-400' :
+                          item.score >= 50 ? 'bg-yellow-500/20 text-yellow-400' :
+                          item.score >= 25 ? 'bg-orange-500/20 text-orange-400' :
+                          'bg-red-500/20 text-red-400'
+                        }`}>
+                          {item.score}/100
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-dark-400">{getTimeAgo(item.timestamp)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>

@@ -21,6 +21,7 @@ class Check(BaseModel):
     severity: str  # "critical" | "warning" | "info"
     detail: str
     fix_hint: Optional[str] = None
+    effort_estimate: Optional[str] = None  # "⚡ 5 min" | "🔧 30 min" | "🏗️ 2+ hours"
 
 
 class ModuleResult(BaseModel):
