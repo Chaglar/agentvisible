@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { normalizeUrl } from '../lib/normalizeUrl'
+import ScanResultPanel from '../components/ScanResultPanel'
 // Demo data for live animation
 const DEMO_BRANDS = [
   {
@@ -106,15 +108,52 @@ function getTimeAgo(timestamp: number): string {
   return `${days} day${days > 1 ? 's' : ''} ago`
 }
 
-// Demo Panel Component with Zero-to-Final Animation
+// Demo Panel Component using reusable ScanResultPanel
 function LiveDemoPanel() {
-  // Brand rotation data as specified in Task 015
+  // Brand rotation data
   const demos = [
-    { url: 'stripe.com', modules: [92, 88, 71, 47, 85], score: 76, label: 'STRONG · top 25%' },
-    { url: 'shopify.com', modules: [95, 84, 78, 89, 82], score: 85, label: 'STRONG · top 15%' },
-    { url: 'notion.so', modules: [78, 65, 82, 42, 71], score: 67, label: 'MODERATE · top 50%' },
-    { url: 'vercel.com', modules: [94, 91, 88, 85, 97], score: 91, label: 'EXCELLENT · top 5%' },
+    {
+      url: 'stripe.com',
+      modules: { structured_data: 92, ai_crawlability: 88, content_parseability: 71, commerce_protocols: 47, agent_discovery: 85 },
+      score: 76,
+      label: 'STRONG · top 25%',
+      topFix: 'enable MCP endpoints (+18 points)'
+    },
+    {
+      url: 'shopify.com',
+      modules: { structured_data: 95, ai_crawlability: 84, content_parseability: 78, commerce_protocols: 89, agent_discovery: 82 },
+      score: 85,
+      label: 'STRONG · top 15%',
+      topFix: 'add AI plugin manifest (+12 points)'
+    },
+    {
+      url: 'notion.so',
+      modules: { structured_data: 78, ai_crawlability: 65, content_parseability: 82, commerce_protocols: 42, agent_discovery: 71 },
+      score: 67,
+      label: 'MODERATE · top 50%',
+      topFix: 'improve semantic HTML (+16 points)'
+    },
+    {
+      url: 'vercel.com',
+      modules: { structured_data: 94, ai_crawlability: 91, content_parseability: 88, commerce_protocols: 85, agent_discovery: 97 },
+      score: 91,
+      label: 'EXCELLENT · top 5%',
+      topFix: 'optimize payment schema (+4 points)'
+    },
   ]
+
+  const [currentBrand, setCurrentBrand] = useState(0)
+  const [isPaused, setIsPaused] = useState(false)
+  const [isAnimating, setIsAnimating] = useState(false)
+  const [currentModuleValues, setCurrentModuleValues] = useState([0, 0, 0, 0, 0])
+  const [currentScore, setCurrentScore] = useState(0)
+  const [showStatus, setShowStatus] = useState(false)
+  const [showTopFix, setShowTopFix] = useState(false)
+
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const timeoutRefs = useRef<NodeJS.Timeout[]>([])
+
+  const currentDemo = demos[currentBrand]
 
   const moduleNames = [
     'Structured data',
@@ -124,20 +163,29 @@ function LiveDemoPanel() {
     'Agent discovery'
   ]
 
-  const [currentBrand, setCurrentBrand] = useState(0)
-  const [isPaused, setIsPaused] = useState(false)
-  const [isAnimating, setIsAnimating] = useState(false)
+  const moduleValues = [
+    currentDemo.modules.structured_data,
+    currentDemo.modules.ai_crawlability,
+    currentDemo.modules.content_parseability,
+    currentDemo.modules.commerce_protocols,
+    currentDemo.modules.agent_discovery
+  ]
 
-  // Animated values - these count up from 0 to target
-  const [moduleValues, setModuleValues] = useState([0, 0, 0, 0, 0])
-  const [currentScore, setCurrentScore] = useState(0)
-  const [showStatus, setShowStatus] = useState(false)
-  const [showTopFix, setShowTopFix] = useState(false)
+  // Get status icon based on value
+  const getStatusIcon = (value: number) => {
+    if (value >= 75) return '✓'
+    if (value >= 50) return '⚠'
+    if (value > 0) return '✗'
+    return ''
+  }
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const timeoutRefs = useRef<NodeJS.Timeout[]>([])
-
-  const currentDemo = demos[currentBrand]
+  // Get status color based on value
+  const getStatusColor = (value: number) => {
+    if (value >= 75) return 'text-green-400'
+    if (value >= 50) return 'text-yellow-400'
+    if (value > 0) return 'text-red-400'
+    return 'text-slate-400'
+  }
 
   // Count-up animation helper
   const animateCountUp = (
@@ -165,22 +213,6 @@ function LiveDemoPanel() {
     timeoutRefs.current.push(timeoutId)
   }
 
-  // Get status icon based on value
-  const getStatusIcon = (value: number) => {
-    if (value >= 75) return '✓'
-    if (value >= 50) return '⚠'
-    if (value > 0) return '✗'
-    return ''
-  }
-
-  // Get status color based on value
-  const getStatusColor = (value: number) => {
-    if (value >= 75) return 'text-green-400'
-    if (value >= 50) return 'text-yellow-400'
-    if (value > 0) return 'text-red-400'
-    return 'text-gray-dark-400'
-  }
-
   // Main animation sequence
   const startAnimation = () => {
     if (isPaused) return
@@ -191,15 +223,15 @@ function LiveDemoPanel() {
 
     // Reset to zero state
     setIsAnimating(true)
-    setModuleValues([0, 0, 0, 0, 0])
+    setCurrentModuleValues([0, 0, 0, 0, 0])
     setCurrentScore(0)
     setShowStatus(false)
     setShowTopFix(false)
 
     // Animate modules sequentially (0.5s delay between each)
-    currentDemo.modules.forEach((targetValue, index) => {
+    moduleValues.forEach((targetValue, index) => {
       animateCountUp(
-        (value) => setModuleValues(prev => {
+        (value) => setCurrentModuleValues(prev => {
           const newValues = [...prev]
           newValues[index] = value
           return newValues
@@ -305,18 +337,18 @@ function LiveDemoPanel() {
                   <div className="w-16 bg-slate-700 rounded-full h-1.5 overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-1000 ease-out ${
-                        moduleValues[index] >= 75 ? 'bg-green-400' :
-                        moduleValues[index] >= 50 ? 'bg-yellow-400' : 'bg-red-400'
+                        currentModuleValues[index] >= 75 ? 'bg-green-400' :
+                        currentModuleValues[index] >= 50 ? 'bg-yellow-400' : 'bg-red-400'
                       }`}
-                      style={{ width: `${moduleValues[index]}%` }}
+                      style={{ width: `${currentModuleValues[index]}%` }}
                     />
                   </div>
                   {/* Status icon */}
-                  <span className={`text-sm ${getStatusColor(moduleValues[index])}`}>
-                    {getStatusIcon(moduleValues[index])}
+                  <span className={`text-sm ${getStatusColor(currentModuleValues[index])}`}>
+                    {getStatusIcon(currentModuleValues[index])}
                   </span>
                   {/* Score value */}
-                  <span className="text-slate-400 text-xs w-12">{moduleValues[index]}/100</span>
+                  <span className="text-slate-400 text-xs w-12">{currentModuleValues[index]}/100</span>
                 </div>
               </div>
             ))}
@@ -380,16 +412,11 @@ function LiveDemoPanel() {
             <div className={`text-xs text-slate-400 mt-1 transition-all duration-300 ${
               showTopFix ? 'opacity-100' : 'opacity-0'
             }`}>
-              {showTopFix ? `Top fix: ${DEMO_BRANDS[currentBrand].topFix}` : ''}
+              {showTopFix ? `Top fix: ${currentDemo.topFix}` : ''}
             </div>
           </div>
         </div>
 
-        {/* Live Badge */}
-        <div className="flex items-center justify-center gap-2 mt-4 text-xs text-slate-400">
-          <div className="w-1 h-1 rounded-full bg-green-400 animate-pulse-slow"></div>
-          <span>live demo running</span>
-        </div>
       </div>
     </div>
   )
@@ -399,6 +426,7 @@ export default function HomePage() {
   const [url, setUrl] = useState('')
   const [scanHistory, setScanHistory] = useState<ScanHistoryItem[]>([])
   const [isClickAnimating, setIsClickAnimating] = useState(false)
+  const [error, setError] = useState('')
   const router = useRouter()
 
   useEffect(() => {
@@ -407,13 +435,19 @@ export default function HomePage() {
 
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!url.trim()) return
+    setError('')
+
+    const normalized = normalizeUrl(url)
+    if (!normalized) {
+      setError('Please enter a valid website')
+      return
+    }
 
     setIsClickAnimating(true)
     setTimeout(() => setIsClickAnimating(false), 150)
 
-    const encodedUrl = encodeURIComponent(url.trim())
-    router.push(`/scan?url=${encodedUrl}`)
+    // Route to scan page with URL as query parameter
+    router.push(`/scan?url=${encodeURIComponent(normalized)}`)
   }
 
   return (
@@ -423,11 +457,6 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-br from-dark via-dark to-dark-secondary"></div>
 
         <div className="relative container mx-auto px-4">
-          <div className="flex items-center gap-2 justify-center mb-8">
-            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse-slow"></div>
-            <span className="text-xs text-green-400 font-mono tracking-wide">live demo running</span>
-          </div>
-
           <div className="grid lg:grid-cols-2 gap-12 items-center max-w-7xl mx-auto">
             <div className="text-center lg:text-left">
               <h1 className="text-5xl lg:text-6xl font-bold leading-tight mb-8 tracking-tight-premium">
@@ -445,10 +474,13 @@ export default function HomePage() {
               <form onSubmit={handleScan} className="mb-6">
                 <div className="relative">
                   <input
-                    type="url"
+                    type="text"
                     value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    placeholder="https://yourwebsite.com"
+                    onChange={(e) => {
+                      setUrl(e.target.value)
+                      if (error) setError('')
+                    }}
+                    placeholder="yourwebsite.com"
                     className="w-full px-6 py-4 text-lg bg-dark-secondary border border-dark-border rounded-xl text-dark-text-primary placeholder-dark-text-secondary focus:ring-2 focus:ring-accent focus:border-accent transition-all duration-200"
                     required
                   />
@@ -463,10 +495,13 @@ export default function HomePage() {
                   </button>
                 </div>
                 <p className="text-sm text-dark-text-secondary mt-2">Press Enter to scan</p>
+                {error && (
+                  <p className="text-sm text-red-400 mt-2">{error}</p>
+                )}
               </form>
 
               {/* Trust indicators */}
-              <div className="border-t border-dark-border pt-4 mb-4">
+              <div className="border-t border-dark-border pt-4">
                 <div className="flex flex-col gap-2 text-sm text-dark-text-secondary">
                   <div className="flex items-center gap-2">
                     <span className="text-accent">✓</span>
@@ -480,12 +515,12 @@ export default function HomePage() {
                     <span className="text-accent">✓</span>
                     <span>Results in 30 seconds</span>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-accent">✓</span>
+                    <span>46% of sites score under 50 — where will you land?</span>
+                  </div>
                 </div>
               </div>
-
-              <p className="text-sm text-dark-text-secondary">
-                <span className="text-secondary">46%</span> of websites score under 50
-              </p>
             </div>
 
             <div className="flex justify-center lg:justify-end">
