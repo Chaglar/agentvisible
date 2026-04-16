@@ -107,216 +107,290 @@ function getTimeAgo(timestamp: number): string {
   return `${days} day${days > 1 ? 's' : ''} ago`
 }
 
-// Live Demo Panel Component
+// Demo Panel Component with Zero-to-Final Animation
 function LiveDemoPanel() {
+  // Brand rotation data as specified in Task 015
+  const demos = [
+    { url: 'stripe.com', modules: [92, 88, 71, 47, 85], score: 76, label: 'STRONG · top 25%' },
+    { url: 'shopify.com', modules: [95, 84, 78, 89, 82], score: 85, label: 'STRONG · top 15%' },
+    { url: 'notion.so', modules: [78, 65, 82, 42, 71], score: 67, label: 'MODERATE · top 50%' },
+    { url: 'vercel.com', modules: [94, 91, 88, 85, 97], score: 91, label: 'EXCELLENT · top 5%' },
+  ]
+
+  const moduleNames = [
+    'Structured data',
+    'AI crawlability',
+    'Content parseability',
+    'Commerce protocols',
+    'Agent discovery'
+  ]
+
   const [currentBrand, setCurrentBrand] = useState(0)
-  const [animationPhase, setAnimationPhase] = useState<'loading' | 'scanning' | 'complete'>('loading')
-  const [visibleModules, setVisibleModules] = useState<number>(0)
   const [isPaused, setIsPaused] = useState(false)
-  const [showGauge, setShowGauge] = useState(false)
-  const [showResults, setShowResults] = useState(false)
+  const [isAnimating, setIsAnimating] = useState(false)
+
+  // Animated values - these count up from 0 to target
+  const [moduleValues, setModuleValues] = useState([0, 0, 0, 0, 0])
+  const [currentScore, setCurrentScore] = useState(0)
+  const [showStatus, setShowStatus] = useState(false)
+  const [showTopFix, setShowTopFix] = useState(false)
+
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const timeoutRefs = useRef<NodeJS.Timeout[]>([])
 
-  const brand = DEMO_BRANDS[currentBrand]
+  const currentDemo = demos[currentBrand]
 
-  useEffect(() => {
-    const startAnimation = () => {
-      if (isPaused) return
+  // Count-up animation helper
+  const animateCountUp = (
+    setValue: (value: number) => void,
+    targetValue: number,
+    duration: number,
+    delay: number = 0
+  ) => {
+    const timeoutId = setTimeout(() => {
+      const steps = 30
+      const increment = targetValue / steps
+      let step = 0
 
-      setAnimationPhase('loading')
-      setVisibleModules(0)
-      setShowGauge(false)
-      setShowResults(false)
+      const interval = setInterval(() => {
+        step++
+        const newValue = Math.min(Math.round(increment * step), targetValue)
+        setValue(newValue)
 
-      // Phase 1: Loading (0.8s)
-      setTimeout(() => {
-        if (isPaused) return
-        setAnimationPhase('scanning')
-
-        // Phase 2: Modules appear one by one (0.8s + 5*1.2s = 6.8s)
-        for (let i = 0; i < 5; i++) {
-          setTimeout(() => {
-            if (!isPaused) setVisibleModules(i + 1)
-          }, i * 1200)
+        if (step >= steps) {
+          clearInterval(interval)
         }
+      }, duration / steps)
+    }, delay)
 
-        // Phase 3: Gauge animation (6s)
-        setTimeout(() => {
-          if (!isPaused) setShowGauge(true)
-        }, 5200)
+    timeoutRefs.current.push(timeoutId)
+  }
 
-        // Phase 4: Results (7s)
-        setTimeout(() => {
-          if (!isPaused) {
-            setShowResults(true)
-            setAnimationPhase('complete')
-          }
-        }, 6200)
+  // Get status icon based on value
+  const getStatusIcon = (value: number) => {
+    if (value >= 75) return '✓'
+    if (value >= 50) return '⚠'
+    if (value > 0) return '✗'
+    return ''
+  }
 
-        // Phase 5: Next brand (12s)
-        setTimeout(() => {
-          if (!isPaused) {
-            setCurrentBrand((prev) => (prev + 1) % DEMO_BRANDS.length)
-          }
-        }, 11200)
-      }, 800)
-    }
+  // Get status color based on value
+  const getStatusColor = (value: number) => {
+    if (value >= 75) return 'text-green-400'
+    if (value >= 50) return 'text-yellow-400'
+    if (value > 0) return 'text-red-400'
+    return 'text-gray-dark-400'
+  }
 
+  // Main animation sequence
+  const startAnimation = () => {
+    if (isPaused) return
+
+    // Clear any existing timeouts
+    timeoutRefs.current.forEach(timeout => clearTimeout(timeout))
+    timeoutRefs.current = []
+
+    // Reset to zero state
+    setIsAnimating(true)
+    setModuleValues([0, 0, 0, 0, 0])
+    setCurrentScore(0)
+    setShowStatus(false)
+    setShowTopFix(false)
+
+    // Animate modules sequentially (0.5s delay between each)
+    currentDemo.modules.forEach((targetValue, index) => {
+      animateCountUp(
+        (value) => setModuleValues(prev => {
+          const newValues = [...prev]
+          newValues[index] = value
+          return newValues
+        }),
+        targetValue,
+        1000, // 1 second duration
+        500 + index * 500 // Start at 0.5s, then 1s, 1.5s, 2s, 2.5s
+      )
+    })
+
+    // Animate gauge (starts at 5.5s)
+    animateCountUp(setCurrentScore, currentDemo.score, 1500, 5500)
+
+    // Show status at 7s
+    const statusTimeout = setTimeout(() => {
+      setShowStatus(true)
+    }, 7000)
+    timeoutRefs.current.push(statusTimeout)
+
+    // Show top fix at 7.5s
+    const topFixTimeout = setTimeout(() => {
+      setShowTopFix(true)
+    }, 7500)
+    timeoutRefs.current.push(topFixTimeout)
+
+    // Rotate to next brand at 10s
+    const rotateTimeout = setTimeout(() => {
+      if (!isPaused) {
+        setCurrentBrand((prev) => (prev + 1) % demos.length)
+      }
+    }, 10000)
+    timeoutRefs.current.push(rotateTimeout)
+  }
+
+  // Setup animation loop
+  useEffect(() => {
     if (!isPaused) {
       startAnimation()
-      intervalRef.current = setInterval(startAnimation, 12000)
+      intervalRef.current = setInterval(startAnimation, 10000)
     }
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
       }
+      timeoutRefs.current.forEach(timeout => clearTimeout(timeout))
     }
   }, [isPaused, currentBrand])
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pass': return '✓'
-      case 'warn': return '⚠'
-      case 'fail': return '✗'
-      default: return '○'
+  // Handle pause/resume
+  useEffect(() => {
+    if (isPaused && intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+      timeoutRefs.current.forEach(timeout => clearTimeout(timeout))
+    } else if (!isPaused && !intervalRef.current) {
+      startAnimation()
+      intervalRef.current = setInterval(startAnimation, 10000)
     }
-  }
+  }, [isPaused])
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pass': return 'text-green-400'
-      case 'warn': return 'text-yellow-400'
-      case 'fail': return 'text-red-400'
-      default: return 'text-gray-dark-400'
-    }
-  }
+  // Calculate gauge stroke offset
+  const circumference = 2 * Math.PI * 32
+  const gaugeOffset = circumference - (currentScore / 100) * circumference
 
   return (
     <div
-      className="bg-dark-secondary border border-dark-border rounded-2xl p-6 max-w-lg mx-auto lg:mx-0"
+      className="relative"
+      style={{ height: '480px' }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      {/* Browser Chrome */}
-      <div className="bg-gray-dark-800 rounded-t-lg p-3 mb-4">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="flex gap-1">
-            <div className="w-3 h-3 rounded-full bg-red-400"></div>
-            <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-            <div className="w-3 h-3 rounded-full bg-green-400"></div>
-          </div>
-          <div className="flex items-center gap-2 ml-4">
-            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse-slow"></div>
-            <span className="text-xs text-green-400 font-mono">LIVE</span>
-          </div>
-        </div>
-        <div className="text-xs text-gray-dark-300 font-mono bg-gray-dark-900 px-3 py-1 rounded">
-          agentvisible.ai/scan/{brand.domain}
-        </div>
-      </div>
+      <div className="absolute inset-0 bg-dark-3 border border-dark-5 rounded-xl overflow-hidden">
+        <div className="absolute inset-0 p-6 flex flex-col gap-3">
 
-      {/* Terminal */}
-      <div className="bg-black rounded-lg p-4 mb-4 font-mono text-sm">
-        <div className="text-green-400 mb-2">$ agentvisible scan {brand.domain}<span className="animate-pulse">_</span></div>
+          {/* Browser Chrome - 48px */}
+          <div className="bg-dark-4 rounded-t-lg p-3 flex-shrink-0" style={{ height: '48px' }}>
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+                <div className="w-3 h-3 rounded-full bg-green-400"></div>
+              </div>
+              <div className="flex items-center gap-2 ml-4">
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse-slow"></div>
+                <span className="text-xs text-green-400 font-mono">LIVE</span>
+              </div>
+              <div className="text-xs text-slate-400 font-mono ml-4">
+                agentvisible.ai/scan/{currentDemo.url}
+              </div>
+            </div>
+          </div>
 
-        {animationPhase !== 'loading' && (
-          <div className="space-y-2">
-            {brand.modules.slice(0, visibleModules).map((module, index) => (
-              <div
-                key={index}
-                className={`flex justify-between items-center transition-all duration-300 ${
-                  index < visibleModules ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                }`}
-                style={{ animationDelay: `${index * 1200}ms` }}
-              >
-                <span className="text-gray-dark-300">{module.name}</span>
+          {/* Terminal - 24px */}
+          <div className="bg-black rounded-lg p-3 flex-shrink-0">
+            <div className="text-green-400 text-sm font-mono">
+              $ agentvisible scan {currentDemo.url}<span className="animate-pulse">_</span>
+            </div>
+          </div>
+
+          {/* Module rows - Always visible, values animate from 0 */}
+          <div className="flex-1 space-y-2">
+            {moduleNames.map((name, index) => (
+              <div key={index} className="flex justify-between items-center h-10">
+                <span className="text-slate-300 text-sm">{name}</span>
                 <div className="flex items-center gap-2">
-                  <div className="w-16 bg-gray-dark-700 rounded-full h-1.5 overflow-hidden">
+                  {/* Progress bar track - always visible */}
+                  <div className="w-20 bg-dark-5 rounded-full overflow-hidden" style={{ height: '6px' }}>
                     <div
-                      className={`h-full rounded-full transition-all duration-1000 ${
-                        module.status === 'pass' ? 'bg-green-400' :
-                        module.status === 'warn' ? 'bg-yellow-400' : 'bg-red-400'
+                      className={`h-full rounded-full transition-all duration-1000 ease-out ${
+                        moduleValues[index] >= 75 ? 'bg-green-400' :
+                        moduleValues[index] >= 50 ? 'bg-yellow-400' : 'bg-red-400'
                       }`}
-                      style={{
-                        width: `${module.score}%`,
-                        animationDelay: `${index * 1200 + 400}ms`
-                      }}
+                      style={{ width: `${moduleValues[index]}%` }}
                     />
                   </div>
-                  <span className={`text-sm ${getStatusColor(module.status)}`}>
-                    {getStatusIcon(module.status)}
+                  {/* Status icon */}
+                  <span className={`text-sm ${getStatusColor(moduleValues[index])}`}>
+                    {getStatusIcon(moduleValues[index])}
                   </span>
-                  <span className="text-gray-dark-400 text-xs w-12">{module.score}/100</span>
+                  {/* Score value */}
+                  <span className="text-slate-400 text-sm font-mono w-12">{moduleValues[index]}/100</span>
                 </div>
               </div>
             ))}
           </div>
-        )}
-      </div>
 
-      {/* Score Gauge */}
-      <div className="flex items-center gap-6">
-        <div className="relative w-18 h-18">
-          {showGauge && (
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 72 72">
-              <circle
-                cx="36"
-                cy="36"
-                r="32"
-                stroke="currentColor"
-                strokeWidth="6"
-                fill="none"
-                className="text-gray-dark-700"
-              />
-              <circle
-                cx="36"
-                cy="36"
-                r="32"
-                stroke={brand.score >= 75 ? '#10b981' : brand.score >= 50 ? '#f59e0b' : '#ef4444'}
-                strokeWidth="6"
-                fill="none"
-                strokeDasharray="201"
-                strokeDashoffset={201 - (brand.score / 100) * 201}
-                strokeLinecap="round"
-                className="transition-all duration-2000 ease-out"
-              />
-            </svg>
-          )}
-          {showGauge && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className={`text-lg font-bold font-mono ${
-                  brand.score >= 75 ? 'text-green-400' :
-                  brand.score >= 50 ? 'text-yellow-400' : 'text-red-400'
-                }`}>
-                  {brand.score}
+          {/* Footer with gauge - Always visible, values animate */}
+          <div className="flex items-center gap-6 flex-shrink-0" style={{ height: '80px' }}>
+            {/* Gauge */}
+            <div className="relative" style={{ width: '96px', height: '96px' }}>
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 96 96">
+                {/* Background circle - always visible */}
+                <circle
+                  cx="48"
+                  cy="48"
+                  r="32"
+                  stroke="currentColor"
+                  strokeWidth="6"
+                  fill="none"
+                  className="text-dark-5"
+                />
+                {/* Progress arc - animates from 0 to score */}
+                <circle
+                  cx="48"
+                  cy="48"
+                  r="32"
+                  stroke={currentScore >= 75 ? '#10b981' : currentScore >= 50 ? '#f59e0b' : '#ef4444'}
+                  strokeWidth="6"
+                  fill="none"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={gaugeOffset}
+                  strokeLinecap="round"
+                  style={{
+                    transition: 'stroke-dashoffset 1500ms ease-out, stroke 300ms ease-out'
+                  }}
+                />
+              </svg>
+              {/* Score text - always visible */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center">
+                  <div className={`text-2xl font-bold font-mono transition-colors duration-300 ${
+                    currentScore >= 75 ? 'text-green-400' :
+                    currentScore >= 50 ? 'text-yellow-400' : 'text-red-400'
+                  }`}>
+                    {currentScore}
+                  </div>
+                  <div className="text-xs text-slate-400">score</div>
                 </div>
-                <div className="text-xs text-gray-dark-400">score</div>
               </div>
             </div>
-          )}
-        </div>
 
-        {showResults && (
-          <div className="flex-1 animate-fade-in-up">
-            <div className={`text-lg font-bold ${
-              brand.score >= 75 ? 'text-green-400' :
-              brand.score >= 50 ? 'text-yellow-400' : 'text-red-400'
-            }`}>
-              {brand.score}/100 {brand.rating.toUpperCase()}
-            </div>
-            <div className="text-xs text-gray-dark-400 mt-1">
-              Top fix: {brand.topFix}
+            {/* Results - Always visible but content fades in */}
+            <div className="flex-1">
+              <div className={`text-xl font-bold font-mono transition-all duration-300 ${
+                showStatus ? 'opacity-100' : 'opacity-0'
+              } ${
+                currentScore >= 75 ? 'text-green-400' :
+                currentScore >= 50 ? 'text-yellow-400' : 'text-red-400'
+              }`}>
+                {currentScore}/100 {showStatus ? currentDemo.label : 'SCANNING...'}
+              </div>
+              <div className={`text-sm text-slate-400 mt-1 transition-all duration-300 ${
+                showTopFix ? 'opacity-100' : 'opacity-0'
+              }`}>
+                {showTopFix ? `Top fix: ${DEMO_BRANDS[currentBrand].topFix}` : ''}
+              </div>
             </div>
           </div>
-        )}
-      </div>
-
-      {/* Live Badge */}
-      <div className="flex items-center justify-center gap-2 mt-4 text-xs text-gray-dark-400">
-        <div className="w-1 h-1 rounded-full bg-green-400 animate-pulse-slow"></div>
-        <span>live demo running</span>
+        </div>
       </div>
     </div>
   )
