@@ -6,11 +6,23 @@ const config: Config = {
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  safelist: [
+    'bg-dark-1', 'bg-dark-2', 'bg-dark-3', 'bg-dark-4', 'bg-dark-5', 'bg-dark-6',
+    'border-dark-1', 'border-dark-2', 'border-dark-3', 'border-dark-4', 'border-dark-5', 'border-dark-6',
+    'text-dark-1', 'text-dark-2', 'text-dark-3', 'text-dark-4', 'text-dark-5', 'text-dark-6',
+  ],
   theme: {
     extend: {
       colors: {
-        // Dark section colors
-        'dark': {
+        // Refined dark tonal palette
+        dark: {
+          1: '#0a0e17',  // Hero background (darkest, most dramatic)
+          2: '#0d1220',  // Section backgrounds (rhythm)
+          3: '#111827',  // Card backgrounds (feel raised on dark-2)
+          4: '#1a1f2e',  // Surfaces: inputs, secondary buttons
+          5: '#252b3a',  // Borders (visible but not harsh)
+          6: '#374150',  // Dividers and muted elements
+          // Legacy dark colors
           DEFAULT: '#0a0e17',
           secondary: '#0d1220',
           border: '#1e2436',
