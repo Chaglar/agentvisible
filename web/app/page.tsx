@@ -144,9 +144,49 @@ function LiveDemoPanel() {
   ]
 
   const [currentBrand, setCurrentBrand] = useState(0)
+  const [isPaused, setIsPaused] = useState(false)
+  const [isAnimating, setIsAnimating] = useState(false)
+  const [currentModuleValues, setCurrentModuleValues] = useState([0, 0, 0, 0, 0])
+  const [currentScore, setCurrentScore] = useState(0)
+  const [showStatus, setShowStatus] = useState(false)
+  const [showTopFix, setShowTopFix] = useState(false)
+
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const timeoutRefs = useRef<NodeJS.Timeout[]>([])
 
   const currentDemo = demos[currentBrand]
+
+  const moduleNames = [
+    'Structured data',
+    'AI crawlability',
+    'Content parseability',
+    'Commerce protocols',
+    'Agent discovery'
+  ]
+
+  const moduleValues = [
+    currentDemo.modules.structured_data,
+    currentDemo.modules.ai_crawlability,
+    currentDemo.modules.content_parseability,
+    currentDemo.modules.commerce_protocols,
+    currentDemo.modules.agent_discovery
+  ]
+
+  // Get status icon based on value
+  const getStatusIcon = (value: number) => {
+    if (value >= 75) return '✓'
+    if (value >= 50) return '⚠'
+    if (value > 0) return '✗'
+    return ''
+  }
+
+  // Get status color based on value
+  const getStatusColor = (value: number) => {
+    if (value >= 75) return 'text-green-400'
+    if (value >= 50) return 'text-yellow-400'
+    if (value > 0) return 'text-red-400'
+    return 'text-slate-400'
+  }
 
   // Count-up animation helper
   const animateCountUp = (
@@ -174,22 +214,6 @@ function LiveDemoPanel() {
     timeoutRefs.current.push(timeoutId)
   }
 
-  // Get status icon based on value
-  const getStatusIcon = (value: number) => {
-    if (value >= 75) return '✓'
-    if (value >= 50) return '⚠'
-    if (value > 0) return '✗'
-    return ''
-  }
-
-  // Get status color based on value
-  const getStatusColor = (value: number) => {
-    if (value >= 75) return 'text-green-400'
-    if (value >= 50) return 'text-yellow-400'
-    if (value > 0) return 'text-red-400'
-    return 'text-gray-dark-400'
-  }
-
   // Main animation sequence
   const startAnimation = () => {
     if (isPaused) return
@@ -200,15 +224,15 @@ function LiveDemoPanel() {
 
     // Reset to zero state
     setIsAnimating(true)
-    setModuleValues([0, 0, 0, 0, 0])
+    setCurrentModuleValues([0, 0, 0, 0, 0])
     setCurrentScore(0)
     setShowStatus(false)
     setShowTopFix(false)
 
     // Animate modules sequentially (0.5s delay between each)
-    currentDemo.modules.forEach((targetValue, index) => {
+    moduleValues.forEach((targetValue, index) => {
       animateCountUp(
-        (value) => setModuleValues(prev => {
+        (value) => setCurrentModuleValues(prev => {
           const newValues = [...prev]
           newValues[index] = value
           return newValues
@@ -314,18 +338,18 @@ function LiveDemoPanel() {
                   <div className="w-16 bg-slate-700 rounded-full h-1.5 overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-1000 ease-out ${
-                        moduleValues[index] >= 75 ? 'bg-green-400' :
-                        moduleValues[index] >= 50 ? 'bg-yellow-400' : 'bg-red-400'
+                        currentModuleValues[index] >= 75 ? 'bg-green-400' :
+                        currentModuleValues[index] >= 50 ? 'bg-yellow-400' : 'bg-red-400'
                       }`}
-                      style={{ width: `${moduleValues[index]}%` }}
+                      style={{ width: `${currentModuleValues[index]}%` }}
                     />
                   </div>
                   {/* Status icon */}
-                  <span className={`text-sm ${getStatusColor(moduleValues[index])}`}>
-                    {getStatusIcon(moduleValues[index])}
+                  <span className={`text-sm ${getStatusColor(currentModuleValues[index])}`}>
+                    {getStatusIcon(currentModuleValues[index])}
                   </span>
                   {/* Score value */}
-                  <span className="text-slate-400 text-xs w-12">{moduleValues[index]}/100</span>
+                  <span className="text-slate-400 text-xs w-12">{currentModuleValues[index]}/100</span>
                 </div>
               </div>
             ))}
@@ -389,7 +413,7 @@ function LiveDemoPanel() {
             <div className={`text-xs text-slate-400 mt-1 transition-all duration-300 ${
               showTopFix ? 'opacity-100' : 'opacity-0'
             }`}>
-              {showTopFix ? `Top fix: ${DEMO_BRANDS[currentBrand].topFix}` : ''}
+              {showTopFix ? `Top fix: ${currentDemo.topFix}` : ''}
             </div>
           </div>
         </div>
@@ -423,9 +447,8 @@ export default function HomePage() {
     setIsClickAnimating(true)
     setTimeout(() => setIsClickAnimating(false), 150)
 
-    // Extract domain from https://domain.com format for URL path
-    const domain = normalized.replace('https://', '')
-    router.push(`/scan/${encodeURIComponent(domain)}`)
+    // Route to scan page with URL as query parameter
+    router.push(`/scan?url=${encodeURIComponent(normalized)}`)
   }
 
   return (
