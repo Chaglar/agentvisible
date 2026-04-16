@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 // Simple scan history interface
 interface ScanHistoryItem {
@@ -392,11 +393,47 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-dark-800 py-8">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-gray-dark-400">
-            © 2024 AgentVisible.ai • Made for the AI agent future
-          </p>
+      <footer className="border-t border-gray-dark-800 py-12">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+
+            {/* Company Info */}
+            <div>
+              <h4 className="font-medium text-dark-text-primary mb-3">AgentVisible.ai</h4>
+              <ul className="space-y-2 text-sm text-dark-text-secondary">
+                <li>AI Agent Readiness Scanner</li>
+                <li>Made for the AI agent future</li>
+              </ul>
+            </div>
+
+            {/* Product */}
+            <div>
+              <h4 className="font-medium text-dark-text-primary mb-3">Product</h4>
+              <ul className="space-y-2 text-sm text-dark-text-secondary">
+                <li><Link href="/scan" className="hover:text-accent transition-colors">Free Scan</Link></li>
+                <li><span className="opacity-50">Pro Monitoring</span></li>
+                <li><span className="opacity-50">Agency Plan</span></li>
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="font-medium text-dark-text-primary mb-3">Legal</h4>
+              <ul className="space-y-2 text-sm text-dark-text-secondary">
+                <li><Link href="/terms" className="hover:text-accent transition-colors">Terms of Service</Link></li>
+                <li><Link href="/privacy" className="hover:text-accent transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/refunds" className="hover:text-accent transition-colors">Refund Policy</Link></li>
+              </ul>
+            </div>
+
+          </div>
+
+          {/* Copyright */}
+          <div className="mt-8 pt-8 border-t border-gray-dark-800 text-center">
+            <p className="text-gray-dark-400 text-sm">
+              © 2026 AgentVisible.ai • Made for the AI agent future
+            </p>
+          </div>
         </div>
       </footer>
     </main>
