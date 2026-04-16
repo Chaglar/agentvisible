@@ -132,66 +132,6 @@ interface Explanations {
   checks: Record<string, string>
 }
 
-// Real-time progress component
-function ScanProgress({ progress }: { progress: ModuleProgress[] }) {
-  return (
-    <div className="max-w-2xl mx-auto mb-12">
-      <h3 className="text-lg font-bold mb-6 text-center">Scan Progress</h3>
-      <div className="space-y-3">
-        {progress.map((module, index) => (
-          <div key={index} className="flex items-center gap-3">
-            <div className="w-6 h-6 flex items-center justify-center">
-              {module.status === 'done' ? (
-                <span className="text-green-400">✅</span>
-              ) : module.status === 'scanning' ? (
-                <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin">🔄</div>
-              ) : (
-                <span className="text-gray-dark-500">⏳</span>
-              )}
-            </div>
-
-            <div className="flex-1">
-              <div className="flex justify-between items-center">
-                <span className={`font-medium ${module.status === 'scanning' ? 'text-accent' : ''}`}>
-                  {module.name}
-                </span>
-                {module.status === 'done' && module.score !== undefined ? (
-                  <span className="text-sm font-mono text-gray-dark-300">
-                    {Math.round(module.score)}/100
-                  </span>
-                ) : module.status === 'scanning' ? (
-                  <span className="text-sm text-accent">scanning...</span>
-                ) : (
-                  <span className="text-sm text-gray-dark-500">waiting</span>
-                )}
-              </div>
-
-              {/* Progress dots */}
-              <div className="flex items-center mt-1">
-                <div className="flex-1 flex items-center">
-                  <div className="flex space-x-1">
-                    {[...Array(20)].map((_, i) => (
-                      <div
-                        key={i}
-                        className={`w-1 h-1 rounded-full ${
-                          module.status === 'done'
-                            ? 'bg-green-400'
-                            : module.status === 'scanning' && i < 10
-                            ? 'bg-accent'
-                            : 'bg-gray-dark-700'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 // Scan history component
 function ScanHistory({ onSelectScan }: { onSelectScan: (url: string) => void }) {
@@ -700,6 +640,43 @@ function convertToScanPanelData(result: EnhancedScanResult) {
   return { modules, status, topFix }
 }
 
+// Convert progress data to ScanResultPanel format for loading state
+function convertProgressToScanPanelData(progress: ModuleProgress[], url: string) {
+  const moduleMap: { [key: string]: keyof typeof modules } = {
+    'Structured data': 'structured_data',
+    'AI crawlability': 'ai_crawlability',
+    'Content parseability': 'content_parseability',
+    'Commerce protocols': 'commerce_protocols',
+    'Agent discovery': 'agent_discovery'
+  }
+
+  const modules = {
+    structured_data: 0,
+    ai_crawlability: 0,
+    content_parseability: 0,
+    commerce_protocols: 0,
+    agent_discovery: 0
+  }
+
+  // Fill in completed module scores, leave others at 0 for animation
+  progress.forEach(module => {
+    const key = moduleMap[module.name]
+    if (key && module.status === 'done' && module.score !== undefined) {
+      modules[key] = module.score
+    }
+  })
+
+  // Calculate partial score based on completed modules
+  const completedCount = progress.filter(m => m.status === 'done').length
+  const totalCount = progress.length || 5
+  const partialScore = Math.round((completedCount / totalCount) * 75) // Estimate
+
+  const status = completedCount === totalCount ? 'ANALYSIS COMPLETE' : 'ANALYZING...'
+  const topFix = completedCount === totalCount ? 'Analysis complete' : `Scanning... ${completedCount}/${totalCount} modules`
+
+  return { modules, status, topFix, score: partialScore }
+}
+
 function getStatusSuffix(score: number) {
   if (score >= 90) return 'top 5%'
   if (score >= 75) return 'top 25%'
@@ -841,7 +818,7 @@ export default function ScanPage() {
         setProgress(prev => prev.map(module => ({
           ...module,
           status: 'done' as const,
-          score: data.data.modules.find(m => MODULE_NAMES[m.module as keyof typeof MODULE_NAMES] === module.name)?.score || 0
+          score: data.data?.modules.find(m => MODULE_NAMES[m.module as keyof typeof MODULE_NAMES] === module.name)?.score || 0
         })))
 
         // Update URL without page reload
@@ -930,7 +907,7 @@ export default function ScanPage() {
           </h1>
           {isLoading && (
             <p className="text-gray-dark-400">
-              Analyzing your website's AI agent readiness... (~15 seconds)
+              Analyzing your website's AI agent readiness... (~30 seconds)
             </p>
           )}
         </div>
@@ -944,7 +921,17 @@ export default function ScanPage() {
         {isLoading && (
           <>
             {progress.length > 0 ? (
-              <ScanProgress progress={progress} />
+              <div className="mb-12 max-w-lg mx-auto">
+                <ScanResultPanel
+                  url={url || ''}
+                  modules={convertProgressToScanPanelData(progress, url || '').modules}
+                  score={convertProgressToScanPanelData(progress, url || '').score}
+                  status={convertProgressToScanPanelData(progress, url || '').status}
+                  topFix={convertProgressToScanPanelData(progress, url || '').topFix}
+                  animate={true}
+                  isLive={false}
+                />
+              </div>
             ) : (
               <LoadingSkeleton />
             )}
@@ -1007,7 +994,7 @@ export default function ScanPage() {
               <h2 className="text-2xl font-bold mb-8 text-center">Detailed Analysis</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {scanResult.modules.map((module, index) => (
-                  <ModuleCard key={index} module={module} explanations={explanations} />
+                  <ModuleCard key={index} module={module} explanations={explanations || undefined} />
                 ))}
               </div>
             </div>
