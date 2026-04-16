@@ -268,47 +268,42 @@ function LiveDemoPanel() {
 
   return (
     <div
-      className="relative"
-      style={{ height: '480px' }}
+      className="bg-dark-3 border border-dark-5 rounded-xl p-6 max-w-lg mx-auto lg:mx-0"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      <div className="absolute inset-0 bg-dark-3 border border-dark-5 rounded-xl overflow-hidden">
-        <div className="absolute inset-0 p-6 flex flex-col gap-3">
+      <div className="space-y-4">
 
-          {/* Browser Chrome - 48px */}
-          <div className="bg-dark-4 rounded-t-lg p-3 flex-shrink-0" style={{ height: '48px' }}>
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1">
-                <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-                <div className="w-3 h-3 rounded-full bg-green-400"></div>
-              </div>
-              <div className="flex items-center gap-2 ml-4">
-                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse-slow"></div>
-                <span className="text-xs text-green-400 font-mono">LIVE</span>
-              </div>
-              <div className="text-xs text-slate-400 font-mono ml-4">
-                agentvisible.ai/scan/{currentDemo.url}
-              </div>
+        {/* Browser Chrome */}
+        <div className="bg-dark-4 rounded-t-lg p-3 mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex gap-1">
+              <div className="w-3 h-3 rounded-full bg-red-400"></div>
+              <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+              <div className="w-3 h-3 rounded-full bg-green-400"></div>
+            </div>
+            <div className="flex items-center gap-2 ml-4">
+              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse-slow"></div>
+              <span className="text-xs text-green-400 font-mono">LIVE</span>
             </div>
           </div>
-
-          {/* Terminal - 24px */}
-          <div className="bg-black rounded-lg p-3 flex-shrink-0">
-            <div className="text-green-400 text-sm font-mono">
-              $ agentvisible scan {currentDemo.url}<span className="animate-pulse">_</span>
-            </div>
+          <div className="text-xs text-slate-400 font-mono bg-dark-5 px-3 py-1 rounded">
+            agentvisible.ai/scan/{currentDemo.url}
           </div>
+        </div>
+
+        {/* Terminal */}
+        <div className="bg-black rounded-lg p-4 mb-4 font-mono text-sm">
+          <div className="text-green-400 mb-2">$ agentvisible scan {currentDemo.url}<span className="animate-pulse">_</span></div>
 
           {/* Module rows - Always visible, values animate from 0 */}
-          <div className="flex-1 space-y-2">
+          <div className="space-y-2">
             {moduleNames.map((name, index) => (
-              <div key={index} className="flex justify-between items-center h-10">
-                <span className="text-slate-300 text-sm">{name}</span>
+              <div key={index} className="flex justify-between items-center">
+                <span className="text-slate-300">{name}</span>
                 <div className="flex items-center gap-2">
                   {/* Progress bar track - always visible */}
-                  <div className="w-20 bg-dark-5 rounded-full overflow-hidden" style={{ height: '6px' }}>
+                  <div className="w-16 bg-slate-700 rounded-full h-1.5 overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-1000 ease-out ${
                         moduleValues[index] >= 75 ? 'bg-green-400' :
@@ -322,74 +317,79 @@ function LiveDemoPanel() {
                     {getStatusIcon(moduleValues[index])}
                   </span>
                   {/* Score value */}
-                  <span className="text-slate-400 text-sm font-mono w-12">{moduleValues[index]}/100</span>
+                  <span className="text-slate-400 text-xs w-12">{moduleValues[index]}/100</span>
                 </div>
               </div>
             ))}
           </div>
+        </div>
 
-          {/* Footer with gauge - Always visible, values animate */}
-          <div className="flex items-center gap-6 flex-shrink-0" style={{ height: '80px' }}>
-            {/* Gauge */}
-            <div className="relative" style={{ width: '96px', height: '96px' }}>
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 96 96">
-                {/* Background circle - always visible */}
-                <circle
-                  cx="48"
-                  cy="48"
-                  r="32"
-                  stroke="currentColor"
-                  strokeWidth="6"
-                  fill="none"
-                  className="text-dark-5"
-                />
-                {/* Progress arc - animates from 0 to score */}
-                <circle
-                  cx="48"
-                  cy="48"
-                  r="32"
-                  stroke={currentScore >= 75 ? '#10b981' : currentScore >= 50 ? '#f59e0b' : '#ef4444'}
-                  strokeWidth="6"
-                  fill="none"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={gaugeOffset}
-                  strokeLinecap="round"
-                  style={{
-                    transition: 'stroke-dashoffset 1500ms ease-out, stroke 300ms ease-out'
-                  }}
-                />
-              </svg>
-              {/* Score text - always visible */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <div className={`text-2xl font-bold font-mono transition-colors duration-300 ${
-                    currentScore >= 75 ? 'text-green-400' :
-                    currentScore >= 50 ? 'text-yellow-400' : 'text-red-400'
-                  }`}>
-                    {currentScore}
-                  </div>
-                  <div className="text-xs text-slate-400">score</div>
+        {/* Score Gauge */}
+        <div className="flex items-center gap-6">
+          <div className="relative w-18 h-18">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 72 72">
+              {/* Background circle - always visible */}
+              <circle
+                cx="36"
+                cy="36"
+                r="32"
+                stroke="currentColor"
+                strokeWidth="6"
+                fill="none"
+                className="text-slate-700"
+              />
+              {/* Progress arc - animates from 0 to score */}
+              <circle
+                cx="36"
+                cy="36"
+                r="32"
+                stroke={currentScore >= 75 ? '#10b981' : currentScore >= 50 ? '#f59e0b' : '#ef4444'}
+                strokeWidth="6"
+                fill="none"
+                strokeDasharray="201"
+                strokeDashoffset={201 - (currentScore / 100) * 201}
+                strokeLinecap="round"
+                style={{
+                  transition: 'stroke-dashoffset 1500ms ease-out, stroke 300ms ease-out'
+                }}
+              />
+            </svg>
+            {/* Score text - always visible */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <div className={`text-lg font-bold font-mono transition-colors duration-300 ${
+                  currentScore >= 75 ? 'text-green-400' :
+                  currentScore >= 50 ? 'text-yellow-400' : 'text-red-400'
+                }`}>
+                  {currentScore}
                 </div>
-              </div>
-            </div>
-
-            {/* Results - Always visible but content fades in */}
-            <div className="flex-1">
-              <div className={`text-xl font-bold font-mono transition-all duration-300 ${
-                showStatus ? 'opacity-100' : 'opacity-0'
-              } ${
-                currentScore >= 75 ? 'text-green-400' :
-                currentScore >= 50 ? 'text-yellow-400' : 'text-red-400'
-              }`}>
-                {currentScore}/100 {showStatus ? currentDemo.label : 'SCANNING...'}
-              </div>
-              <div className={`text-sm text-slate-400 mt-1 transition-all duration-300 ${
-                showTopFix ? 'opacity-100' : 'opacity-0'
-              }`}>
-                {showTopFix ? `Top fix: ${DEMO_BRANDS[currentBrand].topFix}` : ''}
+                <div className="text-xs text-slate-400">score</div>
               </div>
             </div>
           </div>
+
+          {/* Results - Always visible but content fades in */}
+          <div className="flex-1">
+            <div className={`text-lg font-bold transition-all duration-300 ${
+              showStatus ? 'opacity-100' : 'opacity-0'
+            } ${
+              currentScore >= 75 ? 'text-green-400' :
+              currentScore >= 50 ? 'text-yellow-400' : 'text-red-400'
+            }`}>
+              {currentScore}/100 {showStatus ? currentDemo.label : 'SCANNING...'}
+            </div>
+            <div className={`text-xs text-slate-400 mt-1 transition-all duration-300 ${
+              showTopFix ? 'opacity-100' : 'opacity-0'
+            }`}>
+              {showTopFix ? `Top fix: ${DEMO_BRANDS[currentBrand].topFix}` : ''}
+            </div>
+          </div>
+        </div>
+
+        {/* Live Badge */}
+        <div className="flex items-center justify-center gap-2 mt-4 text-xs text-slate-400">
+          <div className="w-1 h-1 rounded-full bg-green-400 animate-pulse-slow"></div>
+          <span>live demo running</span>
         </div>
       </div>
     </div>
