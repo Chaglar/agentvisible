@@ -1067,14 +1067,14 @@ export default function ScanPage() {
 
     return (
       <div className="max-w-lg mx-auto mb-12">
-        <div className="bg-dark-3 border border-dark-5 rounded-2xl p-8 text-center">
+        <div className="bg-gray-dark-800 border border-gray-dark-600 rounded-2xl p-8 text-center">
           {config.icon}
 
-          <h2 className="text-2xl font-bold text-white mb-4">
+          <h2 className="text-2xl font-bold mb-3">
             {config.heading}
           </h2>
 
-          <p className="text-slate-300 text-base mb-8 leading-relaxed">
+          <p className="text-base text-gray-dark-300 mb-8 max-w-md mx-auto">
             {config.body}
           </p>
 
@@ -1082,7 +1082,7 @@ export default function ScanPage() {
             {config.primaryCTA.href ? (
               <Link
                 href={config.primaryCTA.href}
-                className="block w-full px-6 py-3 bg-teal-400 text-dark font-bold rounded-lg hover:bg-teal-300 transition-colors"
+                className="block w-full px-6 py-3 bg-accent text-background font-bold rounded-lg hover:bg-secondary transition-colors"
               >
                 {config.primaryCTA.text}
               </Link>
@@ -1090,7 +1090,7 @@ export default function ScanPage() {
               <button
                 onClick={config.primaryCTA.action || undefined}
                 disabled={config.primaryCTA.disabled}
-                className="w-full px-6 py-3 bg-teal-400 text-dark font-bold rounded-lg hover:bg-teal-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-6 py-3 bg-accent text-background font-bold rounded-lg hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {config.primaryCTA.text}
               </button>
@@ -1099,7 +1099,7 @@ export default function ScanPage() {
             {config.secondaryCTA.href ? (
               <Link
                 href={config.secondaryCTA.href}
-                className="block w-full px-6 py-3 bg-transparent border border-slate-500 text-slate-300 font-medium rounded-lg hover:border-slate-400 hover:text-white transition-colors"
+                className="block w-full px-6 py-3 bg-transparent text-gray-dark-300 font-medium rounded-lg hover:text-white transition-colors"
               >
                 {config.secondaryCTA.text}
               </Link>
@@ -1107,7 +1107,7 @@ export default function ScanPage() {
               <button
                 onClick={config.secondaryCTA.action || undefined}
                 disabled={config.secondaryCTA.disabled}
-                className="w-full px-6 py-3 bg-transparent border border-slate-500 text-slate-300 font-medium rounded-lg hover:border-slate-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-6 py-3 bg-transparent text-gray-dark-300 font-medium rounded-lg hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {config.secondaryCTA.text}
               </button>
