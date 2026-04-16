@@ -693,10 +693,18 @@ function estimatePoints(fix: Check) {
   }
 }
 
+// Enhanced error handling types
+interface ScanError {
+  type: 'rate_limit' | 'server_error' | 'timeout' | 'invalid_url' | 'network_error'
+  message: string
+  statusCode?: number
+  retryAfter?: number
+}
+
 export default function ScanPage() {
   const [scanResult, setScanResult] = useState<EnhancedScanResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<ScanError | null>(null)
   const [shareButtonText, setShareButtonText] = useState('Share Report')
   const [progress, setProgress] = useState<ModuleProgress[]>([])
   const [explanations, setExplanations] = useState<Explanations | null>(null)
@@ -704,16 +712,20 @@ export default function ScanPage() {
   const [comparisonUrl, setComparisonUrl] = useState('')
 
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const hasScannedRef = useRef(false)
 
   const searchParams = useSearchParams()
   const router = useRouter()
   const url = searchParams?.get('url')
 
   useEffect(() => {
+    if (hasScannedRef.current) return
     if (url && !scanResult && !isLoading) {
+      console.log('SCAN FIRED for URL:', url)
+      hasScannedRef.current = true
       performScan(url)
     }
-  }, [url, scanResult, isLoading])
+  }, [url])
 
   useEffect(() => {
     // Load explanations on mount
@@ -795,14 +807,20 @@ export default function ScanPage() {
     simulateProgress()
 
     try {
+      // Create timeout controller
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 45000) // 45 second timeout
+
       const response = await fetch('/api/v1/scan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ url: targetUrl }),
+        signal: controller.signal,
       })
 
+      clearTimeout(timeoutId)
       const data: APIResponse = await response.json()
 
       if (data.status === 'ok' && data.data) {
@@ -825,10 +843,41 @@ export default function ScanPage() {
         const newUrl = `/scan?url=${encodeURIComponent(targetUrl)}`
         window.history.replaceState({}, '', newUrl)
       } else {
-        setError(data.message || 'Scan failed. Please try again.')
+        // Determine error type based on response
+        const errorType: ScanError['type'] = (() => {
+          if (data.code === 'RATE_LIMIT' || response.status === 429) {
+            return 'rate_limit'
+          }
+          if (response.status >= 500) {
+            return 'server_error'
+          }
+          if (data.code === 'TIMEOUT' || data.message?.toLowerCase().includes('timeout')) {
+            return 'timeout'
+          }
+          return 'invalid_url'
+        })()
+
+        setError({
+          type: errorType,
+          message: data.message || 'Scan failed',
+          statusCode: response.status,
+          retryAfter: response.status === 429 ? 3600 : undefined
+        })
       }
     } catch (err) {
-      setError('Network error. Please check your connection and try again.')
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError({
+          type: 'timeout',
+          message: 'Scan timed out after 45 seconds',
+          statusCode: undefined
+        })
+      } else {
+        setError({
+          type: 'network_error',
+          message: 'Network error. Please check your connection and try again.',
+          statusCode: undefined
+        })
+      }
     } finally {
       setIsLoading(false)
 
@@ -857,6 +906,8 @@ export default function ScanPage() {
 
   const retryScans = () => {
     if (url) {
+      hasScannedRef.current = false
+      setError(null)
       performScan(url)
     }
   }
@@ -892,6 +943,183 @@ export default function ScanPage() {
           >
             Go Home
           </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Enhanced error handling component
+  const renderErrorState = () => {
+    if (!error) return null
+
+    const getErrorConfig = (error: ScanError) => {
+      switch (error.type) {
+        case 'rate_limit':
+          return {
+            icon: (
+              <svg className="w-12 h-12 text-amber-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            ),
+            heading: 'You have hit the free scan limit',
+            body: 'Free plan includes 20 scans per hour. You can wait 60 minutes or upgrade to Pro for unlimited scans.',
+            primaryCTA: {
+              text: 'Upgrade to Pro — $99/mo',
+              href: '/pricing',
+              action: null,
+              disabled: false
+            },
+            secondaryCTA: {
+              text: 'Try again in 60 minutes',
+              disabled: true,
+              action: null
+            }
+          }
+
+        case 'server_error':
+          return {
+            icon: (
+              <svg className="w-12 h-12 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ),
+            heading: 'Something went wrong on our end',
+            body: 'Our scanner is having trouble right now. This is not your fault.',
+            primaryCTA: {
+              text: 'Try again',
+              action: () => retryScans(),
+              disabled: false
+            },
+            secondaryCTA: {
+              text: 'Report this issue',
+              href: 'mailto:support@agentvisible.ai?subject=Scan%20Error&body=Error%20details:%20' + encodeURIComponent(error.message),
+              action: null,
+              disabled: false
+            }
+          }
+
+        case 'timeout':
+          return {
+            icon: (
+              <svg className="w-12 h-12 text-amber-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ),
+            heading: 'This scan is taking longer than expected',
+            body: 'The website you entered may be slow to respond or blocking our scanner.',
+            primaryCTA: {
+              text: 'Try a different website',
+              action: () => router.push('/'),
+              disabled: false
+            },
+            secondaryCTA: {
+              text: 'Wait 30 more seconds',
+              action: () => {
+                hasScannedRef.current = false
+                setError(null)
+                performScan(url)
+              },
+              disabled: false
+            }
+          }
+
+        case 'network_error':
+          return {
+            icon: (
+              <svg className="w-12 h-12 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ),
+            heading: 'Something went wrong on our end',
+            body: 'Our scanner is having trouble right now. This is not your fault.',
+            primaryCTA: {
+              text: 'Try again',
+              action: () => retryScans(),
+              disabled: false
+            },
+            secondaryCTA: {
+              text: 'Report this issue',
+              href: 'mailto:support@agentvisible.ai?subject=Network%20Error&body=Error%20details:%20' + encodeURIComponent(error.message),
+              action: null,
+              disabled: false
+            }
+          }
+
+        case 'invalid_url':
+        default:
+          return {
+            icon: (
+              <svg className="w-12 h-12 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+            ),
+            heading: 'We could not scan this website',
+            body: 'The site may be down, blocking crawlers, or not a real website. Double-check the URL and try again.',
+            primaryCTA: {
+              text: 'Try another URL',
+              action: () => router.push('/'),
+              disabled: false
+            },
+            secondaryCTA: {
+              text: 'What sites can you scan?',
+              href: '/faq',
+              action: null,
+              disabled: false
+            }
+          }
+      }
+    }
+
+    const config = getErrorConfig(error)
+
+    return (
+      <div className="max-w-lg mx-auto mb-12">
+        <div className="bg-gray-dark-800 border border-gray-dark-600 rounded-2xl p-8 text-center">
+          {config.icon}
+
+          <h2 className="text-2xl font-bold mb-3">
+            {config.heading}
+          </h2>
+
+          <p className="text-base text-gray-dark-300 mb-8 max-w-md mx-auto">
+            {config.body}
+          </p>
+
+          <div className="space-y-3">
+            {config.primaryCTA.href ? (
+              <Link
+                href={config.primaryCTA.href}
+                className="block w-full px-6 py-3 bg-accent text-background font-bold rounded-lg hover:bg-secondary transition-colors"
+              >
+                {config.primaryCTA.text}
+              </Link>
+            ) : (
+              <button
+                onClick={config.primaryCTA.action || undefined}
+                disabled={config.primaryCTA.disabled}
+                className="w-full px-6 py-3 bg-accent text-background font-bold rounded-lg hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {config.primaryCTA.text}
+              </button>
+            )}
+
+            {config.secondaryCTA.href ? (
+              <Link
+                href={config.secondaryCTA.href}
+                className="block w-full px-6 py-3 bg-transparent text-gray-dark-300 font-medium rounded-lg hover:text-white transition-colors"
+              >
+                {config.secondaryCTA.text}
+              </Link>
+            ) : (
+              <button
+                onClick={config.secondaryCTA.action || undefined}
+                disabled={config.secondaryCTA.disabled}
+                className="w-full px-6 py-3 bg-transparent text-gray-dark-300 font-medium rounded-lg hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {config.secondaryCTA.text}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     )
@@ -939,31 +1167,10 @@ export default function ScanPage() {
         )}
 
         {/* Error State */}
-        {error && (
-          <div className="text-center">
-            <div className="bg-red-500/20 border border-red-500/30 rounded-2xl p-8 mb-8 max-w-2xl mx-auto">
-              <h2 className="text-xl font-bold text-red-400 mb-4">Scan Failed</h2>
-              <p className="text-gray-dark-300 mb-6">{error}</p>
-              <div className="space-x-4">
-                <button
-                  onClick={retryScans}
-                  className="px-6 py-3 bg-accent text-background font-bold rounded-lg hover:bg-secondary transition-colors"
-                >
-                  Try Again
-                </button>
-                <button
-                  onClick={() => router.push('/')}
-                  className="px-6 py-3 bg-gray-dark-700 text-white font-bold rounded-lg hover:bg-gray-dark-600 transition-colors"
-                >
-                  Go Home
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {renderErrorState()}
 
         {/* Results */}
-        {scanResult && !isLoading && (
+        {scanResult && !isLoading && !error && (
           <div>
             {/* Scan Result Panel - Same as Hero Demo */}
             <div className="mb-12 max-w-lg mx-auto">
