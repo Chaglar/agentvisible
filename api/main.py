@@ -12,7 +12,7 @@ from typing import Dict
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException, Request, Depends
+from fastapi import FastAPI, HTTPException, Request, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi.responses import StreamingResponse
@@ -356,6 +356,38 @@ async def get_competitor_suggestions(domain: str):
             message=f"Failed to get competitors: {str(e)}",
             code="COMPETITOR_ERROR"
         )
+
+
+async def get_optional_user_id(authorization: str = None) -> Optional[str]:
+    """Extract user ID from JWT token"""
+    if not authorization or not authorization.startswith('Bearer '):
+        return None
+
+    try:
+        token = authorization.replace('Bearer ', '')
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+        user = verify_jwt(credentials)
+        return user.get('sub') if user else None
+    except:
+        return None
+
+
+async def get_required_user_id(authorization: str = Header(default=None)) -> str:
+    """Extract user ID from JWT token, raise 401 if not found"""
+    uid = await get_optional_user_id(authorization)
+    if not uid:
+        raise HTTPException(status_code=401, detail='Auth required')
+    return uid
+
+
+@app.get('/api/v1/dashboard')
+async def get_dashboard(user_id: str = Depends(get_required_user_id)):
+    supabase = get_supabase_client()
+    scans = supabase.table('scans').select('url,score,created_at,slug').eq('user_id', user_id).order('created_at', desc=True).limit(50).execute()
+    subs = supabase.table('subscriptions').select('*').eq('user_id', user_id).eq('status', 'active').limit(1).execute()
+    purchases = supabase.table('purchases').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
+    tier = 'pro' if subs.data else 'free'
+    return {'tier': tier, 'subscription': subs.data[0] if subs.data else None, 'scans': scans.data or [], 'purchases': purchases.data or [], 'scan_count': len(scans.data or [])}
 
 
 # Root route for testing

@@ -13,6 +13,7 @@ export async function AuthNav() {
     <div className="flex items-center gap-4">
       {user ? (
         <div className="flex items-center gap-4">
+          <a href='/dashboard' className='text-slate-400 hover:text-white transition text-sm'>Dashboard</a>
           <span className="text-sm text-gray-300">
             {user.email}
           </span>
