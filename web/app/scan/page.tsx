@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import ScanResultPanel from '../../components/ScanResultPanel'
+import { authenticatedFetch } from '@/lib/api'
 
 // Utility functions for scan history and progress
 function getScanHistory(): ScanHistoryItem[] {
@@ -719,7 +720,7 @@ function ScanPageContent() {
     setIsCheckingOut(true)
 
     try {
-      const response = await fetch('/api/v1/stripe/create-checkout-session', {
+      const response = await authenticatedFetch('/api/v1/stripe/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -731,12 +732,19 @@ function ScanPageContent() {
       })
 
       if (response.status === 401) {
-        // User not logged in — redirect to signin
-        window.location.href = '/auth/signin?redirect=/scan'
+        // User not logged in — redirect to signin with checkout intent
+        const checkoutType = priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO_MONTHLY ? 'pro' : 'pdf'
+        window.location.href = `/auth/signin?redirect=${encodeURIComponent(`/pricing?checkout=${checkoutType}`)}`
         return
       }
 
       if (!response.ok) {
+        const errorData = await response.json()
+        if (errorData.detail?.includes('already have an active Pro subscription')) {
+          alert('✅ You already have an active Pro subscription! Just sign in to access unlimited scans.')
+          window.location.href = '/auth/signin?redirect=/'
+          return
+        }
         throw new Error('Failed to create checkout session')
       }
 
@@ -849,7 +857,7 @@ function ScanPageContent() {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 45000) // 45 second timeout
 
-      const response = await fetch('/api/v1/scan', {
+      const response = await authenticatedFetch('/api/v1/scan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1000,17 +1008,18 @@ function ScanPageContent() {
               </svg>
             ),
             heading: 'You have hit the free scan limit',
-            body: 'Free plan includes 20 scans per hour. You can wait 60 minutes or upgrade to Pro for unlimited scans.',
+            body: 'Free plan includes 10 scans per hour. If you already have a Pro account, just sign in. Otherwise, view Pro plans for unlimited scans.',
             primaryCTA: {
-              text: isCheckingOut ? 'Starting checkout...' : 'Upgrade to Pro — $99/mo',
-              href: undefined,
-              action: () => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO_MONTHLY!),
-              disabled: isCheckingOut
+              text: 'View Pro Plans',
+              href: '/auth/signin?redirect=/pricing',
+              action: null,
+              disabled: false
             },
             secondaryCTA: {
-              text: 'Try again in 60 minutes',
-              disabled: true,
-              action: null
+              text: 'Sign In',
+              href: '/auth/signin?redirect=/',
+              action: null,
+              disabled: false
             }
           }
 

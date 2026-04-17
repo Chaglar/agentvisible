@@ -695,7 +695,7 @@ export default function HomePage() {
             Simple pricing
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-7xl mx-auto">
             <div className="bg-dark-3 border border-dark-5 rounded-xl p-6 hover:border-dark-6 hover:-translate-y-0.5 transition-all duration-200">
               <h3 className="text-xl font-bold text-white mb-2">Free Scan</h3>
               <div className="text-3xl font-bold text-white mb-4">$0</div>
@@ -719,6 +719,43 @@ export default function HomePage() {
                   Shareable results
                 </li>
               </ul>
+              <Link
+                href="/"
+                className="block w-full bg-gray-dark-700 hover:bg-gray-dark-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors text-center"
+              >
+                Start Free Scan
+              </Link>
+            </div>
+
+            <div className="bg-dark-3 border border-dark-5 rounded-xl p-6 hover:border-dark-6 hover:-translate-y-0.5 transition-all duration-200">
+              <h3 className="text-xl font-bold text-white mb-2">PDF Report</h3>
+              <div className="text-3xl font-bold text-white mb-4">$29</div>
+              <ul className="space-y-3 text-light-text-secondary mb-6">
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Professional PDF export
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Detailed analysis report
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Perfect for presentations
+                </li>
+              </ul>
+              <Link
+                href="/pricing"
+                className="block w-full bg-accent/80 hover:bg-accent text-dark-1 font-semibold py-3 px-6 rounded-xl transition-colors text-center"
+              >
+                Get PDF Report
+              </Link>
             </div>
 
             <div className="bg-dark-3 border border-accent rounded-xl p-6 hover:border-dark-6 hover:-translate-y-0.5 transition-all duration-200 relative">
@@ -727,7 +764,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-bold text-white mb-2">Pro Monitoring</h3>
               <div className="text-3xl font-bold text-white mb-1">$99<span className="text-lg text-slate-400">/month</span></div>
-              <div className="text-sm text-slate-400 mb-4">Coming soon</div>
+              <div className="text-sm text-green-400 mb-4">Available Now • Save 20% annually</div>
               <ul className="space-y-3 text-light-text-secondary mb-6">
                 <li className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
@@ -748,6 +785,12 @@ export default function HomePage() {
                   Priority support
                 </li>
               </ul>
+              <Link
+                href="/pricing"
+                className="block w-full bg-accent hover:bg-secondary text-dark-1 font-semibold py-3 px-6 rounded-xl transition-colors text-center"
+              >
+                View Pro Details
+              </Link>
             </div>
 
             <div className="bg-dark-3 border border-dark-5 rounded-xl p-6 hover:border-dark-6 hover:-translate-y-0.5 transition-all duration-200">
@@ -774,6 +817,12 @@ export default function HomePage() {
                   API access
                 </li>
               </ul>
+              <Link
+                href="/pricing"
+                className="block w-full bg-gray-dark-700 hover:bg-gray-dark-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors text-center"
+              >
+                Learn More
+              </Link>
             </div>
           </div>
         </div>
@@ -811,9 +860,9 @@ export default function HomePage() {
             </details>
 
             <details className="bg-dark-3 border border-dark-5 rounded-xl p-6 hover:border-dark-6 transition-all duration-200">
-              <summary className="font-medium text-white cursor-pointer">What's coming in the Pro plan?</summary>
+              <summary className="font-medium text-white cursor-pointer">What's included in the Pro plan?</summary>
               <div className="mt-4 text-slate-300">
-                Weekly automated rescans, score tracking over time, alerts when your score changes, and priority support. Launch expected Q2 2024.
+                Unlimited scans, weekly automated rescans, score tracking over time, email alerts when your score changes, and priority support. <Link href="/pricing" className="text-accent hover:text-secondary">Available now</Link>.
               </div>
             </details>
           </div>
@@ -876,7 +925,7 @@ export default function HomePage() {
                 <ul className="space-y-2 text-sm text-dark-text-secondary">
                   <li><Link href="/scan" className="hover:text-accent transition-colors">Free Scan</Link></li>
                   <li><Link href="/pricing" className="hover:text-accent transition-colors">Pricing</Link></li>
-                  <li><span className="opacity-50">Pro Monitoring</span></li>
+                  <li><Link href="/pricing" className="hover:text-accent transition-colors">Pro Monitoring</Link></li>
                   <li><span className="opacity-50">Agency Plan</span></li>
                 </ul>
               </div>

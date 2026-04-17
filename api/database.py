@@ -13,6 +13,13 @@ from supabase import Client, create_client
 from config import SUPABASE_KEY, SUPABASE_URL
 
 
+def get_supabase_client() -> Client:
+    """Get a Supabase client instance"""
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        raise ValueError("SUPABASE_URL and SUPABASE_KEY environment variables must be set")
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
 class Database:
     """Async Supabase client for scan data operations"""
 

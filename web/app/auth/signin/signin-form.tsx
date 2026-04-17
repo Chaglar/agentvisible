@@ -23,11 +23,15 @@ export function SignInForm() {
 
     const supabase = createClient()
 
+    // Get redirect parameter from URL
+    const urlParams = new URLSearchParams(window.location.search)
+    const redirect = urlParams.get('redirect') || '/'
+
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`,
         },
       })
 

@@ -5,20 +5,25 @@ Main application entry point with CORS, health endpoint, scan API, and reports
 
 import os
 import time
-import jwt
 from collections import defaultdict
-from typing import Dict, Optional
+from typing import Dict
+
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from fastapi.responses import StreamingResponse
 from fastapi import BackgroundTasks
 
 from config import ALLOWED_ORIGINS, SCANS_PER_HOUR, MODULE_EXPLANATIONS, CHECK_EXPLANATIONS
-from database import get_report, save_scan
+from database import get_report, save_scan, get_supabase_client
 from models import APIResponse, ScanRequest, ScanResult
+from auth import verify_jwt
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from typing import Optional
 from scanner.engine import run_scan
 from scanner.fetcher import is_safe_url
 from utils import (
@@ -31,6 +36,7 @@ from utils import (
 )
 from stripe_routes import router as stripe_router
 from stripe_webhooks import router as stripe_webhook_router
+from debug_jwt import router as debug_router
 
 app = FastAPI(
     title="AgentVisible API",
@@ -51,6 +57,9 @@ app.add_middleware(
 app.include_router(stripe_router)
 app.include_router(stripe_webhook_router)
 
+# Include debug router (for development)
+app.include_router(debug_router)
+
 
 @app.get("/api/v1/health")
 async def health_check():
@@ -62,58 +71,6 @@ async def health_check():
 # Format: {ip: [(timestamp1, timestamp2, ...)]}
 rate_limit_store: Dict[str, list] = defaultdict(list)
 
-# JWT Authentication
-security = HTTPBearer(auto_error=False)
-JWT_SECRET = os.environ.get("SUPABASE_JWT_SECRET")
-
-
-def verify_jwt(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> Optional[dict]:
-    """
-    Verify JWT token from Authorization header
-
-    Args:
-        credentials: Authorization credentials from header
-
-    Returns:
-        Decoded JWT payload if valid, None if no token or invalid
-    """
-    if not credentials or not JWT_SECRET:
-        return None
-
-    try:
-        # Decode JWT using Supabase JWT secret
-        payload = jwt.decode(
-            credentials.credentials,
-            JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated"
-        )
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token has expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-
-def require_auth(user: Optional[dict] = Depends(verify_jwt)) -> dict:
-    """
-    Require valid authentication for protected endpoints
-
-    Args:
-        user: User payload from JWT verification
-
-    Returns:
-        User payload if authenticated
-
-    Raises:
-        HTTPException: 401 if not authenticated
-    """
-    if not user:
-        raise HTTPException(
-            status_code=401,
-            detail="Authentication required. Please sign in."
-        )
-    return user
 
 
 def check_rate_limit(client_ip: str) -> bool:
@@ -144,22 +101,50 @@ def check_rate_limit(client_ip: str) -> bool:
     return True
 
 
+async def has_pro_subscription(user_id: str) -> bool:
+    """Check if user has an active Pro subscription"""
+    try:
+        supabase = get_supabase_client()
+        result = supabase.table('subscriptions').select('tier, status').eq('user_id', user_id).eq('status', 'active').execute()
+        if result.data:
+            subscription = result.data[0]
+            return subscription.get('tier') in ['pro', 'agency']
+        return False
+    except Exception as e:
+        print(f"Failed to check subscription status: {e}")
+        return False
+
+
 @app.post("/api/v1/scan", response_model=APIResponse)
-async def scan_url(request: ScanRequest, req: Request):
+async def scan_url(request: ScanRequest, req: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
     """
     Scan a URL for AI agent readiness
     Returns complete analysis with score, rating, and actionable fixes
     """
     try:
-        # Get client IP for rate limiting
-        client_ip = req.client.host if req.client else "unknown"
+        # Check if user has Pro subscription (unlimited scans)
+        is_pro_user = False
+        user = None
 
-        # Check rate limit
-        if not check_rate_limit(client_ip):
-            raise HTTPException(
-                status_code=429,
-                detail="Rate limit exceeded. Maximum 10 scans per hour per IP."
-            )
+        if credentials:
+            user = verify_jwt(credentials)
+            if user:
+                user_id = user.get('sub')
+                if user_id:
+                    is_pro_user = await has_pro_subscription(user_id)
+                    print(f"User {user.get('email')} has Pro subscription: {is_pro_user}")
+
+        # Apply rate limiting only to free users
+        if not is_pro_user:
+            # Get client IP for rate limiting
+            client_ip = req.client.host if req.client else "unknown"
+
+            # Check rate limit
+            if not check_rate_limit(client_ip):
+                raise HTTPException(
+                    status_code=429,
+                    detail="Rate limit exceeded. Maximum 10 scans per hour per IP."
+                )
 
         # Validate URL safety (SSRF protection)
         url_str = str(request.url)

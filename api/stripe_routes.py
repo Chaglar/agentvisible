@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 
-# Import the auth dependency from main.py
-from main import verify_jwt
+# Import the auth dependency from auth.py
+from auth import verify_jwt
+from database import get_supabase_client
 
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
 
@@ -25,6 +26,8 @@ async def create_checkout_session(
 ):
     """Create a Stripe Checkout session for PDF report or Pro subscription."""
 
+    print(f"Create checkout session request: price_id={req.price_id}, user_id={user.get('sub') if user else 'None'}")
+
     if not user:
         raise HTTPException(status_code=401, detail='Must be logged in to purchase')
 
@@ -32,11 +35,23 @@ async def create_checkout_session(
     if not user_id:
         raise HTTPException(status_code=401, detail='Invalid user token')
 
+    # Check if user already has an active Pro subscription
+    supabase = get_supabase_client()
+    existing_sub = supabase.table('subscriptions').select('tier, status').eq('user_id', user_id).eq('status', 'active').execute()
+
+    if existing_sub.data:
+        subscription = existing_sub.data[0]
+        if subscription.get('tier') in ['pro', 'agency']:
+            raise HTTPException(status_code=400, detail='You already have an active Pro subscription!')
+
     # Determine if this is a one-time or subscription purchase
     pdf_price_id = os.environ.get('STRIPE_PRICE_ID_PDF')
     pro_price_id = os.environ.get('STRIPE_PRICE_ID_PRO_MONTHLY')
 
+    print(f"Price ID validation: req={req.price_id}, pdf={pdf_price_id}, pro={pro_price_id}")
+
     if req.price_id not in [pdf_price_id, pro_price_id]:
+        print(f"Price ID validation failed: {req.price_id} not in [{pdf_price_id}, {pro_price_id}]")
         raise HTTPException(status_code=400, detail='Invalid price ID')
 
     is_subscription = req.price_id == pro_price_id
@@ -77,7 +92,11 @@ async def create_checkout_session(
         return {'checkout_url': session.url, 'session_id': session.id}
 
     except stripe.error.StripeError as e:
+        print(f"Stripe error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        print(f"Unexpected error in create_checkout_session: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Checkout failed: {str(e)}")
 
 
 @router.get('/billing-portal')
@@ -95,7 +114,6 @@ async def create_billing_portal(
         raise HTTPException(status_code=401, detail='Invalid user token')
 
     # Look up stripe_customer_id from subscriptions table
-    from database import get_supabase_client
     supabase = get_supabase_client()
 
     result = supabase.table('subscriptions').select('stripe_customer_id').eq('user_id', user_id).single().execute()

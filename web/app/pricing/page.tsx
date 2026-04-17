@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { Metadata } from 'next'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { authenticatedFetch } from '@/lib/api'
 
 // This would be better handled with generateMetadata in App Router
 // export const metadata: Metadata = {
@@ -16,6 +17,9 @@ export default function PricingPage() {
   const [showWaitlistForm, setShowWaitlistForm] = useState(false)
   const [waitlistSubmitted, setWaitlistSubmitted] = useState(false)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
+  const searchParams = useSearchParams()
+
+  // Note: Removed auto-checkout logic - users should manually click "Start Pro Trial"
 
   const handleWaitlistSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,7 +39,7 @@ export default function PricingPage() {
     setIsCheckingOut(true)
 
     try {
-      const response = await fetch('/api/v1/stripe/create-checkout-session', {
+      const response = await authenticatedFetch('/api/v1/stripe/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -47,8 +51,9 @@ export default function PricingPage() {
       })
 
       if (response.status === 401) {
-        // User not logged in — redirect to signin
-        window.location.href = '/auth/signin?redirect=/pricing'
+        // User not logged in — redirect to signin with checkout intent
+        const checkoutType = priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO_MONTHLY ? 'pro' : 'pdf'
+        window.location.href = `/auth/signin?redirect=${encodeURIComponent(`/pricing?checkout=${checkoutType}`)}`
         return
       }
 
