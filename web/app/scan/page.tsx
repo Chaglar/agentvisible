@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import ScanResultPanel from '../../components/ScanResultPanel'
@@ -701,7 +701,7 @@ interface ScanError {
   retryAfter?: number
 }
 
-export default function ScanPage() {
+function ScanPageContent() {
   const [scanResult, setScanResult] = useState<EnhancedScanResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<ScanError | null>(null)
@@ -1270,5 +1270,17 @@ export default function ScanPage() {
         )}
       </div>
     </main>
+  )
+}
+
+export default function ScanPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-dark-1 flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    }>
+      <ScanPageContent />
+    </Suspense>
   )
 }

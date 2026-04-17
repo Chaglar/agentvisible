@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import CookieConsent from '../components/CookieConsent'
+import { AuthNav } from '../components/auth-nav'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -44,6 +45,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="min-h-screen bg-background text-white font-display antialiased">
+        <div className="fixed top-4 right-4 z-40">
+          <AuthNav />
+        </div>
         {children}
         <CookieConsent />
       </body>

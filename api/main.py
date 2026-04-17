@@ -3,12 +3,15 @@ AgentVisible.ai FastAPI backend
 Main application entry point with CORS, health endpoint, scan API, and reports
 """
 
+import os
 import time
+import jwt
 from collections import defaultdict
-from typing import Dict
+from typing import Dict, Optional
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from fastapi.responses import StreamingResponse
 from fastapi import BackgroundTasks
@@ -52,6 +55,59 @@ async def health_check():
 # Rate limiting: simple in-memory store (10 scans/hour per IP)
 # Format: {ip: [(timestamp1, timestamp2, ...)]}
 rate_limit_store: Dict[str, list] = defaultdict(list)
+
+# JWT Authentication
+security = HTTPBearer(auto_error=False)
+JWT_SECRET = os.environ.get("SUPABASE_JWT_SECRET")
+
+
+def verify_jwt(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> Optional[dict]:
+    """
+    Verify JWT token from Authorization header
+
+    Args:
+        credentials: Authorization credentials from header
+
+    Returns:
+        Decoded JWT payload if valid, None if no token or invalid
+    """
+    if not credentials or not JWT_SECRET:
+        return None
+
+    try:
+        # Decode JWT using Supabase JWT secret
+        payload = jwt.decode(
+            credentials.credentials,
+            JWT_SECRET,
+            algorithms=["HS256"],
+            audience="authenticated"
+        )
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
+def require_auth(user: Optional[dict] = Depends(verify_jwt)) -> dict:
+    """
+    Require valid authentication for protected endpoints
+
+    Args:
+        user: User payload from JWT verification
+
+    Returns:
+        User payload if authenticated
+
+    Raises:
+        HTTPException: 401 if not authenticated
+    """
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required. Please sign in."
+        )
+    return user
 
 
 def check_rate_limit(client_ip: str) -> bool:
