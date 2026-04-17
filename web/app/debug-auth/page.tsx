@@ -39,7 +39,12 @@ export default function DebugAuthPage() {
         }),
       })
 
-      const result = {
+      const result: {
+        status: number
+        statusText: string
+        data: any
+        error: string | null
+      } = {
         status: response.status,
         statusText: response.statusText,
         data: null,

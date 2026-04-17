@@ -95,7 +95,65 @@ async def handle_checkout_completed(supabase, session):
             'status': 'completed',
         }).execute()
 
-        # TODO: Trigger PDF generation + email delivery (Task 027)
+        # Generate PDF and email it
+        try:
+            from pdf_generator import generate_scan_report_pdf
+            from email_service import send_pdf_report_email
+
+            # Fetch the scan data for this URL
+            scan_result = supabase.table('scans').select('*').eq('url', scan_url).order('created_at', desc=True).limit(1).execute()
+
+            if scan_result.data:
+                scan = scan_result.data[0]
+
+                # Get user email from Stripe session (primary method)
+                user_email = session.get('customer_details', {}).get('email')
+
+                # Fallback: get email from Supabase auth if needed
+                if not user_email:
+                    try:
+                        user_result = supabase.rpc('get_user_email', {'user_uuid': user_id}).execute()
+                        user_email = user_result.data if user_result.data else None
+                    except Exception:
+                        pass  # RPC doesn't exist, skip fallback
+
+                if user_email and scan:
+                    # Parse scan data (handle both direct format and modules format)
+                    scan_data = scan
+                    if isinstance(scan.get('modules'), str):
+                        import json
+                        scan_data['modules'] = json.loads(scan['modules'])
+
+                    # Generate PDF
+                    pdf_bytes = generate_scan_report_pdf(scan_data, scan_url)
+
+                    # Email it
+                    email_success = send_pdf_report_email(
+                        to_email=user_email,
+                        url=scan_url,
+                        score=int(scan.get('overall_score', 0)),
+                        pdf_bytes=pdf_bytes,
+                    )
+
+                    # Update purchase record with completion status
+                    pdf_filename = f'reports/{user_id}/{scan_url.replace(".", "-")}.pdf'
+                    supabase.table('purchases').update({
+                        'status': 'completed',
+                        'pdf_url': pdf_filename,
+                    }).eq('stripe_checkout_session_id', session['id']).execute()
+
+                    if email_success:
+                        print(f'PDF report emailed successfully to {user_email} for {scan_url}')
+                    else:
+                        print(f'Failed to email PDF report to {user_email}')
+                else:
+                    print(f'Missing email ({user_email}) or scan data for URL: {scan_url}')
+            else:
+                print(f'No scan data found for URL: {scan_url}')
+
+        except Exception as e:
+            print(f'PDF generation/email error: {e}')
+            # Don't fail the webhook — log the error, retry later
 
 
 async def handle_invoice_paid(supabase, invoice):

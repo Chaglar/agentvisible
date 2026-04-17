@@ -1243,6 +1243,23 @@ function ScanPageContent() {
             {/* Top Fixes */}
             <TopFixes fixes={scanResult.top_fixes} />
 
+            {/* PDF Report CTA */}
+            <div className="mt-8 p-6 bg-dark-3 border border-dark-5 rounded-xl text-center">
+              <h3 className="text-lg font-medium text-white mb-2">
+                Get the full report as PDF
+              </h3>
+              <p className="text-slate-400 text-sm mb-4">
+                Detailed breakdown, fix instructions, and shareable format. Delivered to your email.
+              </p>
+              <button
+                onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PDF!, scanResult.url)}
+                disabled={isCheckingOut}
+                className="bg-teal-400 text-dark-1 px-6 py-3 rounded-lg font-medium hover:bg-teal-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCheckingOut ? 'Processing...' : 'Buy PDF Report — $29'}
+              </button>
+            </div>
+
             {/* Module Cards */}
             <div className="mb-12">
               <h2 className="text-2xl font-bold mb-8 text-center">Detailed Analysis</h2>
