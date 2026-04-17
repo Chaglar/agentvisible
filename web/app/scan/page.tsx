@@ -710,9 +710,47 @@ function ScanPageContent() {
   const [explanations, setExplanations] = useState<Explanations | null>(null)
   const [showComparisonInput, setShowComparisonInput] = useState(false)
   const [comparisonUrl, setComparisonUrl] = useState('')
+  const [isCheckingOut, setIsCheckingOut] = useState(false)
 
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const hasScannedRef = useRef(false)
+
+  const handleCheckout = async (priceId: string, scanUrl?: string) => {
+    setIsCheckingOut(true)
+
+    try {
+      const response = await fetch('/api/v1/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          price_id: priceId,
+          scan_url: scanUrl,
+        }),
+      })
+
+      if (response.status === 401) {
+        // User not logged in — redirect to signin
+        window.location.href = '/auth/signin?redirect=/scan'
+        return
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session')
+      }
+
+      const data = await response.json()
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url
+      }
+    } catch (error) {
+      console.error('Checkout error:', error)
+      alert('Failed to start checkout. Please try again.')
+    } finally {
+      setIsCheckingOut(false)
+    }
+  }
 
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -964,10 +1002,10 @@ function ScanPageContent() {
             heading: 'You have hit the free scan limit',
             body: 'Free plan includes 20 scans per hour. You can wait 60 minutes or upgrade to Pro for unlimited scans.',
             primaryCTA: {
-              text: 'Upgrade to Pro — $99/mo',
-              href: '/pricing',
-              action: null,
-              disabled: false
+              text: isCheckingOut ? 'Starting checkout...' : 'Upgrade to Pro — $99/mo',
+              href: undefined,
+              action: () => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO_MONTHLY!),
+              disabled: isCheckingOut
             },
             secondaryCTA: {
               text: 'Try again in 60 minutes',

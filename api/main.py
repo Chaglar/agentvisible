@@ -29,6 +29,8 @@ from utils import (
     get_social_share_text,
     detect_competitor_suggestions
 )
+from stripe_routes import router as stripe_router
+from stripe_webhooks import router as stripe_webhook_router
 
 app = FastAPI(
     title="AgentVisible API",
@@ -44,6 +46,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include Stripe routers
+app.include_router(stripe_router)
+app.include_router(stripe_webhook_router)
 
 
 @app.get("/api/v1/health")

@@ -15,6 +15,7 @@ export default function PricingPage() {
   const [waitlistEmail, setWaitlistEmail] = useState('')
   const [showWaitlistForm, setShowWaitlistForm] = useState(false)
   const [waitlistSubmitted, setWaitlistSubmitted] = useState(false)
+  const [isCheckingOut, setIsCheckingOut] = useState(false)
 
   const handleWaitlistSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,6 +28,43 @@ export default function PricingPage() {
         setWaitlistSubmitted(false)
         setWaitlistEmail('')
       }, 2000)
+    }
+  }
+
+  const handleCheckout = async (priceId: string, scanUrl?: string) => {
+    setIsCheckingOut(true)
+
+    try {
+      const response = await fetch('/api/v1/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          price_id: priceId,
+          scan_url: scanUrl,
+        }),
+      })
+
+      if (response.status === 401) {
+        // User not logged in — redirect to signin
+        window.location.href = '/auth/signin?redirect=/pricing'
+        return
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session')
+      }
+
+      const data = await response.json()
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url
+      }
+    } catch (error) {
+      console.error('Checkout error:', error)
+      alert('Failed to start checkout. Please try again.')
+    } finally {
+      setIsCheckingOut(false)
     }
   }
 
@@ -122,12 +160,21 @@ export default function PricingPage() {
               </li>
             </ul>
 
-            <Link
-              href="/"
-              className="w-full bg-gray-dark-700 hover:bg-gray-dark-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors text-center block"
-            >
-              Start Free Scan
-            </Link>
+            <div className="space-y-3">
+              <Link
+                href="/"
+                className="w-full bg-gray-dark-700 hover:bg-gray-dark-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors text-center block"
+              >
+                Start Free Scan
+              </Link>
+              <button
+                onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PDF!)}
+                disabled={isCheckingOut}
+                className="w-full bg-transparent border border-gray-dark-500 hover:border-gray-dark-400 text-gray-300 hover:text-white font-medium py-3 px-6 rounded-xl transition-colors disabled:opacity-50"
+              >
+                {isCheckingOut ? 'Starting checkout...' : 'Buy PDF Report - $29'}
+              </button>
+            </div>
           </div>
 
           {/* Pro Plan */}
@@ -191,10 +238,11 @@ export default function PricingPage() {
             </ul>
 
             <button
-              onClick={() => setShowWaitlistForm(true)}
-              className="w-full bg-accent hover:bg-secondary text-background font-semibold py-3 px-6 rounded-xl transition-colors"
+              onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO_MONTHLY!)}
+              disabled={isCheckingOut}
+              className="w-full bg-accent hover:bg-secondary text-background font-semibold py-3 px-6 rounded-xl transition-colors disabled:opacity-50"
             >
-              Join Waitlist
+              {isCheckingOut ? 'Starting checkout...' : 'Start Pro Trial'}
             </button>
           </div>
 
