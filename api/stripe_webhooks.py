@@ -79,6 +79,23 @@ async def handle_checkout_completed(supabase, session):
                 'updated_at': datetime.utcnow().isoformat(),
             }, on_conflict='stripe_subscription_id').execute()
 
+            # Send Pro receipt email
+            try:
+                import resend
+                resend.api_key = os.environ.get('RESEND_API_KEY')
+                from email_templates import pro_receipt_email
+
+                customer_email = session.get('customer_details', {}).get('email')
+                if customer_email:
+                    period_end = ''
+                    if subscription_id:
+                        period_end = datetime.fromtimestamp(sub['current_period_end']).strftime('%B %d, %Y')
+
+                    resend.Emails.send(pro_receipt_email(customer_email, '$99.00', period_end))
+                    print(f'Pro receipt email sent to {customer_email}')
+            except Exception as e:
+                print(f'Pro receipt email error: {e}')
+
     elif product == 'pdf_report':
         # One-time PDF purchase
         payment_intent = session.get('payment_intent')

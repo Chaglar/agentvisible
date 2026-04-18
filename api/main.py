@@ -409,6 +409,34 @@ async def get_dashboard(user_id: str = Depends(get_required_user_id)):
     }
 
 
+@app.post('/api/v1/auth/welcome')
+async def send_welcome(user_id: str = Depends(get_required_user_id)):
+    """Send welcome email to new user (prevent duplicates by checking for existing scans)"""
+    supabase = get_supabase_client()
+
+    # Check if already welcomed (prevent duplicates)
+    existing = supabase.table('scans').select('id').eq('user_id', user_id).limit(1).execute()
+    if existing.data:
+        return {'status': 'already_welcomed'}
+
+    # Get user email
+    try:
+        user = supabase.auth.admin.get_user_by_id(user_id)
+        email = user.user.email if user and user.user else None
+
+        if email:
+            import resend
+            resend.api_key = os.environ.get('RESEND_API_KEY')
+            from email_templates import welcome_email
+            resend.Emails.send(welcome_email(email))
+
+            return {'status': 'sent', 'email': email}
+        else:
+            return {'status': 'no_email'}
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
+
+
 # Root route for testing
 @app.get("/")
 async def root():

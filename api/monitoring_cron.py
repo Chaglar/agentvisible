@@ -68,8 +68,9 @@ async def send_drop_alerts(supabase, alerts):
     """Send email alerts for score drops."""
     import resend
     resend.api_key = os.environ.get('RESEND_API_KEY')
+    from email_templates import score_drop_alert_email
 
-    # Group alerts by user
+    # Group by user
     user_alerts = {}
     for alert in alerts:
         uid = alert['user_id']
@@ -78,52 +79,68 @@ async def send_drop_alerts(supabase, alerts):
         user_alerts[uid].append(alert)
 
     for user_id, user_alert_list in user_alerts.items():
-        # Get user email
-        try:
-            user = supabase.auth.admin.get_user_by_id(user_id)
-            email = user.user.email if user and user.user else None
-        except:
-            email = None
+        user = supabase.auth.admin.get_user_by_id(user_id)
+        email = user.user.email if user and user.user else None
 
-        if not email:
+        if email:
+            try:
+                resend.Emails.send(score_drop_alert_email(email, user_alert_list))
+                print(f'  Alert sent to {email}')
+            except Exception as e:
+                print(f'  Alert email failed: {e}')
+
+
+async def send_weekly_digests():
+    """Send weekly digest to all Pro users with active watchlists."""
+    from database import get_supabase_client
+    import resend
+    resend.api_key = os.environ.get('RESEND_API_KEY')
+    from email_templates import weekly_digest_email
+
+    supabase = get_supabase_client()
+
+    # Get all active Pro subscriptions
+    subs = supabase.table('subscriptions').select('user_id').eq('status', 'active').eq('tier', 'pro').execute()
+
+    print(f'Sending weekly digests to {len(subs.data or [])} Pro users...')
+
+    for sub in (subs.data or []):
+        user_id = sub['user_id']
+
+        # Get their watchlist with latest scores
+        watchlist = supabase.table('watchlist').select('id, url, last_score').eq('user_id', user_id).eq('active', True).execute()
+
+        if not watchlist.data:
             continue
 
-        # Build alert email
-        alert_rows = ''
-        for a in user_alert_list:
-            alert_rows += f'<tr><td style="padding:8px;color:#cbd5e1;">{a["url"]}</td>'
-            alert_rows += f'<td style="padding:8px;color:#ef4444;">{a["old_score"]} → {a["new_score"]} (↓{a["drop"]})</td></tr>'
+        # Get previous scores for change calculation
+        sites = []
+        for item in watchlist.data:
+            history = supabase.table('score_history').select('score').eq('watchlist_id', item['id']).order('scanned_at', desc=True).limit(2).execute()
 
-        try:
-            resend.Emails.send({
-                'from': 'AgentVisible <alerts@agentvisible.ai>',
-                'to': [email],
-                'subject': f'Score drop alert: {len(user_alert_list)} site(s) decreased',
-                'html': f'''
-                    <div style="font-family:-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#cbd5e1;">
-                        <h1 style="color:#ffffff;font-size:24px;">Score Drop Alert</h1>
-                        <p>The following monitored sites had score decreases of more than 5 points:</p>
-                        <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-                            <tr style="border-bottom:1px solid #252b3a;">
-                                <th style="text-align:left;padding:8px;color:#94a3b8;">Site</th>
-                                <th style="text-align:left;padding:8px;color:#94a3b8;">Score Change</th>
-                            </tr>
-                            {alert_rows}
-                        </table>
-                        <p style="margin-top:24px;">
-                            <a href="https://agentvisible.ai/dashboard/monitoring" style="color:#22d3ee;">
-                                View full comparison →
-                            </a>
-                        </p>
-                        <hr style="border-color:#252b3a;margin:24px 0;"/>
-                        <p style="font-size:12px;color:#64748b;">AgentVisible.ai · Pro Monitoring Alert</p>
-                    </div>
-                ''',
+            current = item.get('last_score', 0)
+            previous = history.data[1]['score'] if len(history.data or []) > 1 else current
+
+            sites.append({
+                'url': item['url'],
+                'score': current,
+                'change': current - previous,
             })
-            print(f'  Alert sent to {email}')
-        except Exception as e:
-            print(f'  Alert email failed for {email}: {e}')
+
+        # Get user email and send
+        user = supabase.auth.admin.get_user_by_id(user_id)
+        email = user.user.email if user and user.user else None
+
+        if email and sites:
+            try:
+                resend.Emails.send(weekly_digest_email(email, sites))
+                print(f'  Digest sent to {email}')
+            except Exception as e:
+                print(f'  Digest email failed: {e}')
+
+    print('Weekly digests complete.')
 
 
 if __name__ == '__main__':
     asyncio.run(run_weekly_scans())
+    asyncio.run(send_weekly_digests())
