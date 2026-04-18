@@ -383,7 +383,8 @@ async def get_required_user_id(authorization: str = Header(default=None)) -> str
 @app.get('/api/v1/dashboard')
 async def get_dashboard(user_id: str = Depends(get_required_user_id)):
     supabase = get_supabase_client()
-    scans = supabase.table('scans').select('url,score,created_at,slug').eq('user_id', user_id).order('created_at', desc=True).limit(50).execute()
+    # Note: scans table doesn't have user_id column yet, showing recent scans for now
+    scans = supabase.table('scans').select('url,overall_score,created_at,slug').order('created_at', desc=True).limit(10).execute()
     subs = supabase.table('subscriptions').select('*').eq('user_id', user_id).eq('status', 'active').limit(1).execute()
     purchases = supabase.table('purchases').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
     tier = 'pro' if subs.data else 'free'
