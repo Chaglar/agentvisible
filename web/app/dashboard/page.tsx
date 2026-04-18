@@ -24,21 +24,31 @@ export default function Dashboard() {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
-        router.push('/auth/sign-in');
+        router.push('/auth/signin');
         return;
       }
 
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        console.log('Session exists:', !!session);
+        console.log('Access token exists:', !!session?.access_token);
+
         const response = await fetch('/api/v1/dashboard', {
           headers: {
             'Authorization': `Bearer ${session?.access_token}`
           }
         });
 
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+
         if (response.ok) {
           const dashboardData = await response.json();
+          console.log('Dashboard data received:', dashboardData);
           setData(dashboardData);
+        } else {
+          const errorText = await response.text();
+          console.error('Dashboard API error:', response.status, response.statusText, errorText);
         }
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
@@ -92,6 +102,29 @@ export default function Dashboard() {
           </div>
         )}
 
+        {data.tier === 'pro' && (
+          <div className="bg-[#111827] border border-[#252b3a] rounded-xl p-6 mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-white">Monitoring</h3>
+              <Link href="/dashboard/monitoring" className="text-teal-400 text-sm hover:underline">
+                Manage watchlist →
+              </Link>
+            </div>
+            <p className="text-slate-400 text-sm">
+              Track your site and up to 2 competitors. Weekly automated scans with email alerts.
+            </p>
+          </div>
+        )}
+
+        {data.tier === 'free' && (
+          <div className="bg-[#111827] border border-[#252b3a] rounded-xl p-6 mb-8 opacity-60">
+            <h3 className="text-lg font-medium text-white mb-2">Monitoring</h3>
+            <p className="text-slate-400 text-sm">
+              Pro feature: Track your site + 2 competitors with weekly scans and score drop alerts.
+            </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-[#111827] border border-[#252b3a] rounded-xl p-6">
             <h2 className="text-white text-xl font-bold mb-4">Recent Scans ({data.scan_count})</h2>
@@ -100,7 +133,7 @@ export default function Dashboard() {
                 {data.scans.slice(0, 5).map((scan: any, index: number) => (
                   <div key={index} className="border-b border-[#252b3a] pb-3 last:border-b-0">
                     <div className="text-white font-medium">{scan.url}</div>
-                    <div className="text-slate-400 text-sm">Score: {scan.score}/100</div>
+                    <div className="text-slate-400 text-sm">Score: {scan.overall_score}/100</div>
                     <div className="text-slate-400 text-sm">
                       {new Date(scan.created_at).toLocaleDateString()}
                     </div>
