@@ -37,6 +37,8 @@ from utils import (
 from stripe_routes import router as stripe_router
 from stripe_webhooks import router as stripe_webhook_router
 from debug_jwt import router as debug_router
+from monitoring_routes import router as monitoring_router
+from deps import get_required_user_id
 
 app = FastAPI(
     title="AgentVisible API",
@@ -59,6 +61,9 @@ app.include_router(stripe_webhook_router)
 
 # Include debug router (for development)
 app.include_router(debug_router)
+
+# Include monitoring router
+app.include_router(monitoring_router)
 
 
 @app.get("/api/v1/health")
@@ -358,27 +363,24 @@ async def get_competitor_suggestions(domain: str):
         )
 
 
-async def get_optional_user_id(authorization: str = None) -> Optional[str]:
-    """Extract user ID from JWT token"""
-    if not authorization or not authorization.startswith('Bearer '):
-        return None
+@app.get('/api/v1/debug-subscriptions')
+async def debug_subscriptions(user_id: str = Depends(get_required_user_id)):
+    """Debug endpoint to check subscription status"""
+    supabase = get_supabase_client()
 
-    try:
-        token = authorization.replace('Bearer ', '')
-        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
-        user = verify_jwt(credentials)
-        return user.get('sub') if user else None
-    except:
-        return None
+    # Get all subscriptions for this user
+    all_subs = supabase.table('subscriptions').select('*').eq('user_id', user_id).execute()
 
+    # Get all purchases for this user
+    all_purchases = supabase.table('purchases').select('*').eq('user_id', user_id).execute()
 
-async def get_required_user_id(authorization: str = Header(default=None)) -> str:
-    """Extract user ID from JWT token, raise 401 if not found"""
-    uid = await get_optional_user_id(authorization)
-    if not uid:
-        raise HTTPException(status_code=401, detail='Auth required')
-    return uid
-
+    return {
+        'user_id': user_id,
+        'all_subscriptions': all_subs.data or [],
+        'all_purchases': all_purchases.data or [],
+        'subscription_count': len(all_subs.data or []),
+        'purchase_count': len(all_purchases.data or [])
+    }
 
 @app.get('/api/v1/dashboard')
 async def get_dashboard(user_id: str = Depends(get_required_user_id)):
@@ -386,9 +388,25 @@ async def get_dashboard(user_id: str = Depends(get_required_user_id)):
     # Note: scans table doesn't have user_id column yet, showing recent scans for now
     scans = supabase.table('scans').select('url,overall_score,created_at,slug').order('created_at', desc=True).limit(10).execute()
     subs = supabase.table('subscriptions').select('*').eq('user_id', user_id).eq('status', 'active').limit(1).execute()
+    all_subs = supabase.table('subscriptions').select('*').eq('user_id', user_id).execute()  # Debug: get ALL subscriptions
     purchases = supabase.table('purchases').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
     tier = 'pro' if subs.data else 'free'
-    return {'tier': tier, 'subscription': subs.data[0] if subs.data else None, 'scans': scans.data or [], 'purchases': purchases.data or [], 'scan_count': len(scans.data or [])}
+
+    return {
+        'tier': tier,
+        'subscription': subs.data[0] if subs.data else None,
+        'scans': scans.data or [],
+        'purchases': purchases.data or [],
+        'scan_count': len(scans.data or []),
+        # Debug info
+        'debug': {
+            'user_id': user_id,
+            'active_subs_count': len(subs.data or []),
+            'total_subs_count': len(all_subs.data or []),
+            'all_subscriptions': all_subs.data or [],
+            'purchase_count': len(purchases.data or [])
+        }
+    }
 
 
 # Root route for testing

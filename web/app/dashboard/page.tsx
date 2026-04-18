@@ -14,6 +14,7 @@ interface DashboardData {
 }
 
 export default function Dashboard() {
+
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DashboardData | null>(null);
   const router = useRouter();
