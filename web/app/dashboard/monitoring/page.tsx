@@ -27,8 +27,16 @@ export default function MonitoringPage() {
   const [addingType, setAddingType] = useState<'self' | 'competitor' | null>(null);
   const [scanning, setScanning] = useState(false);
   const [isProUser, setIsProUser] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [statusType, setStatusType] = useState<'success' | 'error'>('success');
   const router = useRouter();
   const supabase = createClient();
+
+  function showStatusMessage(message: string, type: 'success' | 'error' = 'success') {
+    setStatusMessage(message);
+    setStatusType(type);
+    setTimeout(() => setStatusMessage(''), 3000);
+  }
 
   useEffect(() => {
     checkAuthAndLoadData();
@@ -122,10 +130,10 @@ export default function MonitoringPage() {
         await loadComparison();
       } else {
         const error = await response.text();
-        alert('Failed to add URL: ' + error);
+        showStatusMessage('Failed to add URL: ' + error, 'error');
       }
     } catch (error) {
-      alert('Failed to add URL: ' + error);
+      showStatusMessage('Failed to add URL: ' + error, 'error');
     }
   }
 
@@ -158,12 +166,12 @@ export default function MonitoringPage() {
       if (response.ok) {
         await loadWatchlist();
         await loadComparison();
-        alert('Scans completed successfully!');
+        showStatusMessage('Scans completed successfully!', 'success');
       } else {
-        alert('Failed to trigger scans');
+        showStatusMessage('Failed to trigger scans', 'error');
       }
     } catch (error) {
-      alert('Failed to trigger scans: ' + error);
+      showStatusMessage('Failed to trigger scans: ' + error, 'error');
     } finally {
       setScanning(false);
     }
@@ -313,6 +321,15 @@ export default function MonitoringPage() {
 
   return (
     <div className="bg-[#0a0e17] min-h-screen">
+      {statusMessage && (
+        <div className={`fixed top-4 right-4 px-4 py-3 rounded-lg text-sm z-50 ${
+          statusType === 'error'
+            ? 'bg-[#111827] border border-[#dc2626] text-red-400'
+            : 'bg-[#111827] border border-[#252b3a] text-teal-400'
+        }`}>
+          {statusMessage}
+        </div>
+      )}
       <div className="max-w-4xl mx-auto p-6">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-white text-3xl font-bold">Monitoring</h1>
