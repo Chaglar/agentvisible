@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>We Also Cut 80 Percent, by Accident</title>
+<meta name="description" content="Claude Code's creator said they cut 80 percent of its prompt. I tried the undocumented flag, it failed, so I audited my own 542-line agent rulebook instead. It came back 106 lines.">
+<meta property="og:title" content="We Also Cut 80 Percent, by Accident">
+<meta property="og:type" content="article">
+<meta name="author" content="Fatih Gurcaglar">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="site"><a href="/">Agent Visible</a><nav><a href="/writing/">Writing</a><a href="/about/">About</a></nav></header>
+<main><article>
+<h1>We Also Cut 80 Percent, by Accident</h1>
+<p class="meta">Fatih Gurcaglar · August 2026 · 5 min</p>
+<p>Ten days ago Boris Cherny, who created Claude Code, said on stage that the team had cut 80 percent of its system prompt, and mentioned an undocumented flag that strips the remaining scaffolding entirely because the model behaves a little smarter without it. I run a one-person fintech whose code is written mostly by AI agents inside a fairly heavy rulebook, so this was not an abstract claim to me. It was an accusation.</p>
+<p>My rulebook is a file called CLAUDE.md that every agent session loads before touching the repository. It had grown to 542 lines. If the creator of the tool says the instructions are mostly dead weight, the obvious experiment is to find out which of my 542 lines are load-bearing.</p>
+<h2>The flag experiment failed in an interesting way</h2>
+<p>First I tried the flag itself. I ran the same real task twice in headless mode: write a static analysis script that parses every text-draw call in a canvas animation file and reports pairs that would visually overlap.</p>
+<p>The normal run finished in 57 seconds and did the job properly. It parsed 44 draw calls, attributed each to its enclosing scene function, flagged two borderline pairs, and, unprompted, noted that one call used a loop-computed coordinate it could not check statically, then reasoned about why that case could not overlap anyway. Good work, honestly.</p>
+<p>The stripped-prompt run failed in under a second with a login error. Reproducibly. The flag appears to route to a different configuration path that does not see my session, at least in the CLI version I am on. This is what you sign up for with undocumented flags, and it settled the question of building anything on top of it. But it left the more useful question open: if the vendor can cut 80 percent of their prompt, how much of mine is history rather than rules?</p>
+<h2>Reading your own rulebook like a skeptic</h2>
+<p>So I read all 542 lines with one question per line: if an agent ignored this line tomorrow, would anything bad actually happen?</p>
+<p>The file fell into three piles.</p>
+<p>The first pile was history wearing the costume of rules. An activation checklist for an auto-merge system, every item marked complete fourteen months of subjective time ago. A three-session review protocol we stopped using when full automation replaced it. Notes explaining why a decision was made in May. None of it binds anyone. It survived every previous edit because deleting documentation feels like vandalism, and it cost context tokens on every single agent session since.</p>
+<p>The second pile was duplication. The tier system that decides how much autonomy a piece of work gets was defined once in full, then partially restated in three other sections, each restatement slightly staler than the original. An agent reading all four gets the same rule with decreasing accuracy, which is worse than reading it once.</p>
+<p>The third pile was the constitution, and it compresses but does not delete. Which work an agent may merge on its own and which a human must. The banned vocabulary that financial services law imposes on our copy. The rule that no tax figure enters the code from a model's memory rather than a primary source. The hard stop that fires when an agent discovers its task is bigger than briefed. These lines encode risks that are specific to my product and my jurisdiction. No model update will ever make them unnecessary, because the model cannot know them. They are not knowledge, they are policy.</p>
+<p>The result: 542 lines became 106. Eighty percent, almost exactly. I did not aim for the number, and I laughed when the word count came back.</p>
+<h2>What the coincidence actually says</h2>
+<p>I do not think the matching percentage is luck. I think mature instruction files converge on a similar composition: roughly a fifth of what accumulates is policy the model genuinely cannot infer, and the rest is a sediment of past decisions, restated defaults, and explanations addressed to nobody. The vendor's prompt accumulated capability instructions the models outgrew. Mine accumulated project history the sessions outgrew. Different sediment, same ratio.</p>
+<p>The test for which fifth to keep turned out to be the same test I use for autonomy boundaries. A line earns its place if it encodes something about my world: my legal exposure, my money paths, my definition of dangerous. A line that describes how to be a good software engineer is a candidate for deletion, because that is what the model is.</p>
+<p>One caveat, which is really the point. Cutting the prose only felt safe because the rules that matter most stopped living in prose long ago. The vocabulary ban is enforced by a scanner in the build. The merge boundaries are enforced by branch protection and a required review gate. The trimmed file describes the fences; it is not the fences. If your instruction file is the only thing standing between an agent and your production system, do not cut it. Move it into mechanism first, and then discover, as I did, that most of what remains was never load-bearing at all.</p>
+<hr>
+<div class="foot"><em>Fatih Gurcaglar builds <a href="https://smsfcore.com">SMSF Core</a>, record-keeping software for self managed super fund trustees. The previous essay, <a href="/writing/where-the-agent-is-allowed-to-be-wrong/">Where the Agent Is Allowed to Be Wrong</a>, describes the boundary system the surviving 106 lines encode.</em></div>
+</article></main>
+</body>
+</html>

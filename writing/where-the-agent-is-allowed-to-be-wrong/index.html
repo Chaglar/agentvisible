@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Where the Agent Is Allowed to Be Wrong</title>
+<meta name="description" content="Four boundaries for AI coding agent autonomy in a codebase where some lines move money: blast-radius tiers, no self-granted permission, enforced-path controls, and outcome-asserting tests.">
+<meta property="og:title" content="Where the Agent Is Allowed to Be Wrong">
+<meta property="og:description" content="Four boundaries for AI coding agent autonomy in a regulated fintech codebase.">
+<meta property="og:type" content="article">
+<meta name="author" content="Fatih Gurcaglar">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="site">
+  <a href="/">Agent Visible</a>
+  <nav><a href="/writing/">Writing</a><a href="/about/">About</a></nav>
+</header>
+<main>
+<article>
+<h1>Where the Agent Is Allowed to Be Wrong</h1>
+<p class="meta">Fatih Gurcaglar · August 2026 · 10 min</p>
+
+<p>My accounting software ships code written mostly by AI agents. It is record-keeping software for self managed superannuation funds in Australia, which means the code computes things like franking credits and capital gains cost bases, and the people using it are trustees of their own retirement savings. This is not a domain that forgives casual errors, and I run it essentially alone.</p>
+
+<p>So the question I have spent the last year answering is not whether coding agents can be trusted. They can't, not uniformly, and neither can I. The question is where the system is allowed to be wrong. Autonomy is not a property of the agent. It is a property of the territory you let the agent operate in, and territories differ enormously in how expensive a mistake is and how fast you find out.</p>
+
+<p>This essay describes four boundaries I ended up drawing. None of them were obvious to me at the start. All of them now feel like the only sane way to run agents against a codebase where some lines move money and some lines move a button four pixels left.</p>
+
+<h2>Blast radius, not file type</h2>
+
+<p>My first attempt at an autonomy policy classified work by what it touched. UI files were safe, library files needed review. This felt rigorous and lasted about a month.</p>
+
+<p>The problem is that file type is a proxy, and proxies drift. A "UI change" can alter the string that tells a trustee what their tax position is. A one-line edit in a display component can round a currency the wrong way. Meanwhile a large, scary-looking refactor of an internal test helper can be completely inert. Classifying by file put the boundary in the wrong dimension.</p>
+
+<p>What replaced it is a classification by blast radius, written as questions in priority order. The work is walked through them and stops at the first yes:</p>
+
+<pre>1. Does it touch money, tax figures, statutory citations,
+   schema, auth, or payment flow?          -&gt; Tier 3
+2. Does it add a route, cross more than two components,
+   or need new end-to-end coverage?        -&gt; Tier 2
+3. Is it copy, docs, or tests for existing
+   behaviour?                              -&gt; Tier 1
+4. Unsure?                                 -&gt; Tier 3</pre>
+
+<figure>
+<svg viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three tiers mapped against blast radius. Tier 1 and 2, cheap loud errors, full agent autonomy with automated gates. Tier 3, expensive quiet errors, agent authors and a human merges.">
+  <style>text{font:14px Charter,Georgia,serif;fill:currentColor}.s{font-size:12px;opacity:.65}</style>
+  <line x1="60" y1="250" x2="690" y2="250" stroke="currentColor" stroke-width="1.5"/>
+  <text x="375" y="285" text-anchor="middle" class="s">blast radius of the worst plausible mistake</text>
+  <rect x="80" y="90" width="170" height="130" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="165" y="120" text-anchor="middle">Tier 1</text>
+  <text x="165" y="145" text-anchor="middle" class="s">copy, docs, tests</text>
+  <text x="165" y="170" text-anchor="middle" class="s">agent opens + merges</text>
+  <text x="165" y="192" text-anchor="middle" class="s">scanner gates</text>
+  <rect x="280" y="70" width="170" height="150" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="365" y="100" text-anchor="middle">Tier 2</text>
+  <text x="365" y="125" text-anchor="middle" class="s">routes, components</text>
+  <text x="365" y="150" text-anchor="middle" class="s">agent opens + merges</text>
+  <text x="365" y="172" text-anchor="middle" class="s">e2e + scanner gates</text>
+  <rect x="480" y="40" width="190" height="180" rx="10" fill="none" stroke="currentColor" stroke-width="3"/>
+  <text x="575" y="72" text-anchor="middle">Tier 3</text>
+  <text x="575" y="97" text-anchor="middle" class="s">money, tax, schema,</text>
+  <text x="575" y="117" text-anchor="middle" class="s">auth, payments</text>
+  <text x="575" y="147" text-anchor="middle" class="s">agent authors</text>
+  <text x="575" y="167" text-anchor="middle" class="s">human merges</text>
+  <text x="575" y="192" text-anchor="middle" class="s">no autonomous path</text>
+</svg>
+<figcaption>Autonomy narrows as the cost of the worst plausible mistake grows. The heavy border is the point: there is no agent-only path into Tier 3.</figcaption>
+</figure>
+
+<p>Tier 1 and calc-free Tier 2 work is fully autonomous. Tier 3 is the opposite pole: an agent may author the change, but a human merges it, and for database changes a human applies the SQL first, by hand, in the console. There is no path from an agent's keyboard to a merged change on a money line. Not a discouraged path. No path.</p>
+
+<p>The default in rule 4 matters as much as the tiers themselves. When classification is uncertain, the system treats the work as dangerous. Every autonomy incident I have read about in other people's systems begins with something optimistically classified.</p>
+
+<p>It is worth being concrete about what "fully autonomous" means mechanically, because the phrase gets used loosely. For Tier 1 and 2 work in my setup, an agent starts from a fresh checkout of main in its own worktree, so it cannot inherit another session's half-finished state. It iterates until four gates pass locally: the type checker, the unit suite, a production build with runtime configuration deliberately stripped (which surfaces any code that assumes secrets exist at build time), and a compliance scanner I will come back to. Then it commits to a branch namespaced to agents, opens its own pull request, writes the report in the body, and applies the tier label. On the server, a second agent reviews the diff against a rubric with three severity levels; the two worst levels block the merge, the third gets logged and waved through. If nothing blocks, the platform merges it. Nobody watched any of this happen. On a typical day this pipeline runs several times; my involvement is reading a one-line summary the next morning, or not.</p>
+
+<p>The branch protection is doing quiet work in that story. Main only accepts pull requests, for me too. The agents could not push directly to main even if a prompt injection convinced one to try, because the credential they hold has no such right. Autonomy boundaries you enforce with permissions survive bad days a lot better than boundaries you enforce with instructions.</p>
+
+<h2>An agent cannot grant itself permission</h2>
+
+<p>The second boundary took an embarrassing while to see. Suppose an agent is doing Tier 1 work, adding a test for an existing function, and discovers the function needs a small refactor to be testable. The refactor crosses into Tier 2. What should the agent do?</p>
+
+<p>The obvious answer is "use judgment," and it is wrong. An agent reclassifying its own work is an agent granting itself permission. The incentive gradient always points the same direction: the task wants to be finished, the reclassification unblocks it, and the agent is the least reliable judge available at exactly the moment judgment is needed, because it is the party that wants the answer to be yes.</p>
+
+<p>So the rule is mechanical. Discovery of scope beyond the current tier is a hard stop. The agent halts before any further edit, reports what it found, and a human either re-issues the work at the higher tier or finds a smaller path. Escalation is a human act, always, even when the escalation is from trivial to slightly-less-trivial. In practice this costs me two or three interruptions in a normal week, occasionally five or six in a heavy one. Each interruption is thirty seconds of reading and a one-line decision. I consider it the cheapest insurance I buy.</p>
+
+<p>The same logic runs in reverse and surprises people. When work briefed as dangerous turns out to be trivial, the agent still may not demote it. It finishes under the original discipline and flags the mismatch afterward, and the next similar brief gets classified lower by me. A system where the worker can lower its own supervision level has the same defect as one where it can raise its own clearance. The direction of the mistake differs; the missing ingredient, a second party, is the same.</p>
+
+<h2>A control that is not in the enforced path is not a control</h2>
+
+<p>I sell software to trustees under Australian financial services law, which bans certain vocabulary outright. The product must never emit words that imply financial advice. Early on, this rule lived in a document that said, in effect, "don't use these words." Documents do not stop anything. Agents had read it, I had written it, and none of that constituted a control.</p>
+
+<p>The version that works is three layers, each in a path that cannot be skipped:</p>
+
+<pre>pre-commit hook   greps staged customer-facing files
+CI test           walks the built output, fails the build
+deploy gate       a health endpoint the platform checks
+                  before traffic switches</pre>
+
+<p>The interesting engineering is in the details of layer two. The scanner has an allow-list, because statutory phrases legitimately contain banned words ("Super Guarantee Charge" contains "guarantee"). The first implementation skipped any line containing an allowed phrase. An agent-authored review later pointed out the hole: a banned word sharing a line with an allowed phrase sailed through. The fix neutralises only the allowed span and re-scans the remainder of the line. The gate is now stricter than my own manual reading of the same diff, which is the direction you want that relationship to move.</p>
+
+<p>The same principle governs facts, not just vocabulary. The product encodes tax law: rates, dates, thresholds, section numbers. The rule is that no statutory fact enters code or published copy from an agent's memory, ever. Each one is verified against the primary source, the legislation register or the tax office's own pages, and recorded in a register with the value, the source link, and the date it was last checked. When an agent's training data disagrees with the register, the register wins, and when the register entry is stale, the fact gets re-verified before it ships anywhere new. Model memory is a rumour mill with excellent grammar. The register exists because I could not tell, from the outside, whether a confidently stated threshold was knowledge or plausible reconstruction, and for this product the difference is everything.</p>
+
+<p>I keep returning to this pattern because it generalises. Every rule I actually rely on has migrated from prose to an enforced mechanism. The ones still living in prose are the ones I lose sleep over. If an agent can merge work without a rule having fired, the rule is a wish.</p>
+
+<h2>The test must claim the outcome, not the parameter</h2>
+
+<p>The subtlest boundary is inside the test suite. For most code, a test that pins the call ("the function was invoked with create_prorations") is fine. For money paths it is a trap, because the code and the test can share the same wrong assumption about what the parameter does. Both were written against the same mental model, often by the same agent in the same session. Agreement between them proves consistency, not correctness.</p>
+
+<p>The rule on payment and calculation paths is that tests must assert the behavioural outcome in the customer's terms. Not "the API was called with proration enabled" but "a customer switching plans mid-cycle is charged this many cents today." Not "the tax function received the right rate" but "this fixture fund's franking credit comes out to this exact figure, cent for cent." Where the outcome depends on a third-party system, the pull request must cite that system's documentation for the claimed behaviour, and write paths get a scenario in a simulator that replays the whole flow end to end, from plan change to the exact charge.</p>
+
+<p>This rule exists because behavioural tests are the only kind an agent cannot satisfy by being consistently wrong. They anchor the code to the world instead of to the author's model of the world. They are also, not coincidentally, the tests I actually read during a Tier 3 review. A wall of mocked call assertions tells me the agent was busy. A fixture fund whose annual return I can check by hand tells me the code is right.</p>
+
+<h2>What the boundaries buy</h2>
+
+<p>It is fair to ask whether all this scaffolding defeats the purpose. The numbers say it does not. The pull request counter on the main product repository passed 790 last week; agents authored the overwhelming majority, and I have read perhaps a tenth of them line by line. Inside these boundaries the agents have built, over about eight months, the pension-phase calculation module, contribution cap tracking, a transfer balance reporting engine, year-end compliance orchestration, the onboarding email pipeline, and most of two adjacent products, with every money-touching piece crossing a human merge gate on its way in. That is more product than I have shipped in any three previous years combined, and I was the only human on it.</p>
+
+<p>The autonomy is real. It is just shaped: wide where errors are cheap and loud, narrow to zero where errors are expensive and quiet. The scarce resource in an agent-heavy codebase is not model capability, it is human attention, and the design above is a routing algorithm for mine. It spends my eyes on the few hundred lines a month where being wrong compounds, and almost nowhere else.</p>
+
+<p>If I had to compress the year into one sentence, it is this. Do not ask how good the agent is. Ask what happens on the worst day, in each place you let it work, and draw the map so that the worst day is one you can afford. The agent is allowed to be wrong in most of my codebase precisely because I decided, in advance and in mechanism rather than in prose, where wrong is survivable.</p>
+
+<div class="foot"><em>Fatih Gurcaglar builds <a href="https://smsfcore.com">SMSF Core</a>, record-keeping software for self managed super fund trustees. The tiering rules, the hard-stop protocol, the fact register, and the vocabulary gates described here run in production today.</em></div>
+</article>
+</main>
+</body>
+</html>
