@@ -9,14 +9,11 @@
 <meta property="og:description" content="Four boundaries for AI coding agent autonomy in a regulated fintech codebase.">
 <meta property="og:type" content="article">
 <meta name="author" content="Fatih Gurcaglar">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600;650&display=swap" rel="stylesheet">
-<link rel="icon" type="image/svg+xml" href="/logo.svg">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <header class="site">
-  <a href="/"><svg class="knife" width="26" height="26" viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="6" y="26" width="36" height="12" rx="6" fill="currentColor" opacity="0.92"/><circle cx="12" cy="32" r="2.2" fill="var(--paper)"/><circle cx="36" cy="32" r="1.6" fill="var(--paper)"/><g stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M36 30 L14 12"/><path d="M36 30 L26 8"/><path d="M36 30 L40 7"/></g><path d="M36 30 L14 12 L20 10 Z" fill="currentColor"/></svg>Agent Visible</a>
+  <a href="/">Agent Visible</a>
   <nav><a href="/writing/">Writing</a><a href="/about/">About</a></nav>
 </header>
 <main>
@@ -75,6 +72,8 @@
 <p>Tier 1 and calc-free Tier 2 work is fully autonomous. Tier 3 is the opposite pole: an agent may author the change, but a human merges it, and for database changes a human applies the SQL first, by hand, in the console. There is no path from an agent's keyboard to a merged change on a money line. Not a discouraged path. No path.</p>
 
 <p>The default in rule 4 matters as much as the tiers themselves. When classification is uncertain, the system treats the work as dangerous. Every autonomy incident I have read about in other people's systems begins with something optimistically classified.</p>
+
+<p>A robotics engineer would recognise this map as an operational design domain; a platform team would call the tiers failure domains. Both names carry the same idea. The tiers do not rank how likely the agent is to be wrong, they rank what a wrong costs. The probability of a mistake is roughly uniform across my codebase; the loss function is not, and it is the loss that gets to decide.</p>
 
 <p>It is worth being concrete about what "fully autonomous" means mechanically, because the phrase gets used loosely. For Tier 1 and 2 work in my setup, an agent starts from a fresh checkout of main in its own worktree, so it cannot inherit another session's half-finished state. It iterates until four gates pass locally: the type checker, the unit suite, a production build with runtime configuration deliberately stripped (which surfaces any code that assumes secrets exist at build time), and a compliance scanner I will come back to. Then it commits to a branch namespaced to agents, opens its own pull request, writes the report in the body, and applies the tier label. On the server, a second agent reviews the diff against a rubric with three severity levels; the two worst levels block the merge, the third gets logged and waved through. If nothing blocks, the platform merges it. Nobody watched any of this happen. On a typical day this pipeline runs several times; my involvement is reading a one-line summary the next morning, or not.</p>
 
