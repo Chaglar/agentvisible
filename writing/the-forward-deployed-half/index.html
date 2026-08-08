@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Forward-Deployed Half of Agent Engineering</title>
+<meta name="description" content="Half of agent engineering happens before any agent starts: domain discovery, a primary-source fact register, and briefs precise enough to be contradicted with evidence.">
+<meta property="og:title" content="The Forward-Deployed Half of Agent Engineering">
+<meta property="og:type" content="article">
+<meta name="author" content="Fatih Gurcaglar">
+<link rel="icon" type="image/svg+xml" href="/logo.svg">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600;650&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="site"><a href="/"><svg class="knife" width="26" height="26" viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="6" y="26" width="36" height="12" rx="6" fill="currentColor" opacity="0.92"/><circle cx="12" cy="32" r="2.2" fill="var(--paper)"/><circle cx="36" cy="32" r="1.6" fill="var(--paper)"/><g stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M36 30 L14 12"/><path d="M36 30 L26 8"/><path d="M36 30 L40 7"/></g><path d="M36 30 L14 12 L20 10 Z" fill="currentColor"/></svg>Agent Visible</a><nav><a href="/writing/">Writing</a><a href="/about/">About</a></nav></header>
+<main><article>
+<h1>The Forward-Deployed Half of Agent Engineering</h1>
+<p class="meta">Fatih Gurcaglar · August 2026 · 7 min</p>
+<p>There is a job title that Palantir invented and AI labs have recently made fashionable: forward-deployed engineer. The person who goes to where the customer's mess lives, learns the domain until it stops being a mess, and translates it into something software can act on. Job ads for agent companies are full of it now, and reading them gave me a small shock of recognition. Half of what I do all day is that job. Not for a customer. For my own agents.</p>
+<p>The visible half of running an agent-heavy codebase is the part people write about, me included: gates, tiers, reviews, merges. This essay is about the invisible half, the work that happens before any agent starts, because I have come to believe it is where the quality of everything downstream is actually decided.</p>
+<h2>The agent is only as good as the brief</h2>
+<p>My product encodes Australian superannuation law. When I want an agent to build a module, I do not hand it a wish. I hand it a brief: the tables and their exact column constraints, the rules the module must enforce, worked examples with expected figures, an explicit list of what is out of scope, and acceptance criteria written as behaviour rather than implementation. "A lease with rent due in July and no matching bank line shows one missing period." That sentence is a test before it is a test.</p>
+<p>Writing a brief like that takes hours, and the hours are not spent typing. They are spent in the domain: reading the legislation register, checking what the tax office actually says against what I remember it saying, walking the existing schema to see what the new work must not break. The agent then does in an afternoon what the brief spent a day making possible. From the outside it looks like the agent was fast. From the inside, the speed was manufactured earlier, somewhere else.</p>
+<p>This is the forward-deployed shape: the engineering is downstream, the leverage is upstream, and the upstream work is mostly not code. It is interviews with a domain, conducted through primary documents.</p>
+<h2>No fact enters from memory</h2>
+<p>The strictest rule in my operation sits in this upstream half. No statutory fact, no rate, threshold, date or section number, enters a brief, the codebase, or published copy from anyone's memory, mine or a model's. Each one is verified against the primary source and recorded in a register with the value, the source link, and the date it was last checked. Briefs cite the register. Agents are told the register wins over their training data, every time.</p>
+<p>The register exists because of a specific humiliation. Early on I "corrected" a genuinely true legislative date because it looked wrong to me, and separately, a model stated a plausible figure that primary sources did not support. The two failures were mirror images: my memory was stale, its memory was synthetic, and neither of us could tell from the inside. A register with dates on every fact is the only arrangement I have found where the question "how do we know this" always has a boring answer.</p>
+<p>Forward-deployed engineers at consulting firms build the same thing under different names: the source-of-truth spreadsheet, the data dictionary, the glossary the client finally agrees to. It is unglamorous, and it is the asset. Mine is a few hundred lines of markdown, and I would rebuild the codebase before I let it rot.</p>
+<h2>When the agent corrects the brief</h2>
+<p>The best moment in this whole system, the one that convinced me the upstream half deserves an essay, is when the flow reverses.</p>
+<p>I recently briefed an agent to build a property module and wrote, from memory of my own schema, that rent receipts could reuse an existing transactions table. The agent checked the actual schema during its preflight, found the table was shaped for share trades and that the ingest path I described did not exist, flagged the discrepancy at the top of its report, and built the correct table instead. It did not silently adapt, because the rulebook forbids silent adaptation. It contradicted its brief, with evidence.</p>
+<p>What I did next matters more than what it did. I did not just accept the fix. I went back to the checklist that briefs are written from and added a line: verify every claimed reuse against the live schema before the brief ships. The failure taxonomy in my docs has dozens of entries like that now, each one a way a brief once lied. The agents get better because the model improves; the briefs get better because the failures are filed. The second curve is mine to own, and it compounds just as reliably.</p>
+<p>There is a name for the discipline where the specification is treated as the artifact that fails, gets debugged, and improves: requirements engineering, forty years old and deeply unfashionable. Agents are making it fashionable again under a new description, because when execution becomes cheap, whatever feeds execution becomes the bottleneck. The bottleneck moved upstream, and it turns out the bottleneck was always a person who knows the domain, writing things down precisely.</p>
+<h2>The half that does not automate</h2>
+<p>Here is the honest asymmetry. The downstream half of my operation automates beautifully: agents build, test, review, and merge with less of me every month. The upstream half barely automates at all. An agent can fetch a page from the legislation register faster than I can, but deciding that a provision matters to my product, noticing that a forum thread full of scared trustees is actually a mis-reading of a commencement table, choosing which module to build next because a board manager mentioned his property-only fund over coffee: that is domain judgment plus proximity to real people, and it is stubbornly manual.</p>
+<p>I no longer think of that as a limitation. It is the part of the job that was always the job. The agents did not remove it; they removed everything that was hiding it. Strip away the typing, the boilerplate, the test scaffolding, and what remains of a software engineer is a person standing in the middle of a domain, deciding what is true and what matters, and writing it down carefully enough that something else can act on it. There is a job title for that now. It turns out I have been doing it, forward-deployed into my own product, the whole time.</p>
+<hr>
+<div class="foot"><em>Fatih Gurcaglar builds <a href="https://smsfcore.com">SMSF Core</a>, record-keeping software for self managed super fund trustees. Earlier in this series: <a href="/writing/where-the-agent-is-allowed-to-be-wrong/">Where the Agent Is Allowed to Be Wrong</a> on autonomy boundaries, and <a href="/writing/step-three-company-of-one/">Step Three, Measured from a Company of One</a> on the adoption ladder.</em></div>
+</article></main>
+</body>
+</html>

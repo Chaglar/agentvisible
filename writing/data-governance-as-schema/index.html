@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Data Governance When Agents Write the Code</title>
+<meta name="description" content="Governance that survives AI agents is schema, not policy: append-only ledgers, provenance on every statutory fact, and namespaces that work as clearance levels.">
+<meta property="og:title" content="Data Governance When Agents Write the Code">
+<meta property="og:type" content="article">
+<meta name="author" content="Fatih Gurcaglar">
+<link rel="icon" type="image/svg+xml" href="/logo.svg">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600;650&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="site"><a href="/"><svg class="knife" width="26" height="26" viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="6" y="26" width="36" height="12" rx="6" fill="currentColor" opacity="0.92"/><circle cx="12" cy="32" r="2.2" fill="var(--paper)"/><circle cx="36" cy="32" r="1.6" fill="var(--paper)"/><g stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M36 30 L14 12"/><path d="M36 30 L26 8"/><path d="M36 30 L40 7"/></g><path d="M36 30 L14 12 L20 10 Z" fill="currentColor"/></svg>Agent Visible</a><nav><a href="/writing/">Writing</a><a href="/about/">About</a></nav></header>
+<main><article>
+<h1>Data Governance When Agents Write the Code</h1>
+<p class="meta">Fatih Gurcaglar · August 2026 · 6 min</p>
+<p>Data governance has a reputation problem: it usually means a policy document, a committee, and a diagram of who should ask whom before touching a table. That model assumes the people changing the system read policy documents and sit on committees. My system is changed, most days, by AI agents. They read fast, forget nothing within a session, and are constitutionally incapable of attending a meeting. Governance had to become something else, and what it became is the theme of this whole series wearing a database hat: policy that is not enforced by structure is a wish.</p>
+<p>Here is what governs the data in a fintech where agents write most of the code, and a human signs the five percent that matters.</p>
+<h2>Corrections are rows, not edits</h2>
+<p>The first rule is that history is immutable. Cost bases, valuations, capital works, the ledgers that feed tax figures: none of them can be updated in place. A correction is a new row that supersedes the old one, and the old one stays, visibly wrong and visibly superseded.</p>
+<p>This is an old accounting instinct, but with agents it stops being a preference and becomes a load-bearing wall. An agent that can UPDATE can destroy the evidence of its own mistake in the same transaction that makes it. An agent that can only INSERT leaves a trail no matter what it does. I do not enforce this by telling agents not to update. I enforce it by not granting an update path at all: the write route is an insert-only database function, and the table policies do not contain an update rule for anyone, agent or founder. When the property module shipped its valuation table last week, the review question was not "will the code behave." It was "does an update path exist," and the answer had to be no before the schema could apply.</p>
+<h2>Every fact carries its passport</h2>
+<p>The product encodes tax law, and tax law changes. Every statutory constant in the system, every rate, threshold and commencement date, lives in a register with three attachments: the value, the primary source it came from, and the date it was last verified against that source. Code that uses a constant points at the register entry. Published copy cites the same entry. When a value changes upstream, one register line changes, and everything that depends on it is findable by grep.</p>
+<p>The rule that makes this governance rather than bookkeeping: no fact enters the system from memory. Not from mine, which goes stale, and not from a model's, which synthesises plausibly. An agent that wants to use a figure must find it in the register or stop and flag the gap. Provenance is not metadata we add for the auditors' comfort. It is the admission control for facts.</p>
+<h2>Schemas are clearance levels</h2>
+<p>The database is split into namespaces that map to trust, not to features. Application tables live in one schema behind row-level security, so every query is scoped to the fund that owns the row, whichever code path makes it. Reference data, the tax rulings and security identifiers, lives in its own schema that application code reads and never writes. Calculation functions live in another. And the audit log schema, the record of what was ingested, computed and refreshed, is readable only by the service role: no application path, agent-written or otherwise, can reach it at all.</p>
+<p>The point of the separation is that an agent's mistake inherits the clearance of the schema it happens in, not the ambition of the code that made it. A bad write in application space is scoped to one fund by policies the write cannot skip. The audit trail that would prove the mistake happened is in a space the mistake cannot follow it into. This is the identity-plane argument from the previous essay, pushed one layer down: below the credential sits the schema, and the schema does not read prompts.</p>
+<h2>The test is reconstruction</h2>
+<p>There is a single question that all of this serves, and it is the question an SMSF auditor asks every year by profession: can you show me where this number came from? Every figure on a statement should walk backwards to a transaction, the transaction to a source document, the document to a content hash and an arrival date. When my pipeline builds its year-end pack, that chain is the product. The statements are almost a by-product of being able to prove them.</p>
+<p>Agents made this easier, not harder, which surprised me. A human under deadline shortcuts provenance and promises to backfill it; the backfill never comes. An agent does whatever the write path permits, with perfect consistency. So if the only write path attaches the document link, every row has one, forever, including the rows written at three in the morning by a session nobody watched. Governance by schema has the property that governance by policy never achieves: it does not degrade when nobody is looking, because it was never being upheld by looking in the first place.</p>
+<p>That is the whole design, and it echoes the place this series started. Do not ask whether the agent will respect your data. Ask what the schema lets anyone do to it on the worst day, and make the answer boring.</p>
+<hr>
+<div class="foot"><em>Fatih Gurcaglar builds <a href="https://smsfcore.com">SMSF Core</a>, record-keeping software for self managed super fund trustees. Related essays: <a href="/writing/where-the-agent-is-allowed-to-be-wrong/">Where the Agent Is Allowed to Be Wrong</a> on autonomy boundaries, and <a href="/writing/the-forward-deployed-half/">The Forward-Deployed Half of Agent Engineering</a> on the work that happens before agents start.</em></div>
+</article></main>
+</body>
+</html>
