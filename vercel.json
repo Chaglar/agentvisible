@@ -1,1 +1,8 @@
-{ "cleanUrls": true, "trailingSlash": true }
+{
+  "framework": null,
+  "buildCommand": null,
+  "outputDirectory": ".",
+  "installCommand": null,
+  "cleanUrls": true,
+  "trailingSlash": true
+}
