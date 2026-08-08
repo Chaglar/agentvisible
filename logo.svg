@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <!-- swiss knife body -->
+  <rect x="6" y="26" width="36" height="12" rx="6" fill="#2547d0"/>
+  <circle cx="12" cy="32" r="2.2" fill="#f6f7f5"/>
+  <!-- pivot -->
+  <circle cx="36" cy="32" r="1.6" fill="#f6f7f5"/>
+  <!-- fanned tools from pivot: blade, driver, awl -->
+  <g stroke="#2547d0" stroke-width="3" stroke-linecap="round">
+    <path d="M36 30 L14 12"/>
+    <path d="M36 30 L26 8"/>
+    <path d="M36 30 L40 7"/>
+  </g>
+  <!-- blade face -->
+  <path d="M36 30 L14 12 L20 10 Z" fill="#2547d0"/>
+</svg>

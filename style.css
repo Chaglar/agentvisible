@@ -14,7 +14,8 @@ code,pre,.meta,.d,.foot,header.site nav a,.eyebrow{font-family:"IBM Plex Mono","
 
 header.site{max-width:720px;margin:0 auto;padding:30px 24px 0;display:flex;justify-content:space-between;align-items:baseline}
 header.site>a{color:var(--ink);text-decoration:none;font-weight:600;letter-spacing:-.01em;font-size:17px}
-header.site>a::before{content:"▍";color:var(--acc);margin-right:2px}
+header.site>a{display:inline-flex;align-items:center;gap:9px}
+header.site>a .knife{color:var(--acc);flex:none;position:relative;top:1px}
 header.site nav a{color:var(--mut);text-decoration:none;font-size:13px;margin-left:20px;text-transform:lowercase}
 header.site nav a:hover{color:var(--acc)}
 
