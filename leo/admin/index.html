@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Leo — Veli Paneli</title>
+<meta name="description" content="Leo'nun NAPLAN ve OC çalışmalarının yaşa göre takip paneli.">
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="../admin.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50' font-size='50'>📊</text></svg>">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <span class="ava" id="ava">🦁</span>
+    <div>
+      <h1 id="title">Leo · Veli Paneli</h1>
+      <div class="sub" id="subtitle">—</div>
+    </div>
+    <div class="spacer"></div>
+    <a class="btn pri" href="../">← Soru çözme sayfası</a>
+  </div>
+
+  <div class="tabs" id="rangeTabs">
+    <button class="tab on" data-range="0">Tüm zamanlar</button>
+    <button class="tab" data-range="30">Son 30 gün</button>
+    <button class="tab" data-range="7">Son 7 gün</button>
+  </div>
+
+  <div id="empty" class="card empty hide">
+    Henüz çözülmüş soru yok. <a href="../">Soru çözme sayfasından</a> bir tur başlat, sonra buraya dön.
+  </div>
+
+  <div id="dash">
+    <div class="grid kpis" id="kpis"></div>
+
+    <h2>Yetenek gelişimi <span class="n" id="abilityN"></span></h2>
+    <div class="card viz"><div id="chartAbility"></div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--s1)"></i> Tahmini yetenek (θ, logit)</span>
+        <span><i class="dot" style="background:var(--s1);opacity:.35"></i> ±1 standart hata</span>
+        <span>Kesikli çizgi = Year 2 ortalaması</span>
+      </div>
+      <div class="sub" style="margin-top:8px">Her nokta bir oturum sonrası, o ana kadarki tüm cevaplarla yeniden hesaplanan yetenek tahmini.</div>
+    </div>
+
+    <h2>Konulara göre yaşıt karşılaştırması</h2>
+    <div class="card viz"><div id="chartTopics"></div>
+      <div class="sub" style="margin-top:10px">Yüzdelik dilim: 50 = yaşıtlarının tam ortası. En az 6 soru çözülmüş konular gösterilir.</div>
+    </div>
+
+    <h2>Konu detayı</h2>
+    <div class="card scroll"><table id="topicTable"></table></div>
+
+    <h2>Zorluk seviyesine göre başarı</h2>
+    <div class="card viz"><div id="chartLevels"></div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--s1)"></i> Leo'nun gerçek başarısı</span>
+        <span><i class="dot" style="background:var(--s2)"></i> Model beklentisi (tahmini yeteneğine göre)</span>
+      </div>
+      <div class="sub" style="margin-top:8px">Çubuk çizginin <b>üstündeyse</b> o seviyede beklenenden iyi, <b>altındaysa</b> zorlanıyor demektir.</div>
+    </div>
+
+    <h2>Günlük çalışma <span class="n" id="daysN"></span></h2>
+    <div class="card viz"><div id="chartDays"></div></div>
+
+    <h2>Ne yapmalı</h2>
+    <div class="grid" id="recs" style="gap:10px"></div>
+
+    <h2>Oturum geçmişi</h2>
+    <div class="card scroll"><table id="sessionTable"></table></div>
+  </div>
+
+  <h2>Ayarlar</h2>
+  <div class="grid two">
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:12px">Çocuk bilgileri</div>
+      <div class="field"><label for="pName">Ad</label><input id="pName" type="text"></div>
+      <div class="field"><label for="pDob">Doğum tarihi <span style="text-transform:none;font-weight:400">— yaşa göre karşılaştırma için gerekli</span></label><input id="pDob" type="date"></div>
+      <div class="field"><label for="pYear">Sınıf (Year)</label>
+        <select id="pYear"><option value="1">Year 1</option><option value="2">Year 2</option><option value="3">Year 3</option><option value="4">Year 4</option></select></div>
+      <div class="field"><label for="pAva">Avatar</label><input id="pAva" type="text" maxlength="4"></div>
+      <button class="btn pri" id="saveProfile">Kaydet</button>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:12px">Model parametreleri</div>
+      <div class="field"><label for="mGrowth">Yıllık gelişim (logit / okul yılı)</label><input id="mGrowth" type="number" step="0.05" min="0.2" max="2.5"></div>
+      <div class="field"><label for="mSD">Yaşıt grubu standart sapması (logit)</label><input id="mSD" type="number" step="0.05" min="0.4" max="2.5"></div>
+      <div class="field"><label for="mAge">Referans yaş (Year 2 ortası)</label><input id="mAge" type="number" step="0.1" min="5" max="12"></div>
+      <button class="btn" id="saveModel">Kaydet</button>
+      <div class="sub" style="margin-top:10px">Elinde gerçek NAPLAN/OC sonucu varsa bu değerleri kalibre edebilirsin.</div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:12px">Veri</div>
+      <div class="sub" style="margin-bottom:12px">Tüm kayıtlar yalnızca bu tarayıcıda tutulur. Başka bir cihaza taşımak için dışa aktar.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="btnExport">JSON dışa aktar</button>
+        <button class="btn" id="btnExportCsv">CSV dışa aktar</button>
+        <button class="btn" id="btnImport">İçe aktar</button>
+        <button class="btn danger" id="btnReset">Tüm veriyi sil</button>
+      </div>
+      <input type="file" id="fileIn" accept="application/json" class="hide" style="display:none">
+    </div>
+
+    <div class="card">
+      <details>
+        <summary>Yöntem ve sınırlar — okunmalı</summary>
+        <div class="note" style="margin-top:12px">
+          <p><b>Nasıl hesaplanıyor.</b> Her soru 1–5 zorluk seviyesinde etiketli. Bir 3PL-benzeri madde tepki modeli kullanılıyor:
+          P(doğru) = c + (1−c)·logit⁻¹(θ − b). Burada <b>b</b> soru zorluğu (seviye 1–5 → −1.8 … +1.8 logit),
+          <b>c</b> şans faktörü (4 şıklı soruda 0.25), <b>θ</b> ise tüm cevaplardan EAP ile kestirilen yetenek.</p>
+          <p style="margin-top:10px"><b>Yüzdelik dilim ne demek.</b> θ dağılımı referans grupta N(0, σ) kabul ediliyor;
+          yüzdelik = Φ(θ/σ). Yaşa göre karşılaştırmada beklenen θ, yaş farkı × yıllık gelişim kadar kaydırılıyor —
+          yani yaşı küçükse aynı performans daha yüksek yüzdelik verir.</p>
+          <p style="margin-top:10px"><b>En önemli uyarı.</b> Referans dağılım <b>gerçek NAPLAN norm verisi değil</b>, bu uygulamanın
+          kendi zorluk ölçeğine dayanan bir modeldir. Rakamlar <b>yön ve değişim takibi</b> için anlamlıdır; resmî bir
+          scaled score yerine geçmez. Gerçek bir sonuç eline geçtiğinde yandaki model parametrelerini kalibre et.</p>
+          <p style="margin-top:10px"><b>EAP büzülmesi.</b> Tahmin ortalamaya doğru çekilir: gerçek θ = +2 olan bir çocuk
+          60 soruda ortalama +1.72 olarak kestirilir. Yani uçlarda gerçek yetenek gösterilenden biraz <b>daha yüksektir</b>.
+          Soru sayısı arttıkça sapma küçülür; ±1 standart hata bandı grafikte gösteriliyor.</p>
+          <p style="margin-top:10px"><b>Soru sayısı eşiği.</b> 8 sorudan az olan konularda yüzdelik gösterilmez.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div class="sub" style="margin-top:34px;text-align:center">
+    Veriler bu tarayıcıda saklanır · <a href="../">Soru çözme sayfası</a>
+  </div>
+</div>
+
+<script src="../js/visuals.js"></script>
+<script src="../js/bank.js"></script>
+<script src="../js/bank-measure.js"></script>
+<script src="../js/bank-verbal.js"></script>
+<script src="../js/store.js"></script>
+<script src="../js/norms.js"></script>
+<script src="../js/engine.js"></script>
+<script src="../js/charts.js"></script>
+<script src="../js/admin.js"></script>
+</body>
+</html>
