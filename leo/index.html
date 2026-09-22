@@ -69,6 +69,10 @@
       </div>
     </div>
 
+    <h2>Fast maths</h2>
+    <p class="sub" style="margin-bottom:10px">Type the answer — no choices to pick from. Speed is the point: these should come straight out of your head.</p>
+    <div class="drills" id="factCards"></div>
+
     <h2>Quick practice</h2>
     <p class="sub" style="margin-bottom:10px">Ten questions on one thing only. The ones that need work are first.</p>
     <div class="drills" id="drills"></div>
@@ -94,6 +98,42 @@
       <button class="big hide" id="btnNext">Next question →</button>
     </div>
     <button class="big ghost" id="btnQuit" style="margin-top:12px">Stop and go back</button>
+  </section>
+
+  <!-- ============ FAST MATHS ============ -->
+  <section id="fluency" class="hide">
+    <div class="qtop">
+      <div class="dots" id="fDots"></div>
+      <span class="chip" id="fScore">0</span>
+    </div>
+    <div class="qcard">
+      <div class="qmeta"><span id="fTrack"></span><span class="spacer" style="flex:1"></span><span id="fStreak" class="yr"></span></div>
+      <div class="fq" id="fPrompt"></div>
+      <div class="vis" id="fVis"></div>
+      <div class="fans" id="fAns"><span id="fTyped"></span><b class="caret"></b></div>
+      <div id="fMark"></div>
+      <div class="keypad" id="fPad">
+        <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+        <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+        <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+        <button data-k="del" class="k-alt">⌫</button><button data-k="0">0</button>
+        <button data-k="ok" class="k-go">✓</button>
+      </div>
+      <button class="big hide" id="fNext">Next →</button>
+    </div>
+    <button class="big ghost" id="fQuit" style="margin-top:12px">Stop and go back</button>
+  </section>
+
+  <!-- ============ FAST MATHS RESULT ============ -->
+  <section id="fResult" class="hide">
+    <div class="card">
+      <h1 id="frTitle">Done!</h1>
+      <p class="sub" id="frSub"></p>
+      <div class="frstats" id="frStats"></div>
+      <div id="frList"></div>
+      <button class="big" id="frAgain">Go again →</button>
+      <button class="big ghost" id="frHome">Back to the start</button>
+    </div>
   </section>
 
   <!-- ============ WRITING ============ -->
@@ -214,6 +254,7 @@
 <script src="js/store.js"></script>
 <script src="js/norms.js"></script>
 <script src="js/engine.js"></script>
-<script src="js/app.js"></script>
+<script src="js/facts.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>

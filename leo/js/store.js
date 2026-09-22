@@ -29,8 +29,8 @@
       model: null,
       xp: 0, best: 0,
       streak: { days: 0, last: '' },
-      sessions: [], answers: [], writing: [],
-      pending: { sessions: [], answers: [], writing: [] }   // not yet acknowledged by the server
+      sessions: [], answers: [], writing: [], facts: [],
+      pending: { sessions: [], answers: [], writing: [], facts: [] }   // not yet acknowledged by the server
     };
   }
 
@@ -46,6 +46,7 @@
   }
 
   function answerId(a) { return a.aid || (a.sid && a.t ? a.sid + ':' + a.t : null); }
+  function factId(f) { return f.fid || (f.fact && f.t ? f.fact + ':' + f.t : null); }
 
   function mergeById(base, add, idOf) {
     var seen = {}, out = base.slice(), i;
@@ -74,9 +75,13 @@
       for (k in b) if (S.state[k] === undefined) S.state[k] = b[k];
       for (k in b.profile) if (S.state.profile[k] === undefined) S.state.profile[k] = b.profile[k];
       for (k in b.settings) if (S.state.settings[k] === undefined) S.state.settings[k] = b.settings[k];
-      if (!S.state.pending) S.state.pending = { sessions: [], answers: [], writing: [] };
+      if (!S.state.pending) S.state.pending = { sessions: [], answers: [], writing: [], facts: [] };
       if (!S.state.pending.writing) S.state.pending.writing = [];
+      if (!S.state.pending.facts) S.state.pending.facts = [];
       if (!S.state.writing) S.state.writing = [];
+      if (!S.state.facts) S.state.facts = [];
+      // fact attempts written before ids existed still have to merge exactly once
+      S.state.facts.forEach(function (f, i) { if (!f.fid) f.fid = (f.fact || 'f') + ':' + (f.t || i); });
       // v1 records predate answer ids; give them stable ones so they merge exactly once
       S.state.answers.forEach(function (a, i) {
         if (!a.aid) a.aid = (a.sid || 'v1') + ':' + (a.t || i) + ':' + i;
@@ -121,6 +126,7 @@
       st.answers = mergeById(st.answers, rs.answers || [], answerId);
       st.sessions = mergeById(st.sessions, rs.sessions || [], function (x) { return x.id; });
       st.writing = mergeById(st.writing || [], rs.writing || [], function (x) { return x.id; });
+      st.facts = mergeById(st.facts || [], rs.facts || [], factId);
       // A blank field on the server must not clobber a value we already hold — an
       // older record with an empty date of birth would otherwise wipe the default
       // and silently switch the dashboard back to the year-group comparison.
@@ -143,9 +149,11 @@
         S.applyRemote(res);
         if (!res.ok) return st;
         var p = st.pending;
-        if ((p.answers && p.answers.length) || (p.sessions && p.sessions.length) || (p.writing && p.writing.length)) {
-          return S.call('POST', { answers: p.answers, sessions: p.sessions, writing: p.writing }).then(function (r2) {
-            if (r2.ok) { st.pending = { sessions: [], answers: [], writing: [] }; S.applyRemote(r2); }
+        if ((p.answers && p.answers.length) || (p.sessions && p.sessions.length) ||
+            (p.writing && p.writing.length) || (p.facts && p.facts.length)) {
+          return S.call('POST', { answers: p.answers, sessions: p.sessions, writing: p.writing, facts: p.facts })
+            .then(function (r2) {
+            if (r2.ok) { st.pending = { sessions: [], answers: [], writing: [], facts: [] }; S.applyRemote(r2); }
             return st;
           });
         }
@@ -171,6 +179,19 @@
       S.save();
       S.sync();                                  // fire and forget; the queue covers failure
       return pct;
+    },
+
+    /* number-fact attempts. An append-only log: box and fluency are derived from it
+       rather than stored, so two devices merge by id with no conflict resolution. */
+    pushFacts: function () {
+      var st = S.load();
+      var unsent = (st.facts || []).filter(function (f) {
+        return !st.pending.facts.some(function (p) { return factId(p) === factId(f); });
+      });
+      st.pending.facts = mergeById(st.pending.facts, unsent, factId);
+      if (st.facts.length > 20000) st.facts = st.facts.slice(-20000);
+      S.save();
+      return S.sync();
     },
 
     /* a marked piece of writing; the photo itself is never stored or sent on */
@@ -243,11 +264,17 @@
         return a;
       }), answerId);
       st.sessions = mergeById(st.sessions, o.sessions || [], function (x) { return x.id; });
+      st.writing = mergeById(st.writing || [], o.writing || [], function (x) { return x.id; });
+      st.facts = mergeById(st.facts || [], (o.facts || []).map(function (f, i) {
+        if (!f.fid) f.fid = (f.fact || 'imp') + ':' + (f.t || i) + ':' + i;
+        return f;
+      }), factId);
       if (o.profile) Object.assign(st.profile, o.profile);
       if (o.model) st.model = o.model;
       st.pending.answers = st.answers.slice();
       st.pending.sessions = st.sessions.slice();
       st.pending.writing = st.writing.slice();
+      st.pending.facts = (st.facts || []).slice();
       S.save();
       return S.sync().then(function () { return st; });
     },

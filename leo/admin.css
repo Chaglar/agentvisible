@@ -95,3 +95,28 @@ input:focus,select:focus{outline:none;border-color:var(--acc)}
 details summary{cursor:pointer;font-weight:600;font-size:14px;padding:4px 0}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .hide{display:none !important}
+
+/* ---------- number facts ---------- */
+.sub2{font-size:14px;font-weight:700;color:var(--mut);margin:16px 0 8px;letter-spacing:.2px}
+
+.ftracks{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:620px){.ftracks{grid-template-columns:1fr}}
+.ftrack{background:var(--faint);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
+.ftrack .t{font-size:13px;color:var(--mut);margin-bottom:6px}
+.ftrack .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.ftrack .v em{font-style:normal;font-size:14px;font-weight:600;color:var(--mut)}
+.ftrack .bar{height:7px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:8px;display:flex}
+.ftrack .bar i{display:block;height:100%}
+
+/* The grid is the point of this section: one cell per fact, so a table that is
+   "80% right" still shows exactly which four facts are not there yet. */
+.fgrid{display:grid;gap:4px;min-width:520px}
+.fgrid .hd{font-size:11.5px;color:var(--mut);text-align:center;font-variant-numeric:tabular-nums;padding-bottom:2px}
+.fgrid .rh{font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:flex-end;padding-right:6px}
+.fcell{border-radius:7px;padding:7px 2px;text-align:center;font-size:11px;font-weight:600;
+  font-variant-numeric:tabular-nums;color:#fff;line-height:1.25}
+.fcell.fluent{background:var(--good)}
+.fcell.nearly{background:var(--warn);color:#2a2000}
+.fcell.slow{background:var(--serious);color:#2a1200}
+.fcell.wrong{background:var(--critical)}
+.fcell.new{background:var(--faint);color:var(--mut);border:1px solid var(--line)}

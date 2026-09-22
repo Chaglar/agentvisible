@@ -3,8 +3,8 @@
  *   node dev-server.js          (in one terminal)
  *   node test/smoke.mjs         (in another)
  *
- * It sits a NAPLAN test, works the fix-up round, submits a piece of writing both
- * typed and as a photo, and then opens the dashboard in a SEPARATE browser profile
+ * It sits a NAPLAN test, works the fix-up round, drills a set of number facts,
+ * submits a piece of writing both typed and as a photo, and then opens the dashboard in a SEPARATE browser profile
  * to prove the record really is on the server rather than in one browser's
  * localStorage. Screenshots land in test/screenshots/.
  *
@@ -134,8 +134,55 @@ check('fix-up round completes', /^\d+\/\d+$/.test(fixScore), 'fixed ' + fixScore
 const fixups = Number(fixScore.split('/')[1]);
 await shot(page, '07-fixups-done');
 
-/* ---------------- writing: typed ---------------- */
+/* ---------------- fast maths ---------------- */
 await page.click('#btnHome');
+check('fact sets offered', (await page.locator('[data-fact]').count()) === 3);
+await page.click('[data-fact="tables"]');
+await page.waitForSelector('#fluency:not(.hide)');
+check('a fact question is asked', /[0-9]/.test(await page.locator('#fPrompt').textContent()),
+  await page.locator('#fPrompt').textContent());
+await shot(page, '12-fact-question');
+
+// The app decides how long a set is; ask the screen rather than assuming.
+const FACTS_N = await page.locator('#fDots i').count();
+check('a fact set is a sensible length', FACTS_N >= 10 && FACTS_N <= 30, FACTS_N + ' facts');
+
+let factRight = 0, sawQuick = false, sawHint = false;
+for (let i = 0; i < FACTS_N; i++) {
+  await page.waitForSelector('#fPad button[data-k="ok"]:not([disabled])');
+  const want = await page.evaluate(() => window.LEO.debug.factAnswer());
+  const right = i % 4 !== 3;                       // three right, one wrong, repeating
+  const typed = String(right ? want : want + 1);
+  if (right) factRight++;
+  for (const ch of typed) await page.click(`#fPad button[data-k="${ch}"]`);
+  await page.click('#fPad button[data-k="ok"]');
+  await page.waitForSelector('#fNext:not(.hide)');
+  const mark = (await page.locator('#fMark').textContent()) || '';
+  if (right && /straight out of your head/i.test(mark)) sawQuick = true;
+  if (!right && (await page.locator('.fhint').count())) sawHint = true;
+  if (i === 0) await shot(page, '13-fact-marked');
+  if (i === 3) {
+    check('a wrong answer shows the right one',
+      (await page.locator('#fAns').textContent()).includes(String(want)),
+      (await page.locator('#fAns').textContent()).trim());
+  }
+  await page.click('#fNext');
+}
+check('answering fast is recognised', sawQuick);
+check('a wrong fact gets a structure hint', sawHint);
+
+await page.waitForSelector('#fResult:not(.hide)', { timeout: 8000 });
+await page.waitForTimeout(300);
+check('fact set scores correctly',
+  (await page.locator('#frStats').textContent()).includes(factRight + '/' + FACTS_N),
+  (await page.locator('#frStats').textContent()).replace(/\s+/g, ' ').trim());
+check('slow and wrong facts are listed for another go',
+  (await page.locator('#frList .frow').count()) >= FACTS_N - factRight);
+await shot(page, '14-fact-result');
+await page.click('#frHome');            // this already returns to the home screen
+
+/* ---------------- writing: typed ---------------- */
+await page.waitForSelector('#home:not(.hide)');
 await page.click('[data-write="spark"]');
 await page.waitForSelector('#write:not(.hide)');
 await shot(page, '08-writing-task');
@@ -169,15 +216,20 @@ await shot(page, '10-writing-photo');
 const kidState = await page.evaluate(() => {
   const st = window.LEO.store.load();
   return { answers: st.answers.length, sessions: st.sessions.length, writing: st.writing.length,
-           pendingAnswers: st.pending.answers.length, pendingWriting: st.pending.writing.length };
+           facts: st.facts.length,
+           pendingAnswers: st.pending.answers.length, pendingWriting: st.pending.writing.length,
+           pendingFacts: st.pending.facts.length };
 });
-check('nothing left unsynced', kidState.pendingAnswers === 0 && kidState.pendingWriting === 0,
+check('nothing left unsynced',
+  kidState.pendingAnswers === 0 && kidState.pendingWriting === 0 && kidState.pendingFacts === 0,
   JSON.stringify(kidState));
 // The record was wiped at the start, so these are exact, not "at least".
-const want = { answers: 12 + fixups, sessions: 2, writing: 2 };
+const want = { answers: 12 + fixups, sessions: 2, writing: 2, facts: FACTS_N };
 check('the record holds exactly what was done',
-  kidState.answers === want.answers && kidState.sessions === want.sessions && kidState.writing === want.writing,
-  `got ${kidState.answers}/${kidState.sessions}/${kidState.writing}, want ${want.answers}/${want.sessions}/${want.writing} (answers/sessions/writing)`);
+  kidState.answers === want.answers && kidState.sessions === want.sessions &&
+  kidState.writing === want.writing && kidState.facts === want.facts,
+  `got ${kidState.answers}/${kidState.sessions}/${kidState.writing}/${kidState.facts}, ` +
+  `want ${want.answers}/${want.sessions}/${want.writing}/${want.facts} (answers/sessions/writing/facts)`);
 
 /* ---------------- the parent's device: a DIFFERENT browser profile ---------------- */
 const parent = await browser.newContext({ viewport: { width: 1200, height: 1000 }, deviceScaleFactor: 2 });
@@ -190,11 +242,13 @@ await dash.waitForTimeout(1500);
 
 const seen = await dash.evaluate(() => {
   const st = window.LEO.store.load();
-  return { answers: st.answers.length, sessions: st.sessions.length, writing: st.writing.length };
+  return { answers: st.answers.length, sessions: st.sessions.length, writing: st.writing.length,
+           facts: st.facts.length };
 });
 check('fresh device sees the answers', seen.answers === kidState.answers, `${seen.answers} vs ${kidState.answers}`);
 check('fresh device sees the sessions', seen.sessions === kidState.sessions, `${seen.sessions} vs ${kidState.sessions}`);
 check('fresh device sees the writing', seen.writing === kidState.writing, `${seen.writing} vs ${kidState.writing}`);
+check('fresh device sees the fact attempts', seen.facts === kidState.facts, `${seen.facts} vs ${kidState.facts}`);
 
 check('percentile reported', /\d/.test(await dash.locator('.kpi .v').first().textContent()),
   (await dash.locator('.kpi .v').first().textContent()).trim());
@@ -205,6 +259,12 @@ check('accuracy-by-difficulty chart drawn', (await dash.locator('#chartLevels sv
 check('writing section populated', (await dash.locator('#writeTable tbody tr').count()) >= 2);
 check('writing score chart drawn', (await dash.locator('#chartWriting svg').count()) === 1);
 check('session log lists the rounds', (await dash.locator('#sessionTable tbody tr').count()) >= 2);
+check('number-fact section populated', (await dash.locator('.ftrack').count()) === 3);
+check('fact heatmap drawn', (await dash.locator('#factGrid .fcell').count()) === 44);
+check('heatmap separates wrong from slow',
+  (await dash.locator('#factGrid .fcell:not(.new)').count()) > 0,
+  (await dash.locator('#factGrid .fcell:not(.new)').count()) + ' cells have data');
+check('slowest facts listed', (await dash.locator('#factTable tbody tr').count()) >= 1);
 check('recommendations produced', (await dash.locator('#recs .rec').count()) >= 1);
 await shot(dash, '11-dashboard');
 

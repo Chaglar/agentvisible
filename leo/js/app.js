@@ -10,7 +10,10 @@
     if (!S.load().settings.sound) return;
     try {
       actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-      var seq = kind === 'ok' ? [[660, 0], [880, .09]] : kind === 'no' ? [[240, 0], [180, .1]] : [[520, 0], [660, .08], [880, .16]];
+      var seq = kind === 'ok' ? [[660, 0], [880, .09]]
+              : kind === 'no' ? [[240, 0], [180, .1]]
+              : kind === 'tick' ? [[880, 0]]                 // keypad: one soft blip, not a fanfare
+              : [[520, 0], [660, .08], [880, .16]];
       seq.forEach(function (s) {
         var o = actx.createOscillator(), g = actx.createGain(), t0 = actx.currentTime + s[1];
         o.type = 'triangle'; o.frequency.setValueAtTime(s[0], t0);
@@ -53,7 +56,8 @@
   }
 
   function show(id) {
-    ['home', 'quiz', 'coach', 'result', 'write', 'wResult'].forEach(function (s) { $(s).classList.toggle('hide', s !== id); });
+    ['home', 'quiz', 'coach', 'result', 'write', 'wResult', 'fluency', 'fResult']
+      .forEach(function (s) { $(s).classList.toggle('hide', s !== id); });
     window.scrollTo(0, 0);
   }
 
@@ -83,6 +87,16 @@
       return '<button class="drill" data-write="' + k + '">' +
         '<div class="e">' + K.emoji + '</div><div class="t">' + K.label + '</div>' +
         '<div class="n">' + K.blurb + (done ? ' · ' + done + ' done' : '') + '</div></button>';
+    }).join('');
+
+    $('factCards').innerHTML = Object.keys(L.facts.TRACKS).map(function (k) {
+      var T = L.facts.TRACKS[k], sum = L.facts.summary(st.facts || [], k);
+      return '<button class="drill" data-fact="' + k + '">' +
+        '<div class="e">' + T.emoji + '</div><div class="t">' + T.label + '</div>' +
+        '<div class="b"><i style="width:' + sum.pct + '%"></i></div>' +
+        '<div class="n">' + (sum.counts['new'] === sum.total ? T.blurb
+          : sum.counts.fluent ? sum.counts.fluent + ' of ' + sum.total + ' known by heart'
+          : (sum.total - sum.counts['new']) + ' started · none locked in yet') + '</div></button>';
     }).join('');
 
     var weak = L.engine.weakest().filter(function (t) { return t.meta.modes.indexOf('naplan') >= 0 || t.meta.modes.indexOf('oc') >= 0; }).slice(0, 6);
@@ -621,14 +635,174 @@
     if ((e.key === 'Enter' || e.key === ' ') && !$('btnNext').classList.contains('hide')) { e.preventDefault(); step(); }
   });
 
+  /* ---------- fast maths ---------- */
+  /* Answers are typed, and the clock runs from the question appearing to the FIRST
+     keypress. That is thinking time. Total time would be dominated by how fast he
+     can find digits on a keypad, which is not the thing being trained. */
+  var fl = null;   // { track, queue, i, shown, firstKey, typed, done[], locked }
+
+  function startFacts(track) {
+    var st = S.load();
+    var queue = L.facts.pickSession(track, st.facts || [], 20);
+    if (!queue.length) return;
+    fl = { track: track, queue: queue, i: 0, done: [], typed: '', shown: 0, firstKey: 0, locked: false };
+    show('fluency');
+    $('fTrack').textContent = L.facts.TRACKS[track].label;
+    factRender();
+  }
+
+  function factDots() {
+    var h = '';
+    for (var i = 0; i < fl.queue.length; i++) {
+      var d = fl.done[i];
+      h += '<i class="' + (d ? (d.ok ? 'ok' : 'no') : (i === fl.i ? 'now' : '')) + '"></i>';
+    }
+    $('fDots').innerHTML = h;
+  }
+
+  function factRender() {
+    var f = fl.queue[fl.i];
+    fl.typed = ''; fl.firstKey = 0; fl.locked = false;
+    fl.shown = Date.now();
+    $('fPrompt').textContent = L.facts.prompt(f);
+    $('fPrompt').className = 'fq' + (f.kind === 'skip' ? ' seq' : '');
+    var vis = L.facts.visualFor(f);
+    $('fVis').innerHTML = vis && f.kind === 'skip' ? V.render(vis) : '';
+    $('fAns').className = 'fans';
+    $('fTyped').textContent = '';
+    $('fMark').innerHTML = '';
+    $('fNext').classList.add('hide');
+    Array.prototype.forEach.call($('fPad').children, function (b) { b.disabled = false; });
+    var ok = fl.done.filter(function (d) { return d.ok; }).length;
+    $('fScore').textContent = ok + '/' + fl.done.length;
+    var run = 0;
+    for (var i = fl.done.length - 1; i >= 0 && fl.done[i].ok; i--) run++;
+    $('fStreak').textContent = run >= 3 ? '🔥 ' + run + ' in a row' : '';
+    factDots();
+  }
+
+  function factKey(k) {
+    if (!fl || fl.locked) return;
+    if (k === 'ok') return factSubmit();
+    if (k === 'del') { fl.typed = fl.typed.slice(0, -1); $('fTyped').textContent = fl.typed; return; }
+    if (fl.typed.length >= 3) return;
+    if (!fl.firstKey) fl.firstKey = Date.now();      // thinking time stops here
+    fl.typed += k;
+    $('fTyped').textContent = fl.typed;
+    beep('tick');
+  }
+
+  function factSubmit() {
+    if (!fl || fl.locked || !fl.typed.length) return;
+    var f = fl.queue[fl.i];
+    var ok = Number(fl.typed) === f.answer;
+    var ms = Math.max(0, (fl.firstKey || Date.now()) - fl.shown);
+    var quick = ok && ms <= L.facts.FAST_MS;
+    fl.locked = true;
+    Array.prototype.forEach.call($('fPad').children, function (b) { b.disabled = true; });
+
+    fl.done[fl.i] = { fact: f.id, ok: ok, ms: ms, t: Date.now(), track: fl.track,
+                      given: Number(fl.typed), answer: f.answer };
+    $('fAns').className = 'fans done ' + (ok ? 'ok' : 'bad');
+    $('fTyped').textContent = ok ? fl.typed : fl.typed + '  →  ' + f.answer;
+
+    var line = ok
+      ? (quick ? '<span class="zip">⚡ Straight out of your head</span>' : pickPraise())
+      : 'Not this time';
+    var hint = (!ok || !quick) ? L.facts.hint(f) : '';
+    $('fMark').innerHTML = '<div class="fmark ' + (ok ? 'ok' : 'bad') + '">' + line + '</div>' +
+      (hint ? '<div class="fhint">' + hint + '</div>' : '');
+    beep(ok ? 'ok' : 'no');
+
+    $('fNext').classList.remove('hide');
+    $('fNext').textContent = fl.i + 1 >= fl.queue.length ? 'See how you went →' : 'Next →';
+    factDots();
+  }
+
+  function factNext() {
+    if (fl.i + 1 >= fl.queue.length) return factFinish();
+    fl.i++; factRender();
+  }
+
+  function factFinish() {
+    var st = S.load();
+    st.facts = (st.facts || []).concat(fl.done);
+    S.save();
+    S.pushFacts();
+
+    var ok = fl.done.filter(function (d) { return d.ok; }).length;
+    var quick = fl.done.filter(function (d) { return d.ok && d.ms <= L.facts.FAST_MS; }).length;
+    var med = fl.done.filter(function (d) { return d.ok; }).map(function (d) { return d.ms; })
+                     .sort(function (x, y) { return x - y; });
+    var sum = L.facts.summary(st.facts, fl.track);
+
+    $('frTitle').textContent = ok === fl.done.length ? 'Every one!' : ok + ' out of ' + fl.done.length;
+    /* A fact is only "known" after two fast answers on separate days, so after a
+       first session the honest count is zero. Saying "0 of 88 are yours" to a child
+       who just got 15 straight out of his head is both true and useless. */
+    $('frSub').textContent = quick + (quick === 1 ? ' came' : ' came') + ' straight out of your head. ' +
+      (sum.counts.fluent
+        ? sum.counts.fluent + ' of the ' + sum.total + ' in this set are yours for good now.'
+        : 'Come back tomorrow — that is how we find out which ones really stuck.');
+    $('frStats').innerHTML =
+      '<div><b>' + ok + '/' + fl.done.length + '</b><span>right</span></div>' +
+      '<div><b>' + quick + '</b><span>⚡ instant</span></div>' +
+      '<div><b>' + (med.length ? (med[(med.length - 1) >> 1] / 1000).toFixed(1) + 's' : '–') + '</b><span>typical think</span></div>';
+
+    // Only the ones worth another look — right-but-slow counts, it means still counting up
+    var work = fl.done.filter(function (d) { return !d.ok || d.ms > L.facts.FAST_MS; });
+    $('frList').innerHTML = work.length
+      ? '<h3 style="margin:18px 0 4px;font-size:16px">Worth another go</h3>' +
+        '<p class="sub" style="margin-bottom:6px">These came slowly or went wrong. They will be back next time.</p>' +
+        work.map(function (d) {
+          var f = L.facts.byId(d.fact);
+          return '<div class="frow' + (d.ok ? '' : ' bad') + '"><span class="f">' +
+            L.facts.prompt(f).replace(/\?/, '') + (f.kind === 'skip' ? '' : ' = ') + f.answer + '</span>' +
+            '<span class="ms">' + (d.ok ? (d.ms / 1000).toFixed(1) + 's' : 'said ' + d.given) + '</span></div>';
+        }).join('')
+      : '<p class="sub" style="margin-top:16px">Nothing slow, nothing wrong. That set is solid.</p>';
+
+    if (ok === fl.done.length) confetti(1400);
+    show('fResult');
+    paintHome();
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target.closest('[data-fact]') : null;
+    if (t) startFacts(t.dataset.fact);
+  });
+  $('fPad').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (b) factKey(b.dataset.k);
+  });
+  $('fNext').addEventListener('click', factNext);
+  $('fQuit').addEventListener('click', function () {
+    if (fl && fl.done.length) { var st = S.load(); st.facts = (st.facts || []).concat(fl.done); S.save(); S.pushFacts(); }
+    fl = null; show('home'); paintHome();
+  });
+  $('frAgain').addEventListener('click', function () { startFacts(fl.track); });
+  $('frHome').addEventListener('click', function () { show('home'); paintHome(); });
+
+  document.addEventListener('keydown', function (e) {
+    if (!fl || $('fluency').classList.contains('hide')) return;
+    if (e.key >= '0' && e.key <= '9') { e.preventDefault(); factKey(e.key); }
+    else if (e.key === 'Backspace') { e.preventDefault(); factKey('del'); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!$('fNext').classList.contains('hide')) factNext(); else factKey('ok');
+    }
+  });
+
   /* A read-only hook for the smoke test, so it can answer questions correctly or
      wrongly on purpose instead of guessing. It exposes nothing a child could not
      already read off the screen a moment later. */
   L.debug = {
     answerIndex: function () { return sess && sess.current ? sess.current.answer : null; },
     coachAnswerIndex: function () { return coach && coach.q ? coach.q.answer : null; },
+    factAnswer: function () { return fl && fl.queue[fl.i] ? fl.queue[fl.i].answer : null; },
+    factFact: function () { return fl && fl.queue[fl.i] ? fl.queue[fl.i].id : null; },
     screen: function () {
-      return ['home', 'quiz', 'coach', 'result', 'write', 'wResult']
+      return ['home', 'quiz', 'coach', 'result', 'write', 'wResult', 'fluency', 'fResult']
         .filter(function (id) { return !$(id).classList.contains('hide'); })[0] || null;
     }
   };

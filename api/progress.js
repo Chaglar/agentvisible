@@ -14,7 +14,7 @@
  * falls back to local-only storage rather than breaking.
  *
  * GET  /api/progress?profile=leo   -> { ok, configured, state }
- * POST /api/progress               -> merge { profile, answers[], sessions[], patch{} }
+ * POST /api/progress               -> merge { profile, answers[], sessions[], writing[], facts[], patch{} }
  * DELETE /api/progress?profile=leo -> wipe that profile
  *
  * Merging is by id and is idempotent, so a retried or duplicated POST cannot
@@ -26,6 +26,7 @@ const KEY_PREFIX = 'leo:progress:';
 const MAX_ANSWERS = 20000;
 const MAX_SESSIONS = 2000;
 const MAX_WRITING = 500;
+const MAX_FACTS = 20000;
 
 function store() {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -57,7 +58,8 @@ function blankState() {
     streak: { days: 0, last: '' },
     sessions: [],
     answers: [],
-    writing: []
+    writing: [],
+    facts: []
   };
 }
 
@@ -69,6 +71,7 @@ function dayOf(ts) {
 /* xp, best and streak are functions of the answer log, so recompute rather than trust */
 function derive(state) {
   if (!Array.isArray(state.writing)) state.writing = [];
+  if (!Array.isArray(state.facts)) state.facts = [];
   const a = state.answers;
   state.xp = a.reduce((sum, x) => sum + (x.ok ? 10 + (x.lv || 3) * 2 : 2), 0);
   state.best = state.sessions.reduce((m, s) => (s.n ? Math.max(m, Math.round(100 * s.ok / s.n)) : m), 0);
@@ -101,6 +104,7 @@ function mergeById(existing, incoming, idOf) {
 }
 
 function answerId(a) { return a.aid || (a.sid && a.t ? `${a.sid}:${a.t}` : null); }
+function factId(f) { return f.fid || (f.fact && f.t ? `${f.fact}:${f.t}` : null); }
 
 function clean(profile) {
   return String(profile || 'leo').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40) || 'leo';
@@ -142,6 +146,7 @@ module.exports = async (req, res) => {
       state.answers = mergeById(state.answers, body.answers || [], answerId).slice(-MAX_ANSWERS);
       state.sessions = mergeById(state.sessions, body.sessions || [], s => s.id).slice(-MAX_SESSIONS);
       state.writing = mergeById(state.writing || [], body.writing || [], w => w.id).slice(-MAX_WRITING);
+      state.facts = mergeById(state.facts || [], body.facts || [], factId).slice(-MAX_FACTS);
       if (body.patch && typeof body.patch === 'object') {
         if (body.patch.profile) Object.assign(state.profile, body.patch.profile);
         if (body.patch.settings) Object.assign(state.settings, body.patch.settings);

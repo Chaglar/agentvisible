@@ -40,6 +40,51 @@ one is what makes it stick.
 The home screen also chooses when answers appear: straight away, or held to the end like
 a real exam. Either way the fix-up round runs afterwards.
 
+## Fast maths — number-fact fluency
+
+The quiz asks whether he can *work something out*. This asks whether he can *recall
+it*. Those are different skills and need different machinery, so this is a separate
+mode rather than more question types.
+
+Three sets, matching the gaps his practice actually shows:
+
+| Set | Facts | What it covers |
+|---|---|---|
+| Add & take away to 20 | 116 | Number bonds both ways, including bridging ten |
+| Counting in 6s 7s 8s 9s | 40 | The ladder up each table, with the arc picture |
+| Times tables 6 7 8 9 | 88 | × and ÷ to 12, both directions |
+
+**Answers are typed, not chosen.** Four options let you work backwards from the
+answers, which is exactly the habit this mode exists to make unnecessary. A large
+keypad handles it on a tablet; a physical keyboard works too.
+
+**The clock measures time to the first keypress, not time to submit.** Leo's
+processing speed sits at the 6th percentile, so total time would largely measure how
+fast he can find digits on a keypad. Time-to-first-key is thinking time, which is the
+thing worth knowing. **Nothing is ever marked wrong for being slow** — speed is
+diagnosis, never grade, and there is no countdown anywhere.
+
+**A fact counts as known only after two correct answers under three seconds, on
+separate sittings.** One fast answer is luck; a right-but-slow answer means he is
+still counting it out. Those two look identical on an ordinary test — both are just a
+tick — and separating them is the entire point of the mode.
+
+Scheduling is Leitner-style, derived from the log rather than stored: wrong sends a
+fact back to box 0, right-and-fast moves it up one, right-but-slow leaves it where it
+is. Boxes come round after 0, 1, 3, 7 and 21 days. **30% of every set is reserved for
+facts he has not met yet** — without that reserve the ones he keeps getting wrong are
+permanently due and crowd out the rest of the table, which a simulation over 14
+sessions showed happening (57 of 88 facts never appeared at all).
+
+The dashboard draws the whole times-table grid, one cell per fact, coloured green /
+amber / orange / red for known, nearly, right-but-counting, and getting-it-wrong, with
+his typical thinking time in the cell. A topic score of "80% right" cannot tell you
+*which* four facts are missing; this can.
+
+Storage is an **append-only attempt log**. Box and fluency are derived on read rather
+than written down, so two devices merge by id with no conflict resolution and no
+last-write-wins — the same property the answer log has.
+
 ## Writing
 
 The one area his assessments show going backwards: alphabet writing fluency fell from
@@ -109,6 +154,7 @@ real variety):
 | Data & chance | 1,700 |
 | Patterns & algebra | 311 |
 | Grammar & spelling | 98 (hand-written) |
+| Number facts (fluency mode) | 244 (a fixed, deliberately finite set) |
 | Reading | 42 (14 passages × 3 questions, hand-written) |
 
 Reading and language are hand-written and therefore finite — extend them in
@@ -242,21 +288,22 @@ npm run smoke
 
 `test/smoke.mjs` drives the real app in Chromium: it sits a 12-question NAPLAN
 test answering 9 right and 3 wrong on purpose, checks the score, checks the
-difficulty ladder actually climbed, works the fix-up round, submits a piece of
+difficulty ladder actually climbed, works the fix-up round, drills a set of number
+facts through the keypad, submits a piece of
 writing both typed and as a photo of the page, and then opens the dashboard in a
 **separate browser profile**. That last part matters — a second profile shares no
-localStorage, so if the answers, sessions and writing all show up there, the
-record genuinely came back from the server.
+localStorage, so if the answers, sessions, writing and fact attempts all show up
+there, the record genuinely came back from the server.
 
-It asserts 28 things and exits non-zero if any of them fail, so it can gate a
+It asserts 41 things and exits non-zero if any of them fail, so it can gate a
 deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
 
 It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and
 wipes that profile before and after, so runs are independent and it can never
 touch Leo's real record — including when `SMOKE_BASE` points at the deployed site.
 That isolation is what lets the counts be exact rather than "at least": a
-12-question test plus 3 fix-ups must leave exactly 15 answers, 2 sessions and 2
-pieces of writing. Without the wipe, a dev-server left running from a previous run
+12-question test plus 3 fix-ups must leave exactly 15 answers, 2 sessions, 2
+pieces of writing and 20 fact attempts. Without the wipe, a dev-server left running from a previous run
 carries its answers over and every count quietly asserts against stale data.
 
 To answer deliberately rather than by guessing, the test reads `LEO.debug`, a

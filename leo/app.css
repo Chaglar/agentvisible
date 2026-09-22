@@ -224,3 +224,49 @@ h2{font-size:18px;margin:26px 0 10px;letter-spacing:-.01em}
 .wgood{font-size:15.5px;line-height:1.55;padding:8px 0;border-top:1px solid var(--line)}
 .wgood:first-child{border-top:0}
 .wgood::before{content:'✅ ';}
+
+/* ---------- fast maths (number-fact fluency) ---------- */
+/* The question is the hero: nothing else on screen competes with it, because the
+   whole point is to look at it and know the answer without working anything out. */
+.fq{font-size:46px;line-height:1.1;font-weight:800;text-align:center;letter-spacing:.5px;
+  margin:18px 0 14px;font-variant-numeric:tabular-nums}
+.fq.seq{font-size:30px;letter-spacing:1px}
+
+.fans{display:flex;align-items:center;justify-content:center;gap:2px;min-height:62px;
+  background:var(--bg);border:2px solid var(--line);border-radius:14px;margin-bottom:12px;
+  font-size:38px;font-weight:800;font-variant-numeric:tabular-nums}
+.fans.ok{border-color:var(--good);color:var(--good)}
+.fans.bad{border-color:var(--bad);color:var(--bad)}
+.fans .caret{display:inline-block;width:3px;height:34px;background:var(--acc);border-radius:2px;
+  animation:blink 1s steps(1) infinite}
+.fans.done .caret{display:none}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.fans .caret{animation:none}}
+
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.keypad button{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:15px 0;
+  font-size:26px;font-weight:800;cursor:pointer;font-variant-numeric:tabular-nums;
+  transition:transform .08s ease,border-color .12s ease}
+.keypad button:active{transform:scale(.95);border-color:var(--acc)}
+.keypad .k-alt{font-size:22px;color:var(--mut)}
+.keypad .k-go{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.keypad button:disabled{opacity:.4;cursor:default}
+
+/* Speed feedback. Never a failure — "quick" is praise, its absence is silence. */
+.fmark{text-align:center;font-weight:700;margin:10px 0 2px;font-size:17px}
+.fmark.ok{color:var(--good)}
+.fmark.bad{color:var(--bad)}
+.fmark .zip{color:var(--gold)}
+.fhint{text-align:center;color:var(--mut);font-size:15px;line-height:1.45;margin:6px 0 2px}
+
+.frstats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+.frstats div{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 8px;text-align:center}
+.frstats b{display:block;font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+.frstats span{font-size:13px;color:var(--mut)}
+
+.frow{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line);
+  font-variant-numeric:tabular-nums}
+.frow:last-child{border-bottom:0}
+.frow .f{font-weight:700;min-width:96px}
+.frow .ms{margin-left:auto;color:var(--mut);font-size:14px}
+.frow.bad .f{color:var(--bad)}
