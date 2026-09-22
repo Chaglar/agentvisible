@@ -58,6 +58,14 @@
   }
 
   /* ---------- home ---------- */
+  function paintSync() {
+    var st = S.statusText(), el = $('chipSync');
+    if (!el) return;
+    el.className = 'chip ' + st.cls;
+    el.textContent = { ok: '☁︎', wait: '⟳', local: '⌂', err: '⚠' }[st.cls] || '⟳';
+    el.title = st.text;
+  }
+
   function paintHome() {
     var st = S.load();
     $('ava').textContent = st.profile.avatar || '🦁';
@@ -66,6 +74,7 @@
     $('chipStreak').textContent = '🔥 ' + st.streak.days;
     $('btnSound').textContent = st.settings.sound ? '🔊' : '🔇';
     $('naplanLv').textContent = 'Starts at level ' + Math.max(2, N.suggestLevel(st.answers.slice(-80)));
+    paintSync();
 
     var weak = L.engine.weakest().filter(function (t) { return t.meta.modes.indexOf('naplan') >= 0 || t.meta.modes.indexOf('oc') >= 0; }).slice(0, 6);
     $('drills').innerHTML = weak.map(function (t) {
@@ -103,6 +112,11 @@
 
     $('qTopic').textContent = q.meta.label;
     $('qSub').textContent = q.sub || '';
+    var yrEl = $('qYear');
+    if (yrEl) {
+      yrEl.textContent = q.cur && q.cur.yr ? 'Year ' + q.cur.yr + ' content' : '';
+      yrEl.title = q.cur && q.cur.note ? q.cur.note : '';
+    }
     $('qPassage').innerHTML = q.passage ?
       '<div class="passage"><h4>' + q.passage.title + '</h4>' + q.passage.text + '</div>' : '';
     $('qText').innerHTML = q.prompt;
@@ -221,7 +235,9 @@
     if ((e.key === 'Enter' || e.key === ' ') && !$('btnNext').classList.contains('hide')) { e.preventDefault(); step(); }
   });
 
+  S.onchange = paintSync;
   paintHome();
+  S.sync().then(paintHome);
 
   // deep link from the dashboard: /leo/?drill=fractions starts that drill straight away
   var qp = new URLSearchParams(location.search);

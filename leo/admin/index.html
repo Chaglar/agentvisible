@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="tr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Leo — Veli Paneli</title>
-<meta name="description" content="Leo'nun NAPLAN ve OC çalışmalarının yaşa göre takip paneli.">
+<title>Leo — Parent Dashboard</title>
+<meta name="description" content="Age-referenced progress tracking for Leo's NAPLAN and OC practice.">
 <meta name="robots" content="noindex,nofollow">
 <link rel="stylesheet" href="../admin.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50' font-size='50'>📊</text></svg>">
@@ -15,124 +15,153 @@
   <div class="head">
     <span class="ava" id="ava">🦁</span>
     <div>
-      <h1 id="title">Leo · Veli Paneli</h1>
+      <h1 id="title">Leo · Parent Dashboard</h1>
       <div class="sub" id="subtitle">—</div>
     </div>
     <div class="spacer"></div>
-    <a class="btn pri" href="../">← Soru çözme sayfası</a>
+    <a class="btn pri" href="../">← Practice page</a>
+  </div>
+
+  <div id="syncBar" class="note" style="margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <span class="dot" id="syncDot" style="background:var(--mut)"></span>
+    <span id="syncText">Checking server…</span>
+    <span class="spacer" style="flex:1"></span>
+    <button class="btn" id="btnSync" style="padding:5px 11px">Sync now</button>
+    <button class="btn" id="btnKey" style="padding:5px 11px">Access key</button>
   </div>
 
   <div class="tabs" id="rangeTabs">
-    <button class="tab on" data-range="0">Tüm zamanlar</button>
-    <button class="tab" data-range="30">Son 30 gün</button>
-    <button class="tab" data-range="7">Son 7 gün</button>
+    <button class="tab on" data-range="0">All time</button>
+    <button class="tab" data-range="30">Last 30 days</button>
+    <button class="tab" data-range="7">Last 7 days</button>
   </div>
 
   <div id="empty" class="card empty hide">
-    Henüz çözülmüş soru yok. <a href="../">Soru çözme sayfasından</a> bir tur başlat, sonra buraya dön.
+    No questions answered yet. Start a round on the <a href="../">practice page</a>, then come back.
   </div>
 
   <div id="dash">
     <div class="grid kpis" id="kpis"></div>
 
-    <h2>Yetenek gelişimi <span class="n" id="abilityN"></span></h2>
+    <h2>Ability over time <span class="n" id="abilityN"></span></h2>
     <div class="card viz"><div id="chartAbility"></div>
       <div class="legend">
-        <span><i class="dot" style="background:var(--s1)"></i> Tahmini yetenek (θ, logit)</span>
-        <span><i class="dot" style="background:var(--s1);opacity:.35"></i> ±1 standart hata</span>
-        <span>Kesikli çizgi = Year 2 ortalaması</span>
+        <span><i class="dot" style="background:var(--s1)"></i> Estimated ability (θ, logits)</span>
+        <span><i class="dot" style="background:var(--s1);opacity:.35"></i> ±1 standard error</span>
+        <span>Dashed line = middle of the Year 2 reference group</span>
       </div>
-      <div class="sub" style="margin-top:8px">Her nokta bir oturum sonrası, o ana kadarki tüm cevaplarla yeniden hesaplanan yetenek tahmini.</div>
+      <div class="sub" style="margin-top:8px">Each point is recalculated after a session, using every answer up to that moment.</div>
     </div>
 
-    <h2>Konulara göre yaşıt karşılaştırması</h2>
+    <h2>How each topic compares with same-age children</h2>
     <div class="card viz"><div id="chartTopics"></div>
-      <div class="sub" style="margin-top:10px">Yüzdelik dilim: 50 = yaşıtlarının tam ortası. En az 6 soru çözülmüş konular gösterilir.</div>
+      <div class="sub" style="margin-top:10px">Percentile: 50 means exactly average for his age. Topics with at least 6 answers are shown.</div>
     </div>
 
-    <h2>Konu detayı</h2>
-    <div class="card scroll"><table id="topicTable"></table></div>
+    <h2>Topic detail</h2>
+    <div class="card scroll"><table id="topicTable"></table>
+      <div class="sub" style="margin-top:10px">“Curriculum” is the Australian Curriculum v9 year level at which the hardest content he has attempted in that topic is normally introduced.</div>
+    </div>
 
-    <h2>Zorluk seviyesine göre başarı</h2>
+    <h2>Accuracy by difficulty</h2>
     <div class="card viz"><div id="chartLevels"></div>
       <div class="legend">
-        <span><i class="dot" style="background:var(--s1)"></i> Leo'nun gerçek başarısı</span>
-        <span><i class="dot" style="background:var(--s2)"></i> Model beklentisi (tahmini yeteneğine göre)</span>
+        <span><i class="dot" style="background:var(--s1)"></i> Leo's actual accuracy</span>
+        <span><i class="dot" style="background:var(--s2)"></i> Model expectation at his estimated ability</span>
       </div>
-      <div class="sub" style="margin-top:8px">Çubuk çizginin <b>üstündeyse</b> o seviyede beklenenden iyi, <b>altındaysa</b> zorlanıyor demektir.</div>
+      <div class="sub" style="margin-top:8px">A bar <b>above</b> the line means he is doing better than expected at that difficulty; <b>below</b> means that band is hard for him.</div>
     </div>
 
-    <h2>Günlük çalışma <span class="n" id="daysN"></span></h2>
+    <h2>Daily practice <span class="n" id="daysN"></span></h2>
     <div class="card viz"><div id="chartDays"></div></div>
 
-    <h2>Ne yapmalı</h2>
+    <h2>What to do next</h2>
     <div class="grid" id="recs" style="gap:10px"></div>
 
-    <h2>Oturum geçmişi</h2>
+    <h2>Session history</h2>
     <div class="card scroll"><table id="sessionTable"></table></div>
   </div>
 
-  <h2>Ayarlar</h2>
+  <h2>Settings</h2>
   <div class="grid two">
     <div class="card">
-      <div style="font-weight:700;margin-bottom:12px">Çocuk bilgileri</div>
-      <div class="field"><label for="pName">Ad</label><input id="pName" type="text"></div>
-      <div class="field"><label for="pDob">Doğum tarihi <span style="text-transform:none;font-weight:400">— yaşa göre karşılaştırma için gerekli</span></label><input id="pDob" type="date"></div>
-      <div class="field"><label for="pYear">Sınıf (Year)</label>
+      <div style="font-weight:700;margin-bottom:12px">Child</div>
+      <div class="field"><label for="pName">Name</label><input id="pName" type="text"></div>
+      <div class="field"><label for="pDob">Date of birth <span style="text-transform:none;font-weight:400">— needed for the age comparison</span></label><input id="pDob" type="date"></div>
+      <div class="field"><label for="pYear">School year</label>
         <select id="pYear"><option value="1">Year 1</option><option value="2">Year 2</option><option value="3">Year 3</option><option value="4">Year 4</option></select></div>
       <div class="field"><label for="pAva">Avatar</label><input id="pAva" type="text" maxlength="4"></div>
-      <button class="btn pri" id="saveProfile">Kaydet</button>
+      <div class="field"><label for="pId">Profile id <span style="text-transform:none;font-weight:400">— the server record this device reads and writes</span></label><input id="pId" type="text" maxlength="40"></div>
+      <button class="btn pri" id="saveProfile">Save</button>
     </div>
 
     <div class="card">
-      <div style="font-weight:700;margin-bottom:12px">Model parametreleri</div>
-      <div class="field"><label for="mGrowth">Yıllık gelişim (logit / okul yılı)</label><input id="mGrowth" type="number" step="0.05" min="0.2" max="2.5"></div>
-      <div class="field"><label for="mSD">Yaşıt grubu standart sapması (logit)</label><input id="mSD" type="number" step="0.05" min="0.4" max="2.5"></div>
-      <div class="field"><label for="mAge">Referans yaş (Year 2 ortası)</label><input id="mAge" type="number" step="0.1" min="5" max="12"></div>
-      <button class="btn" id="saveModel">Kaydet</button>
-      <div class="sub" style="margin-top:10px">Elinde gerçek NAPLAN/OC sonucu varsa bu değerleri kalibre edebilirsin.</div>
+      <div style="font-weight:700;margin-bottom:12px">Model parameters</div>
+      <div class="field"><label for="mGrowth">Growth per school year (logits)</label><input id="mGrowth" type="number" step="0.05" min="0.2" max="2.5"></div>
+      <div class="field"><label for="mSD">Reference group standard deviation (logits)</label><input id="mSD" type="number" step="0.05" min="0.4" max="2.5"></div>
+      <div class="field"><label for="mAge">Reference age (middle of Year 2)</label><input id="mAge" type="number" step="0.1" min="5" max="12"></div>
+      <button class="btn" id="saveModel">Save</button>
+      <div class="sub" style="margin-top:10px">If you get a real NAPLAN or OC result, calibrate these against it.</div>
     </div>
 
     <div class="card">
-      <div style="font-weight:700;margin-bottom:12px">Veri</div>
-      <div class="sub" style="margin-bottom:12px">Tüm kayıtlar yalnızca bu tarayıcıda tutulur. Başka bir cihaza taşımak için dışa aktar.</div>
+      <div style="font-weight:700;margin-bottom:12px">Data</div>
+      <div class="sub" style="margin-bottom:12px">Records are stored on the server so every device sees the same history. Exports are for backup and for analysis outside the app.</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn" id="btnExport">JSON dışa aktar</button>
-        <button class="btn" id="btnExportCsv">CSV dışa aktar</button>
-        <button class="btn" id="btnImport">İçe aktar</button>
-        <button class="btn danger" id="btnReset">Tüm veriyi sil</button>
+        <button class="btn" id="btnExport">Export JSON</button>
+        <button class="btn" id="btnExportCsv">Export CSV</button>
+        <button class="btn" id="btnImport">Import</button>
+        <button class="btn danger" id="btnReset">Delete all data</button>
       </div>
       <input type="file" id="fileIn" accept="application/json" class="hide" style="display:none">
     </div>
 
     <div class="card">
       <details>
-        <summary>Yöntem ve sınırlar — okunmalı</summary>
+        <summary>Method, sources and limits — worth reading</summary>
         <div class="note" style="margin-top:12px">
-          <p><b>Nasıl hesaplanıyor.</b> Her soru 1–5 zorluk seviyesinde etiketli. Bir 3PL-benzeri madde tepki modeli kullanılıyor:
-          P(doğru) = c + (1−c)·logit⁻¹(θ − b). Burada <b>b</b> soru zorluğu (seviye 1–5 → −1.8 … +1.8 logit),
-          <b>c</b> şans faktörü (4 şıklı soruda 0.25), <b>θ</b> ise tüm cevaplardan EAP ile kestirilen yetenek.</p>
-          <p style="margin-top:10px"><b>Yüzdelik dilim ne demek.</b> θ dağılımı referans grupta N(0, σ) kabul ediliyor;
-          yüzdelik = Φ(θ/σ). Yaşa göre karşılaştırmada beklenen θ, yaş farkı × yıllık gelişim kadar kaydırılıyor —
-          yani yaşı küçükse aynı performans daha yüksek yüzdelik verir.</p>
-          <p style="margin-top:10px"><b>En önemli uyarı.</b> Referans dağılım <b>gerçek NAPLAN norm verisi değil</b>, bu uygulamanın
-          kendi zorluk ölçeğine dayanan bir modeldir. Rakamlar <b>yön ve değişim takibi</b> için anlamlıdır; resmî bir
-          scaled score yerine geçmez. Gerçek bir sonuç eline geçtiğinde yandaki model parametrelerini kalibre et.</p>
-          <p style="margin-top:10px"><b>EAP büzülmesi.</b> Tahmin ortalamaya doğru çekilir: gerçek θ = +2 olan bir çocuk
-          60 soruda ortalama +1.72 olarak kestirilir. Yani uçlarda gerçek yetenek gösterilenden biraz <b>daha yüksektir</b>.
-          Soru sayısı arttıkça sapma küçülür; ±1 standart hata bandı grafikte gösteriliyor.</p>
-          <p style="margin-top:10px"><b>Soru sayısı eşiği.</b> 8 sorudan az olan konularda yüzdelik gösterilmez.</p>
+          <p><b>How the scores are produced.</b> Every question carries a difficulty level 1–5. A 3PL-style item response
+          model is fitted: P(correct) = c + (1−c)·logit⁻¹(θ − b), where <b>b</b> is the item difficulty (level 1–5 mapped to
+          −1.8 … +1.8 logits), <b>c</b> is the guessing floor (1 ÷ number of options, so 0.25 for a four-option item and 0.20
+          for the five-option OC maths items), and <b>θ</b> is ability, estimated by EAP over a normal reference prior.</p>
+          <p style="margin-top:10px"><b>What the percentile means.</b> Ability in the reference group is taken as N(0, σ),
+          so the percentile is Φ(θ/σ). For the age comparison the expected θ is shifted by (age − reference age) × growth
+          per year: the same performance therefore scores higher for a younger child.</p>
+          <p style="margin-top:10px"><b>The important caveat.</b> The reference distribution is a <b>model built on this
+          app's own difficulty ladder — it is not measured NAPLAN norm data</b>. The numbers are meaningful for tracking
+          direction and spread over time. They are not a substitute for an official scaled score. Calibrate the parameters
+          opposite once you have a real result.</p>
+          <p style="margin-top:10px"><b>EAP shrinkage.</b> Estimates are pulled toward the mean: in simulation, a child whose
+          true θ is +2 is recovered at about +1.72 over 60 items. At the extremes his real ability is therefore a little
+          <b>higher</b> than shown. The ±1 standard error band is drawn on the ability chart, and it narrows as he answers more.</p>
+          <p style="margin-top:10px"><b>Minimum data.</b> No percentile is shown for a topic with fewer than 8 answers.</p>
+          <p style="margin-top:14px"><b>Curriculum and test sources, checked September 2026.</b></p>
+          <ul style="margin:6px 0 0 18px">
+            <li>Australian Curriculum v9 Mathematics, Year 2 and Year 3 content descriptions — the level ladder is mapped to
+            these codes, visible in the topic table. Year 2 covers numbers to 1000, halves/quarters/eighths by repeated
+            halving, ×2 facts with doubling and halving, informal units, calendars and clock to the quarter-hour. Thirds and
+            fifths, formal units, chance and the 3–9 times tables are Year 3 or later, and are marked as such.</li>
+            <li>NAPLAN (nap.edu.au): Year 3 sits Reading 45 min, Conventions of Language 45 min (spelling, then grammar and
+            punctuation) and Numeracy 40 min. The online test is tailored: everyone starts on testlet A and moves to an
+            easier or harder testlet based on it. This app's NAPLAN mode reproduces that branching.</li>
+            <li>NSW Opportunity Class placement test (education.nsw.gov.au): Reading 40 min; Thinking Skills 30 questions in
+            30 min with four options; Mathematical Reasoning 35 questions in 40 min with <b>five</b> options. Content comes
+            from the NSW curriculum up to Year 4, and the paper is a fixed form — so OC mode here does not adapt, and its
+            maths questions offer five options.</li>
+          </ul>
         </div>
       </details>
     </div>
   </div>
 
   <div class="sub" style="margin-top:34px;text-align:center">
-    Veriler bu tarayıcıda saklanır · <a href="../">Soru çözme sayfası</a>
+    <a href="../">Practice page</a>
   </div>
 </div>
 
 <script src="../js/visuals.js"></script>
+<script src="../js/curriculum.js"></script>
+<script src="../js/content-literacy.js"></script>
 <script src="../js/bank.js"></script>
 <script src="../js/bank-measure.js"></script>
 <script src="../js/bank-verbal.js"></script>

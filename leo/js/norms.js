@@ -89,12 +89,12 @@
     },
 
     band: function (pct) {
-      if (pct == null) return { key: 'none', tr: 'Veri yok', color: 'var(--mut)' };
-      if (pct >= 90) return { key: 'top', tr: 'Üst %10', color: 'var(--good)' };
-      if (pct >= 75) return { key: 'strong', tr: 'Güçlü', color: 'var(--good)' };
-      if (pct >= 40) return { key: 'ontrack', tr: 'Yaşıtlarıyla aynı seviyede', color: 'var(--acc)' };
-      if (pct >= 20) return { key: 'watch', tr: 'Takip edilmeli', color: 'var(--warn)' };
-      return { key: 'support', tr: 'Destek gerekiyor', color: 'var(--bad)' };
+      if (pct == null) return { key: 'none', label: 'No data yet', color: 'var(--mut)' };
+      if (pct >= 90) return { key: 'top', label: 'Top 10%', color: 'var(--good)' };
+      if (pct >= 75) return { key: 'strong', label: 'Strong', color: 'var(--good)' };
+      if (pct >= 40) return { key: 'ontrack', label: 'On track for his age', color: 'var(--acc)' };
+      if (pct >= 20) return { key: 'watch', label: 'Worth watching', color: 'var(--warn)' };
+      return { key: 'support', label: 'Needs support', color: 'var(--bad)' };
     },
 
     // suggested starting level for a fresh session, from what we already know
