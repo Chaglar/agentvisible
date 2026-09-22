@@ -233,6 +233,55 @@
       'A bed beside a window with the moon outside');
   };
 
+  /* ------------------------------------------------------- Three Loud Things */
+
+  A.hands = function () {
+    return svg(
+      // a desk edge, two sticks, and the beat coming off it
+      '<path d="M18 68 H136 V78 H18 Z" fill="' + FAINT + '"/>' +
+      '<path d="M18 68 H136 V78 H18 Z"/><path d="M28 78 V94"/><path d="M126 78 V94"/>' +
+      '<g stroke="' + WARM + '" stroke-width="5" stroke-linecap="round">' +
+      '<path d="M54 30 L70 62"/><path d="M104 26 L92 60"/></g>' +
+      '<g stroke="' + ACC + '" stroke-width="2.6">' +
+      '<path d="M148 42 q9 -7 18 0"/><path d="M148 56 q9 -7 18 0"/><path d="M148 70 q9 -7 18 0"/>' +
+      '<path d="M170 34 q11 -9 22 0"/><path d="M170 52 q11 -9 22 0"/></g>' +
+      '<circle cx="70" cy="64" r="4" fill="' + WARM + '" stroke="none"/>' +
+      '<circle cx="92" cy="62" r="4" fill="' + WARM + '" stroke="none"/>',
+      'Two drumsticks on the edge of a desk, with the beat coming off it');
+  };
+
+  A.listbook = function () {
+    return svg(
+      '<path d="M34 24 h132 v62 h-132 Z" fill="' + FAINT + '"/>' +
+      '<path d="M34 24 h132 v62 h-132 Z"/><path d="M100 24 v62"/>' +
+      '<g stroke="' + INK + '" stroke-width="1.8" opacity=".45">' +
+      '<path d="M44 40 h46"/><path d="M44 52 h46"/><path d="M44 64 h30"/>' +
+      '<path d="M110 40 h46"/><path d="M110 52 h30"/></g>' +
+      // four marks, and a great deal of room left over
+      '<g stroke="' + WARM + '" stroke-width="2.6">' +
+      '<path d="M112 64 l4 4 l7 -9"/><path d="M126 64 l4 4 l7 -9"/>' +
+      '<path d="M140 64 l4 4 l7 -9"/><path d="M112 76 l4 4 l7 -9"/></g>' +
+      '<path d="M170 88 l14 -14" stroke="' + INK + '" stroke-width="3"/>' +
+      '<path d="M183 75 l6 -6 l5 5 l-6 6 Z" fill="' + GOLD + '" stroke="' + INK + '"/>',
+      'An open book with only four small marks on the page');
+  };
+
+  A.weather = function () {
+    return svg(
+      // rain a long way off, and a window with nobody's fault in it
+      '<g stroke="' + INK + '" opacity=".28">' +
+      '<path d="M116 26 c-8 -10 -24 -8 -28 4 c-12 -1 -18 9 -14 17 h56 c6 -8 0 -20 -14 -21 Z" fill="' + FAINT + '"/></g>' +
+      '<g stroke="' + ACC + '" stroke-width="2.4" opacity=".8">' +
+      '<path d="M92 54 l-5 12"/><path d="M106 54 l-5 12"/><path d="M120 54 l-5 12"/>' +
+      '<path d="M99 70 l-4 9"/><path d="M113 70 l-4 9"/></g>' +
+      '<path d="M18 22 h48 v60 h-48 Z" fill="var(--vpaper)"/>' +
+      '<path d="M18 22 h48 v60 h-48 Z"/><path d="M42 22 v60"/><path d="M18 52 h48"/>' +
+      '<path d="M14 84 h56" stroke="' + INK + '" stroke-width="3"/>' +
+      '<g stroke="' + GOLD + '" stroke-width="2.2"><path d="M150 84 q12 -7 24 0"/></g>' +
+      '<path d="M8 94 H192" opacity=".22"/>',
+      'A window with rain falling a long way off');
+  };
+
   A.render = function (name) { return A[name] ? A[name]() : ''; };
   root.LEO = root.LEO || {};
   root.LEO.bookart = A;

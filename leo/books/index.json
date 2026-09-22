@@ -1,5 +1,17 @@
 [
  {
+  "id": "loud",
+  "title": "Three Loud Things",
+  "author": "written for Leo",
+  "year": 2026,
+  "n": 3,
+  "words": 2341,
+  "verse": false,
+  "original": true,
+  "blurb": "Three stories about being told you are too much, and what is actually going on.",
+  "kb": 12
+ },
+ {
   "id": "breathes",
   "title": "The Cave That Breathes",
   "author": "written for Leo",

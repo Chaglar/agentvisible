@@ -121,8 +121,21 @@ Four decisions, each from his profile rather than from what was easy:
 
 ### Reading the books in the app
 
-Six books are here in full and can be read inside the app. The first was written
+Seven books are here in full and can be read inside the app. The first was written
 for this app; the rest are public domain.
+
+**Three Loud Things** — 3 stories, written for Leo. A boy whose hands drum on
+desks without him deciding to; a boy who says "I'm the bad one" before anyone else
+can; a boy who reads his father's bad mood as being about him. They exist because
+those are his, and because a child who says *I am a bad kid* has generalised from
+events to a nature, which is the thing to interrupt.
+
+None of the three ends with the boy learning to sit quietly. In the first, a drum
+teacher makes him tap on purpose and he *cannot* — which is the proof that it is
+not naughtiness, because naughtiness can be done deliberately. In the second, a
+caretaker's logbook shows him he is in it four times in two years, against the
+shapeless heap he had been carrying. In the third, a father answers "is this one
+mine?" honestly rather than reassuringly.
 
 **The Cave That Breathes** — 7 chapters, written for Leo. A boy finds a crack in a
 hillside that blows air out on Tuesday and sucks it in on Wednesday, and works out
