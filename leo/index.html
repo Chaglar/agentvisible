@@ -52,8 +52,17 @@
         <div class="m-foot">
           <span class="tag">Hard from the start</span><span class="tag">12 questions</span><span class="tag">Exam style — answers at the end</span>
           <span class="tag">Maths questions have 5 choices, like the real paper</span>
+          <span class="tag">The clock just counts — it never runs out</span>
         </div>
       </button>
+    </div>
+
+    <div class="card" style="margin-top:18px;padding:14px 16px">
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px">When do you want the answers?</div>
+      <div class="sub" style="margin-bottom:10px">Either way, we go through anything you got wrong at the end.</div>
+      <div class="seg" id="fbSeg">
+        <button data-fb="instant">Straight away</button><button data-fb="end">At the end</button>
+      </div>
     </div>
 
     <h2>Quick practice</h2>
@@ -83,6 +92,35 @@
     <button class="big ghost" id="btnQuit" style="margin-top:12px">Stop and go back</button>
   </section>
 
+  <!-- ============ COACH: going through the ones you got wrong ============ -->
+  <section id="coach" class="hide">
+    <div class="qtop">
+      <div class="dots" id="cDots"></div>
+      <span class="chip" id="cCount">0 fixed</span>
+    </div>
+    <div class="qcard">
+      <div class="qmeta"><span id="cTopic"></span><span>·</span><span id="cSub"></span></div>
+
+      <div id="cLesson">
+        <div class="ctitle" id="cTitle"></div>
+        <div class="cwrong" id="cWrong"></div>
+        <div class="csteps" id="cSteps"></div>
+        <div class="cremember hide" id="cRemember"></div>
+      </div>
+
+      <div id="cTry" class="hide">
+        <div class="ctry-badge">Your turn</div>
+        <div class="qtext" id="cQText"></div>
+        <div class="vis" id="cQVis"></div>
+        <div class="choices" id="cQChoices"></div>
+        <div id="cQFeedback"></div>
+      </div>
+
+      <button class="big" id="cNext">Show me →</button>
+    </div>
+    <button class="big ghost" id="cSkip" style="margin-top:12px">Skip this one</button>
+  </section>
+
   <!-- ============ RESULT ============ -->
   <section id="result" class="hide">
     <div class="card score">
@@ -95,6 +133,7 @@
     </div>
     <h2>Every question</h2>
     <div class="rlist" id="rList"></div>
+    <button class="big hide" id="btnFix" style="background:var(--gold)">🛠 Let’s fix the ones you got wrong</button>
     <div class="row2" style="margin-top:16px">
       <button class="big ghost" id="btnHome">Home</button>
       <button class="big" id="btnAgain">Play again</button>
@@ -107,6 +146,7 @@
 <script src="js/visuals.js"></script>
 <script src="js/curriculum.js"></script>
 <script src="js/content-literacy.js"></script>
+<script src="js/coach.js"></script>
 <script src="js/bank.js"></script>
 <script src="js/bank-measure.js"></script>
 <script src="js/bank-verbal.js"></script>

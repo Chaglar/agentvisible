@@ -237,7 +237,8 @@
       var base1 = rng.int(3, 12), dbl = rng.chance(0.5);
       q.sub = dbl ? 'Doubling' : 'Halving';
       q.prompt = dbl ? 'What is <b>double ' + base1 + '</b>?' : 'What is <b>half of ' + (base1 * 2) + '</b>?';
-      q.visual = { type: 'tenframe', frames: dbl ? [Math.min(base1, 10), Math.max(0, base1 - 10)] : [Math.min(base1 * 2, 10), Math.max(0, base1 * 2 - 10)] };
+      var show = dbl ? base1 : base1 * 2;
+      q.visual = { type: 'tenframe', frames: show > 10 ? [10, show - 10] : [show] };
       Object.assign(q, mc(rng, dbl ? base1 * 2 : base1, [base1 + 2, base1 * 2 + 1, base1 - 1]));
       q.explain = dbl ? base1 + ' + ' + base1 + ' = <b>' + (base1 * 2) + '</b>. Doubling is just adding the number to itself.'
         : 'Split ' + (base1 * 2) + ' into two equal parts: ' + base1 + ' + ' + base1 + ' = ' + (base1 * 2) + ', so half is <b>' + base1 + '</b>.';
