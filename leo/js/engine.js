@@ -26,6 +26,9 @@
       pool: [['thinking', 2.4], ['reasoning', 2.0], ['reading', 1.4], ['multdiv', 0.7], ['fractions', 0.7], ['patterns', 0.6]],
       adaptive: 'fixed', ladder: [3, 4, 4, 5, 4, 5, 5, 4, 5, 5, 5, 5, 4, 5, 5], feedback: 'end', length: 12
     },
+    coach: {                                   // not startable: the label for fix-up rounds
+      label: 'Fix-ups', emoji: '🛠', pool: null, adaptive: 'none', feedback: 'instant', length: 0, internal: true
+    },
     drill: {
       label: 'Focus drill', emoji: '⚡',
       pool: null, adaptive: 'step', feedback: 'instant', length: 10

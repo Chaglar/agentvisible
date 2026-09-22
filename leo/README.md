@@ -29,6 +29,30 @@ offer **five** options, matching the real paper; Thinking Skills offers four.
 **Focus drill** — ten questions on one topic, adapting question by question. The home
 screen orders these weakest-first.
 
+**Fix-ups** — after any round, anything he got wrong is taught, not just marked. The
+app groups the wrong answers by kind, takes the three most common, and for each one
+shows a short lesson: one line at a time, each with a picture, ending in a single
+sentence to remember. Then it asks a *fresh* question of the same kind. Get it right
+and it is ticked off; get it wrong and it explains that specific question and offers an
+easier one of the same type. An explanation a child only nods at does not stick — doing
+one is what makes it stick.
+
+The home screen also chooses when answers appear: straight away, or held to the end like
+a real exam. Either way the fix-up round runs afterwards.
+
+### Why the lessons are shaped this way
+
+They follow Leo's assessment profile rather than a generic teaching style: visual-spatial
+reasoning at the 98th percentile, auditory working memory at the 25th, processing speed at
+the 6th. So every lesson gives **one short line at a time, carried by a picture**, never a
+paragraph or a verbal chain to hold in the head, and never a rule learnt by chanting. The
+times-table lessons are built on structure rather than recall — eights are three doublings,
+sevens are fives plus twos, nines are tens minus one lot — and they rebuild themselves
+around the actual numbers he got wrong. The OC clock counts up and never runs out, because
+under time pressure is precisely where his profile says he stops showing what he knows.
+
+Lesson content is in `js/coach.js`, separate from the flow that runs it.
+
 ## Question bank
 
 Questions are generated, not drawn from a fixed list, so the maths topics do not
