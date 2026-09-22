@@ -283,3 +283,12 @@ h2{font-size:18px;margin:26px 0 10px;letter-spacing:-.01em}
 /* Poetry keeps its line breaks and gets a little air; the OC paper's hardest
    text type reads wrong as a solid block. */
 .passage .verse{line-height:1.75;font-style:normal;padding-left:2px}
+
+/* Extract-matching sets: several short texts side by side, labelled, the way the
+   real OC paper lays them out. */
+.extracts{display:grid;gap:10px;margin-top:4px}
+@media (min-width:560px){.extracts{grid-template-columns:1fr 1fr}}
+.ex{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px;font-size:14.5px;line-height:1.55}
+.ex b.lbl{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;
+  background:var(--acc);color:var(--acc-ink);font-size:13px;margin-right:7px;vertical-align:1px}
+.paired .ex{border-left:3px solid var(--acc)}

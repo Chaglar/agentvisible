@@ -285,6 +285,24 @@ check('slowest facts listed', (await dash.locator('#factTable tbody tr').count()
 check('recommendations produced', (await dash.locator('#recs .rec').count()) >= 1);
 await shot(dash, '11-dashboard');
 
+/* Extract-matching options ARE the labels, so a shuffle would silently mark the
+   wrong extract correct — invisible in the UI and wrong on every attempt. */
+const labelCheck = await dash.evaluate(() => {
+  const L = window.LEO;
+  let seen = 0, bad = 0;
+  for (let i = 0; i < 3000; i++) {
+    const q = L.bank.topics.reading.gen(5, L.RNG(i));
+    if (!/^Which extract/.test(q.prompt)) continue;
+    seen++;
+    if (q.choices.map(c => c.text).join('') !== 'ABCD') { bad++; continue; }
+    if ('ABCD'[q.answer] !== q.explain.trim()[0]) bad++;
+  }
+  return { seen, bad };
+});
+check('extract-matching keeps its labels in order',
+  labelCheck.seen > 50 && labelCheck.bad === 0,
+  `${labelCheck.seen} rendered, ${labelCheck.bad} wrong`);
+
 check('no console or page errors anywhere', errors.length === 0, errors.slice(0, 3).join(' | '));
 
 await browser.close();

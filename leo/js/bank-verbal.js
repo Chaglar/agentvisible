@@ -10,7 +10,10 @@
     var pool = PASSAGES.filter(function (p) { return Math.abs(p.lv - lv) <= 1; });
     if (!pool.length) pool = PASSAGES;
     var p = rng.pick(pool), qq = rng.pick(p.qs);
-    var order = rng.shuffle(qq.c.map(function (c, i) { return { c: c, i: i }; }));
+    var idx = qq.c.map(function (c, i) { return { c: c, i: i }; });
+    // Extract-matching options ARE the labels A-D, so shuffling them would break the
+    // link to the extract each one names. Those sets opt out.
+    var order = qq.fixed ? idx : rng.shuffle(idx);
     return {
       topic: 'reading', level: lv, sub: p.title,
       passage: { title: p.title, text: p.text },

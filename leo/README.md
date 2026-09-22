@@ -160,7 +160,7 @@ real variety):
 | Patterns & algebra | 311 |
 | Grammar & spelling | 98 (hand-written) |
 | Number facts (fluency mode) | 244 (a fixed, deliberately finite set) |
-| Reading | 84 (28 passages × 3 questions, hand-written) |
+| Reading | 101 (32 passages, hand-written) |
 
 Reading and language are hand-written and therefore finite — extend them in
 `js/content-literacy.js` and `js/content-reading.js`, which hold nothing but content.
@@ -180,7 +180,27 @@ on something true.
 
 The set covers what the OC reading paper actually contains, including **poetry**,
 which the bank previously had none of and which every source names as its hardest
-text type. Questions are tagged with the OC reading skill they exercise
+text type.
+
+`content-reading-oc.js` adds the paper's harder shapes, written after reading an
+actual OC reading sample:
+
+- **Extract matching** — several labelled texts and a statement to place against
+  one of them. The answer options *are* the labels, so the generator must not
+  shuffle them; the smoke test renders a few hundred of these and checks the labels
+  stay in order and still match the explanation, because a shuffle here would mark
+  the wrong extract correct on every attempt while looking perfectly normal.
+- **Paired texts** — two extracts on one idea, with questions answerable only by
+  holding both in mind. The sample paper's hardest question was of this kind.
+- **A poem that withholds its subject.** The sample used Tennyson's *Crossing the
+  Bar*, which never says "death"; the whole task is to arrive at it. The earlier
+  poems here state their contrast outright, which is a gentler exercise.
+
+That sample was harder than this bank had assumed — a ~900-word Victorian folk tale
+beside a Mark Twain extract, then policy prose with vocabulary like *heterogeneous*
+and *subsistence*. Register in this file is correspondingly heavier. Note that the
+real papers draw on public-domain classics precisely because they are free to
+reproduce, which is an option open to this bank too. Questions are tagged with the OC reading skill they exercise
 (comprehension, inference, evaluation, text structure, tone, vocabulary) so coverage
 can be checked rather than assumed.
 
@@ -319,7 +339,7 @@ writing both typed and as a photo of the page, and then opens the dashboard in a
 localStorage, so if the answers, sessions, writing and fact attempts all show up
 there, the record genuinely came back from the server.
 
-It asserts 43 things and exits non-zero if any of them fail, so it can gate a
+It asserts 44 things and exits non-zero if any of them fail, so it can gate a
 deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
 
 It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and
