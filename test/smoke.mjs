@@ -303,6 +303,41 @@ check('extract-matching keeps its labels in order',
   labelCheck.seen > 50 && labelCheck.bad === 0,
   `${labelCheck.seen} rendered, ${labelCheck.bad} wrong`);
 
+/* The generated Thinking Skills questions state their own arithmetic in the
+   explanation, so the question can be checked against itself: a solid whose rate
+   does not divide evenly, or whose marked answer is not the product it prints,
+   would teach the child something false while looking entirely plausible. */
+const generated = await dash.evaluate(() => {
+  const L = window.LEO;
+  let spatial = 0, argue = 0, bad = [];
+  for (let lv = 3; lv <= 5; lv++) {
+    for (let i = 0; i < 300; i++) {
+      const q = L.bank.topics.thinking.gen(lv, L.RNG(lv * 811 + i));
+      if (q.choices.length !== 4 || q.answer == null || q.answer < 0 || q.answer > 3) {
+        bad.push(q.sub + ': malformed'); continue;
+      }
+      if (new Set(q.choices.map(c => c.text || 'v')).size !== 4 && q.choices.every(c => c.text)) {
+        bad.push(q.sub + ': duplicate options'); continue;
+      }
+      if (q.sub === 'Solids and joins') {
+        spatial++;
+        const rate = q.explain.match(/(\d+) ÷ (\d+) = <b>(\d+) seconds per face/);
+        const prod = q.explain.match(/(\d+) × (\d+) = <b>(\d+) seconds/);
+        if (!rate || !prod) { bad.push('solids: unparseable'); continue; }
+        if (+rate[1] / +rate[2] !== +rate[3]) bad.push('solids: rate not whole');
+        if (+prod[1] * +prod[2] !== +prod[3]) bad.push('solids: product wrong');
+        if (q.choices[q.answer].text !== prod[3] + ' seconds') bad.push('solids: answer mismatch');
+      }
+      if (/flaw|Weaken|conclusion|reasoning holds/i.test(q.sub || '')) argue++;
+    }
+  }
+  return { spatial, argue, bad: bad.slice(0, 4), nbad: bad.length };
+});
+check('generated thinking questions are self-consistent',
+  generated.nbad === 0 && generated.spatial > 20 && generated.argue > 100,
+  `${generated.spatial} spatial, ${generated.argue} argument, ${generated.nbad} bad` +
+  (generated.bad.length ? ' — ' + generated.bad.join('; ') : ''));
+
 check('no console or page errors anywhere', errors.length === 0, errors.slice(0, 3).join(' | '));
 
 await browser.close();

@@ -60,14 +60,17 @@
 
   topic('thinking', { label: 'Thinking skills', emoji: '🧩', strand: 'thinking', modes: ['oc'] }, function (lv, rng) {
     var q = { topic: 'thinking', level: lv };
-    var kinds = lv <= 2 ? ['odd', 'seq', 'matrix'] : lv === 3 ? ['odd', 'matrix', 'order', 'code', 'argue'] :
-                lv === 4 ? ['order', 'matrix', 'code', 'balance', 'must', 'argue', 'argue'] :
-                           ['order', 'must', 'balance', 'numlogic', 'code', 'argue', 'argue', 'argue'];
+    var kinds = lv <= 2 ? ['odd', 'seq', 'matrix'] : lv === 3 ? ['odd', 'matrix', 'order', 'code', 'argue', 'solids'] :
+                lv === 4 ? ['order', 'matrix', 'code', 'balance', 'must', 'argue', 'argue', 'solids'] :
+                           ['order', 'must', 'balance', 'numlogic', 'code', 'argue', 'argue', 'argue', 'solids'];
     var kind = rng.pick(kinds);
 
     // Argument analysis lives in bank-argue.js — four of the ten questions in the
     // real Thinking Skills sample were of this kind, so it is weighted heavily.
     if (kind === 'argue' && L.argue) return L.argue.pick(lv, rng);
+    // 3D spatial reasoning — the part of the paper that leans on visual-spatial
+    // ability and carries almost no reading load.
+    if (kind === 'solids' && L.spatial) return L.spatial.gen(lv, rng);
 
     if (kind === 'odd') {
       var groups = C.ODDONE;

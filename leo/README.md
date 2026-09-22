@@ -228,6 +228,28 @@ two-speaker form has four possible keys and all four occur.
 Contexts are drawn from subjects Leo already knows, so reading load does not
 obscure the reasoning, which is the thing being tested.
 
+## 3D spatial reasoning
+
+`bank-spatial.js` with the `cubes` renderer in `visuals.js`. Two solids built from
+unit cubes, drawn isometrically; one's gluing time is given and the other's is
+asked for. The trick the real question teaches is that you never count the cubes —
+you count the **joins**, get the rate per face, and apply it.
+
+This is here for a specific reason: visual-spatial reasoning at the 98th percentile
+against processing speed at the 6th means this is the one section where the
+strongest channel does the work and the weakest is barely involved. It also carries
+almost no reading load, which is where time is lost everywhere else.
+
+Solids are grown randomly rather than drawn by hand, so they do not repeat, and
+every generated pair is checked before use: the rate must divide evenly, the answer
+must be whole, and the marked option must equal the product the explanation prints.
+The smoke test re-runs that check over a few hundred generated questions, because a
+solid whose arithmetic does not close would teach something false while looking
+entirely plausible.
+
+Cubes are painted in order of `x+y+z` so nearer ones land on top of farther ones;
+without that the faces tangle and the drawing stops reading as a solid.
+
 ## Curriculum alignment
 
 `js/curriculum.js` maps every topic and level onto Australian Curriculum v9 content
@@ -363,7 +385,7 @@ writing both typed and as a photo of the page, and then opens the dashboard in a
 localStorage, so if the answers, sessions, writing and fact attempts all show up
 there, the record genuinely came back from the server.
 
-It asserts 44 things and exits non-zero if any of them fail, so it can gate a
+It asserts 45 things and exits non-zero if any of them fail, so it can gate a
 deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
 
 It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and

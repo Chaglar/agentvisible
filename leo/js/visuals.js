@@ -320,6 +320,46 @@
     return S(140, 140, out);
   };
 
+  /* A solid built from unit cubes, drawn isometrically. spec.cubes is a list of
+     [x, y, z] grid positions; +x goes right-and-down the screen, +y left-and-down,
+     +z straight up. Cubes are painted in order of x+y+z so nearer ones land on top
+     of farther ones — without that the faces tangle and the solid stops reading as
+     a solid. */
+  V.cubes = function (s) {
+    var cs = s.cubes || [], w = s.w || 22, h = s.h || 12.7, v = s.v || 25;
+    if (!cs.length) return S(10, 10, '');
+    var pts = cs.map(function (c) {
+      return { c: c, px: (c[0] - c[1]) * w, py: (c[0] + c[1]) * h - c[2] * v,
+               key: c[0] + c[1] + c[2] };
+    });
+    var xs = pts.map(function (p) { return p.px; }), ys = pts.map(function (p) { return p.py; });
+    var pad = 8;
+    var minX = Math.min.apply(null, xs) - w - pad, maxX = Math.max.apply(null, xs) + w + pad;
+    var minY = Math.min.apply(null, ys) - pad, maxY = Math.max.apply(null, ys) + 2 * h + v + pad;
+    var top = C[0], left = C[0], right = C[0];
+    var body = pts.sort(function (a, b) { return a.key - b.key; }).map(function (p) {
+      var x = p.px - minX, y = p.py - minY;
+      var face = function (pt, fill, op) {
+        return '<polygon points="' + pt + '" fill="' + fill + '" opacity="' + op +
+          '" stroke="' + STROKE + '" stroke-width="1.6" stroke-linejoin="round"/>';
+      };
+      return face(x + ',' + y + ' ' + (x + w) + ',' + (y + h) + ' ' + x + ',' + (y + 2 * h) + ' ' + (x - w) + ',' + (y + h), top, '1') +
+        face((x - w) + ',' + (y + h) + ' ' + x + ',' + (y + 2 * h) + ' ' + x + ',' + (y + 2 * h + v) + ' ' + (x - w) + ',' + (y + h + v), left, '.62') +
+        face(x + ',' + (y + 2 * h) + ' ' + (x + w) + ',' + (y + h) + ' ' + (x + w) + ',' + (y + h + v) + ' ' + x + ',' + (y + 2 * h + v), right, '.4');
+    }).join('');
+    return S(Math.round(maxX - minX), Math.round(maxY - minY), body);
+  };
+
+  /* Two solids side by side with their labels — the shape the OC paper uses. */
+  V.cubePair = function (s) {
+    var a = V.cubes({ type: 'cubes', cubes: s.a }), b = V.cubes({ type: 'cubes', cubes: s.b });
+    return '<div style="display:flex;gap:26px;align-items:flex-end;justify-content:center;flex-wrap:wrap">' +
+      '<div style="text-align:center"><div>' + a + '</div>' +
+        '<div style="font-weight:800;margin-top:6px;font-size:15px">P</div></div>' +
+      '<div style="text-align:center"><div>' + b + '</div>' +
+        '<div style="font-weight:800;margin-top:6px;font-size:15px">S</div></div></div>';
+  };
+
   V.areaGrid = function (s) {                  // grid with some cells shaded (area / perimeter)
     var cw = 26, out = '';
     for (var y = 0; y < s.rows; y++) for (var x = 0; x < s.cols; x++) {
