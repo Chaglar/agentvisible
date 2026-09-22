@@ -49,7 +49,7 @@ async function redis(cmd) {
 function blankState() {
   return {
     v: 2,
-    profile: { name: 'Leo', dob: '', year: 2, avatar: '🦁', country: 'AU' },
+    profile: { name: 'Leo', dob: '2018-08-15', year: 2, avatar: '🦁', country: 'AU' },
     settings: { sound: true, feedback: 'instant' },
     model: null,
     xp: 0, best: 0,

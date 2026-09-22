@@ -48,6 +48,7 @@
         v: a.enough ? shown : '—', suf: a.enough ? ordinal(shown) + ' percentile' : '',
         d: a.enough ? ('68% interval: ' + loPct + '–' + hiPct + (ag != null ? ' · aged ' + ag.toFixed(1) : ''))
                     : 'Needs at least ' + N.params.minItems + ' answers (currently ' + all.length + ')',
+        note: ageNote(ag, a, pctCohort, pctAge),
         band: band },
       { k: 'Working at', v: a.enough ? N.yearEquivalent(a.theta).toFixed(1) : '—', suf: a.enough ? ' year level' : '',
         d: a.enough ? ('θ = ' + a.theta.toFixed(2) + ' ± ' + a.se.toFixed(2) + ' logits') : 'Still gathering data' },
@@ -61,9 +62,25 @@
         '<div class="v">' + c.v + (c.suf ? '<small>' + c.suf + '</small>' : '') + '</div>' +
         '<div class="d">' + c.d + '</div>' +
         (c.band ? '<div class="band"><i class="dot" style="background:' + c.band.color + '"></i>' + c.band.label + '</div>' : '') +
+        (c.note ? '<div class="d" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">' + c.note + '</div>' : '') +
         '</div>';
     }).join('');
   }
+  /* Two percentiles for the same child invites "which one is right?". Both are —
+     they answer different questions. Say so whenever the child is meaningfully older
+     or younger than the middle of their year group, because that is exactly when the
+     two numbers pull apart. */
+  function ageNote(ag, a, pctCohort, pctAge) {
+    if (ag == null || !a.enough || pctAge == null) return '';
+    var gap = ag - N.params.cohortAgeMid;
+    if (Math.abs(gap) < 0.3) return '';
+    var older = gap > 0;
+    return 'He is <b>' + Math.abs(gap).toFixed(1) + ' years ' + (older ? 'older' : 'younger') +
+      '</b> than the middle of Year 2, so this is the ' + (older ? 'harder' : 'gentler') +
+      ' of the two comparisons. Against his year group he is <b>' + pctCohort + ordinal(pctCohort) +
+      '</b>. The age figure is the one that matters for selective entry.';
+  }
+
   function ordinal(n) {
     if (n == null) return '';
     var s = ['th', 'st', 'nd', 'rd'], v = n % 100;

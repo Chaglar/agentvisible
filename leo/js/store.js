@@ -24,7 +24,7 @@
     return {
       v: 2,
       profileId: 'leo',
-      profile: { name: 'Leo', dob: '', year: 2, avatar: '🦁', country: 'AU' },
+      profile: { name: 'Leo', dob: '2018-08-15', year: 2, avatar: '🦁', country: 'AU' },
       settings: { sound: true, feedback: 'instant' },
       model: null,
       xp: 0, best: 0,
@@ -32,6 +32,17 @@
       sessions: [], answers: [],
       pending: { sessions: [], answers: [] }   // not yet acknowledged by the server
     };
+  }
+
+  // Object.assign, but a null/undefined/empty-string source field is ignored
+  function mergeFilled(base, add) {
+    var out = Object.assign({}, base);
+    Object.keys(add || {}).forEach(function (k) {
+      var v = add[k];
+      if (v === null || v === undefined || v === '') return;
+      out[k] = v;
+    });
+    return out;
   }
 
   function answerId(a) { return a.aid || (a.sid && a.t ? a.sid + ':' + a.t : null); }
@@ -107,8 +118,11 @@
       var rs = res.state;
       st.answers = mergeById(st.answers, rs.answers || [], answerId);
       st.sessions = mergeById(st.sessions, rs.sessions || [], function (x) { return x.id; });
-      if (rs.profile) st.profile = Object.assign({}, st.profile, rs.profile);
-      if (rs.settings) st.settings = Object.assign({}, st.settings, rs.settings);
+      // A blank field on the server must not clobber a value we already hold — an
+      // older record with an empty date of birth would otherwise wipe the default
+      // and silently switch the dashboard back to the year-group comparison.
+      if (rs.profile) st.profile = mergeFilled(st.profile, rs.profile);
+      if (rs.settings) st.settings = mergeFilled(st.settings, rs.settings);
       if (rs.model) st.model = rs.model;
       st.xp = rs.xp || st.xp; st.best = rs.best || st.best;
       if (rs.streak) st.streak = rs.streak;
