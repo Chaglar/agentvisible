@@ -36,6 +36,9 @@
      line shown on the card. Classics here are public domain, so free editions and
      free recorded readings exist for all of them. */
   var SUGGESTED = [
+    { id: 'breathes', title: 'The Cave That Breathes', author: 'written for you', tag: 'new',
+      kid: 'A crack in a hill blows air out on Tuesday and sucks it in on Wednesday. Why?',
+      why: 'Written for this app and pitched at him: his subjects, a proper story, and the science in it is real — caves do breathe, and for the reason Jem works out.' },
     { id: 'jacobs', title: 'English Fairy Tales', author: 'Joseph Jacobs', tag: 'classic',
       kid: 'Giants, bogeys and a very lucky old woman.',
       why: 'The OC reading paper drew a passage straight from this book. Same language, same shape, no surprise on the day.' },

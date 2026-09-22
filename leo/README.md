@@ -121,7 +121,18 @@ Four decisions, each from his profile rather than from what was easy:
 
 ### Reading the books in the app
 
-Five books are here in full, not as extracts, and can be read inside the app:
+Six books are here in full and can be read inside the app. The first was written
+for this app; the rest are public domain.
+
+**The Cave That Breathes** — 7 chapters, written for Leo. A boy finds a crack in a
+hillside that blows air out on Tuesday and sucks it in on Wednesday, and works out
+why. The cave is invented; **the way it breathes is not**. Caves with a large
+enough volume really do exhale when the barometric pressure falls and inhale when
+it rises, and that is the thing Jem reasons his way to. The subjects are his —
+limestone, fossils, a thing to be worked out — and it is a serial, because a serial
+is what brings a child back tomorrow.
+
+The five classics:
 
 | | | |
 |---|---|---|
@@ -131,7 +142,7 @@ Five books are here in full, not as extracts, and can be read inside the app:
 | *English Fairy Tales* | Joseph Jacobs, 1890 | 44 tales |
 | *A Child's Garden of Verses* | R. L. Stevenson, 1885 | 63 poems |
 
-171,000 words. All five are **public domain** (Project Gutenberg #11, #289, #2781,
+174,000 words. All five classics are **public domain** (Project Gutenberg #11, #289, #2781,
 #7439, #25609), so the complete text is here legitimately rather than by anyone's
 indulgence, and each file credits its source. They are fetched only when opened, so
 the app does not carry 900 KB it may never use. The modern suggestions — *Double
@@ -149,6 +160,27 @@ Three things in the reader exist for this reader in particular:
   setting is remembered. Crowded text is what makes a page look unreadable before a
   word of it has been tried.
 - **It remembers where he was**, per chapter, so picking a book back up is one tap.
+
+### A drawing at every chapter head
+
+`bookart.js`. A wall of unbroken text is what a reluctant reader closes; a picture
+at the top of a chapter breaks the page and gives the eye somewhere to arrive
+before the reading starts. *The Cave That Breathes* has its own drawing per
+chapter; each classic carries one motif.
+
+They are line art rather than pictures for three reasons: a few hundred bytes
+instead of a few hundred kilobytes, so nothing waits on a download; colours taken
+from the CSS custom properties, so dark mode is correct without a second set of
+files; and vector, so they stay sharp at whatever type size the reader has chosen.
+
+Four of the twelve were wrong the first time and had to be redrawn against a
+rendered screenshot rather than in the head: the hillside crack read as a black
+spike pointing at the sky, the ammonite's spiral was built from arcs and came out
+looking like an eye (it is a computed logarithmic spiral now, sized so it fits
+inside its frame instead of overflowing by 34px), the bed read as a table, and the
+camel took five attempts — it only stopped reading as a sheep, then a
+brontosaurus, when it was drawn as a filled silhouette with the hump standing
+clearly proud of the back.
 
 Finishing a chapter logs the sitting itself, so reading in the app puts its own
 sticker on the cover — the reader and the shelf are the same thing.
@@ -455,7 +487,7 @@ writing both typed and as a photo of the page, and then opens the dashboard in a
 localStorage, so if the answers, sessions, writing and fact attempts all show up
 there, the record genuinely came back from the server.
 
-It asserts 61 things and exits non-zero if any of them fail, so it can gate a
+It asserts 63 things and exits non-zero if any of them fail, so it can gate a
 deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
 
 It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and

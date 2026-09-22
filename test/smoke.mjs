@@ -175,6 +175,19 @@ const tappable = await page.locator('#rdBody w').count();
 check('the real text is there, every word tappable', tappable > 1500, tappable + ' words');
 check('it is the actual book',
   /Alice was beginning to get very tired/.test(await page.locator('#rdBody p').first().textContent()));
+check('the chapter head carries a drawing', (await page.locator('.rdArt svg').count()) === 1);
+
+/* The story written for him: every chapter has its own picture, and the drawings
+   must all render — an SVG that throws leaves a silent blank at the chapter head. */
+const drawings = await page.evaluate(async () => {
+  const b = await window.LEO.reader.load('breathes');
+  const arts = b.chapters.map(c => c.art);
+  const rendered = arts.map(a => (window.LEO.bookart.render(a) || '').length);
+  return { n: arts.length, distinct: new Set(arts).size, empty: rendered.filter(l => l < 100).length };
+});
+check('the written-for-him story has a picture per chapter',
+  drawings.n === 7 && drawings.distinct === 7 && drawings.empty === 0,
+  `${drawings.n} chapters, ${drawings.distinct} different drawings, ${drawings.empty} blank`);
 const sizeBefore = await page.evaluate(() => getComputedStyle(document.getElementById('rdBody')).fontSize);
 await page.click('#rdBigger');
 await page.click('#rdBigger');

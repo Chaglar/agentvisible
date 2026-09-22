@@ -374,3 +374,9 @@ h2{font-size:18px;margin:26px 0 10px;letter-spacing:-.01em}
 .cpRow .t{flex:1;font-weight:600}
 .cpRow .m{font-size:12px;color:var(--mut)}
 .cpRow.read .t{color:var(--mut)}
+
+/* A drawing at the head of each chapter: a break in the text and somewhere for the
+   eye to arrive before the reading starts. */
+.rdArt{margin:0 auto 18px;max-width:20em}
+.rdArt .bkart{width:100%;height:auto;display:block}
+.pick .tag.new{color:var(--v2)}

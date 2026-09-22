@@ -85,7 +85,9 @@
 
   function chapterHTML(book, i) {
     var c = book.chapters[i];
-    return '<h2 class="rdTitle">' + c.t + '</h2>' +
+    var art = (c.art && L.bookart) ? L.bookart.render(c.art) : '';
+    return (art ? '<div class="rdArt">' + art + '</div>' : '') +
+      '<h2 class="rdTitle">' + c.t + '</h2>' +
       c.p.map(function (p) {
         return book.verse
           ? '<p class="verse">' + speakable(p).replace(/\n/g, '<br>') + '</p>'
