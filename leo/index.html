@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Leo's Test Lab</title>
+<meta name="description" content="NAPLAN and OC test practice for Year 2 — adaptive, visual, Australian curriculum.">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#2a78d6">
+<link rel="stylesheet" href="app.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50' font-size='50'>🦁</text></svg>">
+<style>
+.fr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:-.42em;line-height:1.05;font-weight:800;margin:0 3px}
+.fr i{font-style:normal;border-bottom:2.5px solid currentColor;padding:0 5px 1px}
+.fr b{padding:1px 5px 0}
+</style>
+</head>
+<body>
+<canvas id="confetti" class="hide"></canvas>
+<div class="wrap">
+
+  <div class="top">
+    <div class="who"><span class="ava" id="ava">🦁</span><span id="who">Leo</span></div>
+    <div class="spacer"></div>
+    <span class="chip" id="chipXp">⚡ 0</span>
+    <span class="chip" id="chipStreak">🔥 0</span>
+    <button class="iconbtn" id="btnSound" title="Sound on/off">🔊</button>
+  </div>
+
+  <!-- ============ HOME ============ -->
+  <section id="home">
+    <h1>Which test today?</h1>
+    <p class="sub">Pick a test. The questions match Year 2 in Australia — and they get harder when you get them right.</p>
+
+    <div class="modes">
+      <button class="mode naplan" data-mode="naplan">
+        <div class="m-top">
+          <span class="badge">🎯</span>
+          <span><span class="t">NAPLAN practice</span><span class="d">Maths, reading and grammar — like the Year 3 test</span></span>
+        </div>
+        <div class="m-foot">
+          <span class="tag">Adapts as you go</span><span class="tag">12 questions</span><span class="tag" id="naplanLv">Starts at level 3</span>
+        </div>
+      </button>
+      <button class="mode oc" data-mode="oc">
+        <div class="m-top">
+          <span class="badge">🏅</span>
+          <span><span class="t">OC test practice</span><span class="d">Thinking skills, maths reasoning and reading</span></span>
+        </div>
+        <div class="m-foot">
+          <span class="tag">Hard from the start</span><span class="tag">12 questions</span><span class="tag">Exam style — answers at the end</span>
+        </div>
+      </button>
+    </div>
+
+    <h2>Quick practice</h2>
+    <p class="sub" style="margin-bottom:10px">Ten questions on one thing only. The ones that need work are first.</p>
+    <div class="drills" id="drills"></div>
+
+    <div class="footlink"><a href="admin/">Parent dashboard →</a></div>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section id="quiz" class="hide">
+    <div class="qtop">
+      <div class="dots" id="dots"></div>
+      <div class="ladder" id="ladder" title="Difficulty"><b></b><b></b><b></b><b></b><b></b></div>
+      <span class="chip" id="timer" style="display:none">0:00</span>
+    </div>
+    <div id="noteSlot"></div>
+    <div class="qcard">
+      <div class="qmeta"><span id="qTopic"></span><span>·</span><span id="qSub"></span></div>
+      <div id="qPassage"></div>
+      <div class="qtext" id="qText"></div>
+      <div class="vis" id="qVis"></div>
+      <div class="choices" id="qChoices"></div>
+      <div id="qFeedback"></div>
+      <button class="big hide" id="btnNext">Next question →</button>
+    </div>
+    <button class="big ghost" id="btnQuit" style="margin-top:12px">Stop and go back</button>
+  </section>
+
+  <!-- ============ RESULT ============ -->
+  <section id="result" class="hide">
+    <div class="card score">
+      <div id="rEmoji" style="font-size:44px">🎉</div>
+      <div class="big-n" id="rScore">0/0</div>
+      <div class="lbl" id="rLbl"></div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap">
+        <span class="chip" id="rXp">⚡ +0</span><span class="chip" id="rTime">⏱ 0:00</span><span class="chip" id="rLevel">📈 Level 3</span>
+      </div>
+    </div>
+    <h2>Every question</h2>
+    <div class="rlist" id="rList"></div>
+    <div class="row2" style="margin-top:16px">
+      <button class="big ghost" id="btnHome">Home</button>
+      <button class="big" id="btnAgain">Play again</button>
+    </div>
+    <div class="footlink"><a href="admin/">Parent dashboard →</a></div>
+  </section>
+
+</div>
+
+<script src="js/visuals.js"></script>
+<script src="js/bank.js"></script>
+<script src="js/bank-measure.js"></script>
+<script src="js/bank-verbal.js"></script>
+<script src="js/store.js"></script>
+<script src="js/norms.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
