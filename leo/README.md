@@ -119,6 +119,85 @@ Four decisions, each from his profile rather than from what was easy:
   exact shape of the NAPLAN Year 3 reading magazine, and field guides to rocks and
   fungi because that is where his background knowledge already runs deepest.
 
+### Reading the books in the app
+
+Seven books are here in full and can be read inside the app. The first was written
+for this app; the rest are public domain.
+
+**Three Loud Things** — 3 stories, written for Leo. A boy whose hands drum on
+desks without him deciding to; a boy who says "I'm the bad one" before anyone else
+can; a boy who reads his father's bad mood as being about him. They exist because
+those are his, and because a child who says *I am a bad kid* has generalised from
+events to a nature, which is the thing to interrupt.
+
+None of the three ends with the boy learning to sit quietly. In the first, a drum
+teacher makes him tap on purpose and he *cannot* — which is the proof that it is
+not naughtiness, because naughtiness can be done deliberately. In the second, a
+caretaker's logbook shows him he is in it four times in two years, against the
+shapeless heap he had been carrying. In the third, a father answers "is this one
+mine?" honestly rather than reassuringly.
+
+**The Cave That Breathes** — 7 chapters, written for Leo. A boy finds a crack in a
+hillside that blows air out on Tuesday and sucks it in on Wednesday, and works out
+why. The cave is invented; **the way it breathes is not**. Caves with a large
+enough volume really do exhale when the barometric pressure falls and inhale when
+it rises, and that is the thing Jem reasons his way to. The subjects are his —
+limestone, fossils, a thing to be worked out — and it is a serial, because a serial
+is what brings a child back tomorrow.
+
+The five classics:
+
+| | | |
+|---|---|---|
+| *Alice's Adventures in Wonderland* | Lewis Carroll, 1865 | 12 chapters |
+| *The Wind in the Willows* | Kenneth Grahame, 1908 | 12 chapters |
+| *Just So Stories* | Rudyard Kipling, 1902 | 12 stories |
+| *English Fairy Tales* | Joseph Jacobs, 1890 | 44 tales |
+| *A Child's Garden of Verses* | R. L. Stevenson, 1885 | 63 poems |
+
+174,000 words. All five classics are **public domain** (Project Gutenberg #11, #289, #2781,
+#7439, #25609), so the complete text is here legitimately rather than by anyone's
+indulgence, and each file credits its source. They are fetched only when opened, so
+the app does not carry 900 KB it may never use. The modern suggestions — *Double
+Helix*, Minecraft handbooks, field guides — stay as shelf entries to log, because
+their text is not ours to reproduce.
+
+Three things in the reader exist for this reader in particular:
+
+- **Tap any word to hear it.** Decoding is the bottleneck and he reads better
+  silently than aloud, so the usual repair — "sound it out" — is the one thing that
+  does not help. Tapping speaks the word and he keeps going instead of stopping at
+  the wall, with nobody needing to sit beside him. It uses the browser's own speech
+  synthesis: no key, no cost, nothing uploaded.
+- **Type size is his to set**, on a short measure with generous leading, and the
+  setting is remembered. Crowded text is what makes a page look unreadable before a
+  word of it has been tried.
+- **It remembers where he was**, per chapter, so picking a book back up is one tap.
+
+### A drawing at every chapter head
+
+`bookart.js`. A wall of unbroken text is what a reluctant reader closes; a picture
+at the top of a chapter breaks the page and gives the eye somewhere to arrive
+before the reading starts. *The Cave That Breathes* has its own drawing per
+chapter; each classic carries one motif.
+
+They are line art rather than pictures for three reasons: a few hundred bytes
+instead of a few hundred kilobytes, so nothing waits on a download; colours taken
+from the CSS custom properties, so dark mode is correct without a second set of
+files; and vector, so they stay sharp at whatever type size the reader has chosen.
+
+Four of the twelve were wrong the first time and had to be redrawn against a
+rendered screenshot rather than in the head: the hillside crack read as a black
+spike pointing at the sky, the ammonite's spiral was built from arcs and came out
+looking like an eye (it is a computed logarithmic spiral now, sized so it fits
+inside its frame instead of overflowing by 34px), the bed read as a table, and the
+camel took five attempts — it only stopped reading as a sheep, then a
+brontosaurus, when it was drawn as a filled silhouette with the hump standing
+clearly proud of the back.
+
+Finishing a chapter logs the sitting itself, so reading in the app puts its own
+sticker on the cover — the reader and the shelf are the same thing.
+
 The dashboard shows the split between reading alone, reading together and
 listening. If it collapses to one column, that is worth a nudge.
 
@@ -421,7 +500,7 @@ writing both typed and as a photo of the page, and then opens the dashboard in a
 localStorage, so if the answers, sessions, writing and fact attempts all show up
 there, the record genuinely came back from the server.
 
-It asserts 55 things and exits non-zero if any of them fail, so it can gate a
+It asserts 63 things and exits non-zero if any of them fail, so it can gate a
 deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
 
 It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and

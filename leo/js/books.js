@@ -36,6 +36,12 @@
      line shown on the card. Classics here are public domain, so free editions and
      free recorded readings exist for all of them. */
   var SUGGESTED = [
+    { id: 'loud', title: 'Three Loud Things', author: 'written for you', tag: 'new',
+      kid: 'A boy whose hands will not sit still. A boy who thinks he is the bad one. A dad in a mood.',
+      why: 'Three stories about being told you are too much. None of them ends with the boy learning to sit quietly — the turn in each is that he sees something about himself he had got wrong.' },
+    { id: 'breathes', title: 'The Cave That Breathes', author: 'written for you', tag: 'new',
+      kid: 'A crack in a hill blows air out on Tuesday and sucks it in on Wednesday. Why?',
+      why: 'Written for this app and pitched at him: his subjects, a proper story, and the science in it is real — caves do breathe, and for the reason Jem works out.' },
     { id: 'jacobs', title: 'English Fairy Tales', author: 'Joseph Jacobs', tag: 'classic',
       kid: 'Giants, bogeys and a very lucky old woman.',
       why: 'The OC reading paper drew a passage straight from this book. Same language, same shape, no surprise on the day.' },
