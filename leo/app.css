@@ -279,3 +279,7 @@ h2{font-size:18px;margin:26px 0 10px;letter-spacing:-.01em}
 
 .sub2{font-size:15px;font-weight:800;margin:16px 0 2px;letter-spacing:.2px}
 .sub2:first-of-type{margin-top:10px}
+
+/* Poetry keeps its line breaks and gets a little air; the OC paper's hardest
+   text type reads wrong as a solid block. */
+.passage .verse{line-height:1.75;font-style:normal;padding-left:2px}

@@ -160,10 +160,29 @@ real variety):
 | Patterns & algebra | 311 |
 | Grammar & spelling | 98 (hand-written) |
 | Number facts (fluency mode) | 244 (a fixed, deliberately finite set) |
-| Reading | 42 (14 passages × 3 questions, hand-written) |
+| Reading | 84 (28 passages × 3 questions, hand-written) |
 
 Reading and language are hand-written and therefore finite — extend them in
-`js/content-literacy.js`, which holds nothing but content.
+`js/content-literacy.js` and `js/content-reading.js`, which hold nothing but content.
+
+### Why the reading passages are about minerals, fungi and making things
+
+Background knowledge is the strongest single predictor of reading comprehension: a
+child reads well above his decoding level in a subject he already knows, because he
+is not spending effort working out what the words refer to. Leo can name hundreds of
+fungi and dozens of minerals on sight, so a passage about opal or mycorrhiza is
+*easier* for him than one about a wet sock, despite far harder vocabulary. The
+passages in `content-reading.js` use that.
+
+Minecraft appears as a bridge to the real subject — real geology, real circuits,
+real ecology — never as retold game lore. It earns the attention and then spends it
+on something true.
+
+The set covers what the OC reading paper actually contains, including **poetry**,
+which the bank previously had none of and which every source names as its hardest
+text type. Questions are tagged with the OC reading skill they exercise
+(comprehension, inference, evaluation, text structure, tone, vocabulary) so coverage
+can be checked rather than assumed.
 
 ## Curriculum alignment
 
