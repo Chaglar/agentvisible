@@ -10,7 +10,10 @@
     if (!S.load().settings.sound) return;
     try {
       actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-      var seq = kind === 'ok' ? [[660, 0], [880, .09]] : kind === 'no' ? [[240, 0], [180, .1]] : [[520, 0], [660, .08], [880, .16]];
+      var seq = kind === 'ok' ? [[660, 0], [880, .09]]
+              : kind === 'no' ? [[240, 0], [180, .1]]
+              : kind === 'tick' ? [[880, 0]]                 // keypad: one soft blip, not a fanfare
+              : [[520, 0], [660, .08], [880, .16]];
       seq.forEach(function (s) {
         var o = actx.createOscillator(), g = actx.createGain(), t0 = actx.currentTime + s[1];
         o.type = 'triangle'; o.frequency.setValueAtTime(s[0], t0);
@@ -22,24 +25,40 @@
   }
 
   /* ---------- confetti ---------- */
+  /* The first version scattered pieces up to half a screen ABOVE the viewport and
+     ran for a second or so, so most of them never came into view and the ones that
+     did were gone before he looked up. Pieces now start just above the fold, are
+     recycled when they fall off the bottom, and fade out at the end — so the
+     duration actually is how long he sees it. */
   function confetti(ms) {
     var cv = $('confetti'), ctx = cv.getContext('2d');
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var total = reduce ? 900 : (ms || 3000);
     cv.width = innerWidth; cv.height = innerHeight; cv.classList.remove('hide');
     var cols = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#4a3aa7'];
-    var bits = Array.from({ length: 90 }, function () {
-      return { x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * .5, w: 6 + Math.random() * 7,
-               h: 8 + Math.random() * 9, v: 2 + Math.random() * 3.4, a: Math.random() * 6.28,
-               s: (Math.random() - .5) * .22, c: cols[(Math.random() * cols.length) | 0] };
-    });
-    var end = Date.now() + (ms || 1700);
+    function spawn(first) {
+      return { x: Math.random() * cv.width,
+               y: first ? -20 - Math.random() * cv.height * .35 : -20 - Math.random() * 120,
+               w: 6 + Math.random() * 7, h: 8 + Math.random() * 9,
+               v: 2 + Math.random() * 3.4, drift: (Math.random() - .5) * 1.1,
+               a: Math.random() * 6.28, s: (Math.random() - .5) * .22,
+               c: cols[(Math.random() * cols.length) | 0] };
+    }
+    var bits = Array.from({ length: 110 }, function () { return spawn(true); });
+    var started = Date.now(), end = started + total, FADE = 700;
     (function frame() {
+      var left = end - Date.now();
       ctx.clearRect(0, 0, cv.width, cv.height);
-      bits.forEach(function (b) {
-        b.y += b.v; b.a += b.s;
+      ctx.globalAlpha = left < FADE ? Math.max(0, left / FADE) : 1;
+      bits.forEach(function (b, i) {
+        b.y += b.v; b.x += b.drift; b.a += b.s;
+        // keep the screen full for the whole run instead of emptying after one pass
+        if (b.y > cv.height + 30 && left > FADE) bits[i] = spawn(false);
         ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.a);
         ctx.fillStyle = b.c; ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); ctx.restore();
       });
-      if (Date.now() < end) requestAnimationFrame(frame);
+      ctx.globalAlpha = 1;
+      if (left > 0) requestAnimationFrame(frame);
       else { ctx.clearRect(0, 0, cv.width, cv.height); cv.classList.add('hide'); }
     })();
   }
@@ -53,7 +72,8 @@
   }
 
   function show(id) {
-    ['home', 'quiz', 'coach', 'result', 'write', 'wResult'].forEach(function (s) { $(s).classList.toggle('hide', s !== id); });
+    ['home', 'quiz', 'coach', 'result', 'write', 'wResult', 'fluency', 'fResult', 'addBook', 'logRead']
+      .forEach(function (s) { $(s).classList.toggle('hide', s !== id); });
     window.scrollTo(0, 0);
   }
 
@@ -83,6 +103,18 @@
       return '<button class="drill" data-write="' + k + '">' +
         '<div class="e">' + K.emoji + '</div><div class="t">' + K.label + '</div>' +
         '<div class="n">' + K.blurb + (done ? ' · ' + done + ' done' : '') + '</div></button>';
+    }).join('');
+
+    paintShelf();
+
+    $('factCards').innerHTML = Object.keys(L.facts.TRACKS).map(function (k) {
+      var T = L.facts.TRACKS[k], sum = L.facts.summary(st.facts || [], k);
+      return '<button class="drill" data-fact="' + k + '">' +
+        '<div class="e">' + T.emoji + '</div><div class="t">' + T.label + '</div>' +
+        '<div class="b"><i style="width:' + sum.pct + '%"></i></div>' +
+        '<div class="n">' + (sum.counts['new'] === sum.total ? T.blurb
+          : sum.counts.fluent ? sum.counts.fluent + ' of ' + sum.total + ' known by heart'
+          : (sum.total - sum.counts['new']) + ' started · none locked in yet') + '</div></button>';
     }).join('');
 
     var weak = L.engine.weakest().filter(function (t) { return t.meta.modes.indexOf('naplan') >= 0 || t.meta.modes.indexOf('oc') >= 0; }).slice(0, 6);
@@ -133,6 +165,9 @@
     $('qVis').style.display = q.visual ? 'flex' : 'none';
     $('qFeedback').innerHTML = '';
     $('btnNext').classList.add('hide');
+    sess.sel = null;
+    $('btnCheck').classList.remove('hide');
+    $('btnCheck').disabled = true;
 
     var visualChoices = q.choices.some(function (c) { return c.visual; });
     var box = $('qChoices');
@@ -143,13 +178,28 @@
         (c.visual ? V.render(c.visual) : '<span>' + c.text + '</span>') + '</button>';
     }).join('');
     Array.prototype.forEach.call(box.children, function (b) {
-      b.addEventListener('click', function () { pick(+b.dataset.i); });
+      b.addEventListener('click', function () { select(+b.dataset.i); });
     });
   }
 
-  function pick(idx) {
+  /* Choosing and answering are two separate acts. A stray tap on a phone used to
+     commit an answer outright; now it only highlights, and nothing is recorded
+     until "Check my answer". Tapping another option just moves the highlight. */
+  function select(idx) {
     if ($('qChoices').dataset.done) return;
+    sess.sel = idx;
+    Array.prototype.forEach.call($('qChoices').children, function (b, i) {
+      b.classList.toggle('sel', i === idx);
+    });
+    $('btnCheck').disabled = false;
+    beep('tick');
+  }
+
+  function pick(idx) {
+    if ($('qChoices').dataset.done || idx == null) return;
     $('qChoices').dataset.done = '1';
+    $('btnCheck').classList.add('hide');
+    Array.prototype.forEach.call($('qChoices').children, function (b) { b.classList.remove('sel'); });
     var res = sess.answer(idx);
     var kids = $('qChoices').children;
     if (sess.feedback === 'instant') {
@@ -339,7 +389,7 @@
     h += '<div class="wsec"><h3>What you wrote</h3><div class="wtrans">' + esc(a.transcription || '') + '</div>' +
       '<div class="sub" style="margin-top:6px">' + (a.word_count || 0) + ' words · ' + spentLabel() + '</div></div>';
     $('wFeedback').innerHTML = h;
-    confetti(1200); beep('up');
+    confetti(2600); beep('up');
     paintHome();
   }
 
@@ -434,6 +484,9 @@
     $('cQVis').style.display = q.visual ? 'flex' : 'none';
     $('cQFeedback').innerHTML = '';
     $('cNext').classList.add('hide');
+    coach.sel = null;
+    $('cCheck').classList.remove('hide');
+    $('cCheck').disabled = true;
     var visualChoices = q.choices.some(function (c) { return c.visual; });
     var box = $('cQChoices');
     box.className = 'choices' + (visualChoices ? ' grid4' : '');
@@ -444,15 +497,27 @@
         (c.visual ? V.render(c.visual) : '<span>' + c.text + '</span>') + '</button>';
     }).join('');
     Array.prototype.forEach.call(box.children, function (b) {
-      b.addEventListener('click', function () { coachAnswer(+b.dataset.i); });
+      b.addEventListener('click', function () { coachSelect(+b.dataset.i); });
     });
     window.scrollTo(0, 0);
   }
 
+  function coachSelect(idx) {
+    if ($('cQChoices').dataset.done) return;
+    coach.sel = idx;
+    Array.prototype.forEach.call($('cQChoices').children, function (b, i) {
+      b.classList.toggle('sel', i === idx);
+    });
+    $('cCheck').disabled = false;
+    beep('tick');
+  }
+
   function coachAnswer(idx) {
     var box = $('cQChoices');
-    if (box.dataset.done) return;
+    if (box.dataset.done || idx == null) return;
     box.dataset.done = '1';
+    $('cCheck').classList.add('hide');
+    Array.prototype.forEach.call(box.children, function (b) { b.classList.remove('sel'); });
     var q = coach.q, ok = idx === q.answer, f = coach.list[coach.i];
     var at = Date.now();
     coach.logged.push({
@@ -520,7 +585,7 @@
     $('rLbl').textContent = n === total ? 'You fixed every one of them. That is the whole point.'
       : n ? 'You fixed ' + n + ' of ' + total + '. The rest we do again tomorrow.'
           : 'These are the hard ones. Coming back to them tomorrow is how they get easy.';
-    if (n) { confetti(1300); beep('up'); }
+    if (n) { confetti(3200); beep('up'); }
     paintHome();
   }
 
@@ -542,7 +607,7 @@
     if (wrongs.length) $('btnFix').textContent = '🛠 Let\u2019s fix the ' + wrongs.length +
       (wrongs.length === 1 ? ' one you got wrong' : ' you got wrong');
     lastItems = r.items;
-    if (r.pct >= 65) { confetti(); beep('up'); }
+    if (r.pct >= 65) { confetti(r.pct >= 90 ? 4200 : 3200); beep('up'); }
     if (r.streak > 1) setTimeout(function () { popup('🔥', r.streak + ' days in a row', 'Keep the streak alive tomorrow'); }, 700);
 
     $('rList').innerHTML = r.items.map(function (a, i) {
@@ -586,7 +651,9 @@
   $('wDone').addEventListener('click', function () { show('home'); paintHome(); });
   $('wAgain').addEventListener('click', function () { startWriting(wr.task.kind); });
 
+  $('btnCheck').addEventListener('click', function () { pick(sess && sess.sel); });
   $('btnNext').addEventListener('click', step);
+  $('cCheck').addEventListener('click', function () { coachAnswer(coach && coach.sel); });
   $('btnFix').addEventListener('click', function () { if (lastItems) startCoach(lastItems); });
   $('cNext').addEventListener('click', coachStep);
   $('cSkip').addEventListener('click', function () {
@@ -611,14 +678,303 @@
       if (/^[1-5]$/.test(e.key) && !$('cQChoices').dataset.done && !$('cTry').classList.contains('hide')) {
         var cb = $('cQChoices').children[+e.key - 1]; if (cb) cb.click();
       }
-      if ((e.key === 'Enter' || e.key === ' ') && !$('cNext').classList.contains('hide')) { e.preventDefault(); coachStep(); }
+      if (e.key === 'Enter' || e.key === ' ') {
+        if (!$('cNext').classList.contains('hide')) { e.preventDefault(); coachStep(); }
+        else if (!$('cCheck').classList.contains('hide') && !$('cCheck').disabled) { e.preventDefault(); coachAnswer(coach.sel); }
+      }
       return;
     }
     if ($('quiz').classList.contains('hide')) return;
     if (/^[1-4]$/.test(e.key) && !$('qChoices').dataset.done) {
       var b = $('qChoices').children[+e.key - 1]; if (b) b.click();
     }
-    if ((e.key === 'Enter' || e.key === ' ') && !$('btnNext').classList.contains('hide')) { e.preventDefault(); step(); }
+    if (e.key === 'Enter' || e.key === ' ') {
+      if (!$('btnNext').classList.contains('hide')) { e.preventDefault(); step(); }
+      else if (!$('btnCheck').classList.contains('hide') && !$('btnCheck').disabled) { e.preventDefault(); pick(sess.sel); }
+    }
+  });
+
+  /* ---------- the reading shelf ---------- */
+  var BK = L.books;
+  var logBook = null, logHow = 'self', logMins = 10, justStuck = null;
+
+  function coverHTML(b, newestId) {
+    return '<div class="cov" style="--h:' + b.hue + '">' +
+      '<span class="tt">' + esc(b.title) + '</span>' +
+      b.stickers.map(function (st, i) {
+        var isNew = newestId && b.sessions[i] && b.sessions[i].id === newestId;
+        return '<span class="st' + (isNew ? ' new' : '') + '" style="left:' + st.x + '%;top:' + st.y +
+          '%;transform:rotate(' + st.rot + 'deg)">' + st.emoji + '</span>';
+      }).join('') +
+      (b.finished ? '<span class="ribbon">🎀</span>' : '') + '</div>';
+  }
+
+  function paintShelf() {
+    var st = S.load(), books = BK.shelf(st.library || []), tot = BK.totals(st.library || []);
+    $('shelfN').textContent = tot.stickers ? tot.stickers + (tot.stickers === 1 ? ' sticker' : ' stickers') : '';
+    if (!books.length) {
+      $('shelf').innerHTML = '<div class="sub" style="grid-column:1/-1">No books yet. Add one and every time you ' +
+        'read it, a sticker goes on the cover.</div>';
+      return;
+    }
+    $('shelf').innerHTML = books.map(function (b) {
+      return '<button class="bk' + (b.finished ? ' done' : '') + '" data-book="' + b.id + '">' +
+        coverHTML(b, justStuck) +
+        '<span class="cnt">' + (b.stickers.length || 'not yet') +
+        (b.stickers.length ? (b.stickers.length === 1 ? ' sticker' : ' stickers') : '') + '</span></button>';
+    }).join('');
+    justStuck = null;
+  }
+
+  function openAddBook() {
+    var have = {};
+    BK.shelf(S.load().library || []).forEach(function (b) { have[b.id] = 1; });
+    $('bookPicks').innerHTML = BK.SUGGESTED.filter(function (p) { return !have[p.id]; }).map(function (p) {
+      return '<button class="pick" data-pick="' + p.id + '">' +
+        '<div class="t">' + esc(p.title) + '</div>' +
+        (p.author ? '<div class="a">' + esc(p.author) + '</div>' : '') +
+        '<div class="k">' + esc(p.kid) + '</div>' +
+        '<span class="tag">' + p.tag + '</span></button>';
+    }).join('') || '<div class="sub">You have added all the suggestions. Type your own below.</div>';
+    $('bookOwn').value = '';
+    show('addBook');
+  }
+
+  function addBook(id, title, author) {
+    S.pushLibrary([{ id: id, kind: 'book', title: title, author: author || '', t: Date.now() }]);
+    paintHome();
+    openLog(id);
+  }
+
+  function openLog(id) {
+    var b = BK.shelf(S.load().library || []).filter(function (x) { return x.id === id; })[0];
+    if (!b) return;
+    logBook = b; logHow = 'self'; logMins = 10;
+    $('logCover').innerHTML = '<div class="bk">' + coverHTML(b) + '</div>';
+    $('logTitle').textContent = b.title;
+    $('logMeta').textContent = b.sessions.length
+      ? b.stickers.length + (b.stickers.length === 1 ? ' sticker' : ' stickers') + ' so far · ' + b.mins + ' minutes'
+      : 'Nothing on this cover yet.';
+    $('logHow').innerHTML = Object.keys(BK.HOW).map(function (k) {
+      var h = BK.HOW[k];
+      return '<button data-how="' + k + '"' + (k === logHow ? ' class="on"' : '') + '>' +
+        '<span class="e">' + h.emoji + '</span><span>' + h.label +
+        '<span class="n">' + h.note + '</span></span></button>';
+    }).join('');
+    Array.prototype.forEach.call($('logMins').children, function (b2) {
+      b2.classList.toggle('on', +b2.dataset.m === logMins);
+    });
+    $('logFinish').classList.toggle('hide', b.finished);
+    show('logRead');
+  }
+
+  function saveRead() {
+    if (!logBook) return;
+    var id = logBook.id + ':' + Date.now();
+    S.pushLibrary([{ id: id, kind: 'read', book: logBook.id, how: logHow, mins: logMins, t: Date.now() }]);
+    justStuck = id;
+    var st = S.load();
+    var b = BK.shelf(st.library).filter(function (x) { return x.id === logBook.id; })[0];
+    var line = BK.praise(b, BK.totals(st.library));
+    beep('ok');
+    popup('🎉', 'Sticker on the book!', line || (b.stickers.length + ' on this cover now'), 2200);
+    show('home'); paintHome();
+  }
+
+  function finishBook() {
+    if (!logBook) return;
+    S.pushLibrary([{ id: logBook.id + ':fin:' + Date.now(), kind: 'finished', book: logBook.id, t: Date.now() }]);
+    confetti(3600); beep('up');
+    popup('🎀', 'Finished!', esc(logBook.title), 2600);
+    show('home'); paintHome();
+  }
+
+  $('btnAddBook').addEventListener('click', openAddBook);
+  $('bookCancel').addEventListener('click', function () { show('home'); paintHome(); });
+  $('bookPicks').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-pick]'); if (!b) return;
+    var p = BK.SUGGESTED.filter(function (x) { return x.id === b.dataset.pick; })[0];
+    if (p) addBook(p.id, p.title, p.author);
+  });
+  $('bookOwnAdd').addEventListener('click', function () {
+    var v = ($('bookOwn').value || '').trim().slice(0, 80);
+    if (!v) return;
+    addBook('own:' + Date.now(), v, '');
+  });
+  $('bookOwn').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('bookOwnAdd').click(); });
+  $('shelf').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-book]'); if (b) openLog(b.dataset.book);
+  });
+  $('logHow').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-how]'); if (!b) return;
+    logHow = b.dataset.how;
+    Array.prototype.forEach.call($('logHow').children, function (x) { x.classList.toggle('on', x === b); });
+  });
+  $('logMins').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-m]'); if (!b) return;
+    logMins = +b.dataset.m;
+    Array.prototype.forEach.call($('logMins').children, function (x) { x.classList.toggle('on', x === b); });
+  });
+  $('logSave').addEventListener('click', saveRead);
+  $('logFinish').addEventListener('click', finishBook);
+  $('logBack').addEventListener('click', function () { show('home'); paintHome(); });
+
+  /* ---------- fast maths ---------- */
+  /* Answers are typed, and the clock runs from the question appearing to the FIRST
+     keypress. That is thinking time. Total time would be dominated by how fast he
+     can find digits on a keypad, which is not the thing being trained. */
+  var fl = null;   // { track, queue, i, shown, firstKey, typed, done[], locked }
+
+  function startFacts(track) {
+    var st = S.load();
+    var queue = L.facts.pickSession(track, st.facts || [], 20);
+    if (!queue.length) return;
+    fl = { track: track, queue: queue, i: 0, done: [], typed: '', shown: 0, firstKey: 0, locked: false };
+    show('fluency');
+    $('fTrack').textContent = L.facts.TRACKS[track].label;
+    factRender();
+  }
+
+  function factDots() {
+    var h = '';
+    for (var i = 0; i < fl.queue.length; i++) {
+      var d = fl.done[i];
+      h += '<i class="' + (d ? (d.ok ? 'ok' : 'no') : (i === fl.i ? 'now' : '')) + '"></i>';
+    }
+    $('fDots').innerHTML = h;
+  }
+
+  function factRender() {
+    var f = fl.queue[fl.i];
+    fl.typed = ''; fl.firstKey = 0; fl.locked = false;
+    fl.shown = Date.now();
+    $('fPrompt').textContent = L.facts.prompt(f);
+    $('fPrompt').className = 'fq' + (f.kind === 'skip' ? ' seq' : '');
+    var vis = L.facts.visualFor(f);
+    $('fVis').innerHTML = vis && f.kind === 'skip' ? V.render(vis) : '';
+    $('fAns').className = 'fans';
+    $('fTyped').textContent = '';
+    $('fMark').innerHTML = '';
+    $('fNext').classList.add('hide');
+    Array.prototype.forEach.call($('fPad').children, function (b) { b.disabled = false; });
+    var ok = fl.done.filter(function (d) { return d.ok; }).length;
+    $('fScore').textContent = ok + '/' + fl.done.length;
+    var run = 0;
+    for (var i = fl.done.length - 1; i >= 0 && fl.done[i].ok; i--) run++;
+    $('fStreak').textContent = run >= 3 ? '🔥 ' + run + ' in a row' : '';
+    factDots();
+  }
+
+  function factKey(k) {
+    if (!fl || fl.locked) return;
+    if (k === 'ok') return factSubmit();
+    if (k === 'del') { fl.typed = fl.typed.slice(0, -1); $('fTyped').textContent = fl.typed; return; }
+    if (fl.typed.length >= 3) return;
+    if (!fl.firstKey) fl.firstKey = Date.now();      // thinking time stops here
+    fl.typed += k;
+    $('fTyped').textContent = fl.typed;
+    beep('tick');
+  }
+
+  function factSubmit() {
+    if (!fl || fl.locked || !fl.typed.length) return;
+    var f = fl.queue[fl.i];
+    var ok = Number(fl.typed) === f.answer;
+    var ms = Math.max(0, (fl.firstKey || Date.now()) - fl.shown);
+    var quick = ok && ms <= L.facts.FAST_MS;
+    fl.locked = true;
+    Array.prototype.forEach.call($('fPad').children, function (b) { b.disabled = true; });
+
+    fl.done[fl.i] = { fact: f.id, ok: ok, ms: ms, t: Date.now(), track: fl.track,
+                      given: Number(fl.typed), answer: f.answer };
+    $('fAns').className = 'fans done ' + (ok ? 'ok' : 'bad');
+    $('fTyped').textContent = ok ? fl.typed : fl.typed + '  →  ' + f.answer;
+
+    var line = ok
+      ? (quick ? '<span class="zip">⚡ Straight out of your head</span>' : pickPraise())
+      : 'Not this time';
+    var hint = (!ok || !quick) ? L.facts.hint(f) : '';
+    $('fMark').innerHTML = '<div class="fmark ' + (ok ? 'ok' : 'bad') + '">' + line + '</div>' +
+      (hint ? '<div class="fhint">' + hint + '</div>' : '');
+    beep(ok ? 'ok' : 'no');
+
+    $('fNext').classList.remove('hide');
+    $('fNext').textContent = fl.i + 1 >= fl.queue.length ? 'See how you went →' : 'Next →';
+    factDots();
+  }
+
+  function factNext() {
+    if (fl.i + 1 >= fl.queue.length) return factFinish();
+    fl.i++; factRender();
+  }
+
+  function factFinish() {
+    var st = S.load();
+    st.facts = (st.facts || []).concat(fl.done);
+    S.save();
+    S.pushFacts();
+
+    var ok = fl.done.filter(function (d) { return d.ok; }).length;
+    var quick = fl.done.filter(function (d) { return d.ok && d.ms <= L.facts.FAST_MS; }).length;
+    var med = fl.done.filter(function (d) { return d.ok; }).map(function (d) { return d.ms; })
+                     .sort(function (x, y) { return x - y; });
+    var sum = L.facts.summary(st.facts, fl.track);
+
+    $('frTitle').textContent = ok === fl.done.length ? 'Every one!' : ok + ' out of ' + fl.done.length;
+    /* A fact is only "known" after two fast answers on separate days, so after a
+       first session the honest count is zero. Saying "0 of 88 are yours" to a child
+       who just got 15 straight out of his head is both true and useless. */
+    $('frSub').textContent = quick + (quick === 1 ? ' came' : ' came') + ' straight out of your head. ' +
+      (sum.counts.fluent
+        ? sum.counts.fluent + ' of the ' + sum.total + ' in this set are yours for good now.'
+        : 'Come back tomorrow — that is how we find out which ones really stuck.');
+    $('frStats').innerHTML =
+      '<div><b>' + ok + '/' + fl.done.length + '</b><span>right</span></div>' +
+      '<div><b>' + quick + '</b><span>⚡ instant</span></div>' +
+      '<div><b>' + (med.length ? (med[(med.length - 1) >> 1] / 1000).toFixed(1) + 's' : '–') + '</b><span>typical think</span></div>';
+
+    // Only the ones worth another look — right-but-slow counts, it means still counting up
+    var work = fl.done.filter(function (d) { return !d.ok || d.ms > L.facts.FAST_MS; });
+    $('frList').innerHTML = work.length
+      ? '<h3 style="margin:18px 0 4px;font-size:16px">Worth another go</h3>' +
+        '<p class="sub" style="margin-bottom:6px">These came slowly or went wrong. They will be back next time.</p>' +
+        work.map(function (d) {
+          var f = L.facts.byId(d.fact);
+          return '<div class="frow' + (d.ok ? '' : ' bad') + '"><span class="f">' +
+            L.facts.prompt(f).replace(/\?/, '') + (f.kind === 'skip' ? '' : ' = ') + f.answer + '</span>' +
+            '<span class="ms">' + (d.ok ? (d.ms / 1000).toFixed(1) + 's' : 'said ' + d.given) + '</span></div>';
+        }).join('')
+      : '<p class="sub" style="margin-top:16px">Nothing slow, nothing wrong. That set is solid.</p>';
+
+    if (ok === fl.done.length) confetti(4200);
+    show('fResult');
+    paintHome();
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target.closest('[data-fact]') : null;
+    if (t) startFacts(t.dataset.fact);
+  });
+  $('fPad').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (b) factKey(b.dataset.k);
+  });
+  $('fNext').addEventListener('click', factNext);
+  $('fQuit').addEventListener('click', function () {
+    if (fl && fl.done.length) { var st = S.load(); st.facts = (st.facts || []).concat(fl.done); S.save(); S.pushFacts(); }
+    fl = null; show('home'); paintHome();
+  });
+  $('frAgain').addEventListener('click', function () { startFacts(fl.track); });
+  $('frHome').addEventListener('click', function () { show('home'); paintHome(); });
+
+  document.addEventListener('keydown', function (e) {
+    if (!fl || $('fluency').classList.contains('hide')) return;
+    if (e.key >= '0' && e.key <= '9') { e.preventDefault(); factKey(e.key); }
+    else if (e.key === 'Backspace') { e.preventDefault(); factKey('del'); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!$('fNext').classList.contains('hide')) factNext(); else factKey('ok');
+    }
   });
 
   /* A read-only hook for the smoke test, so it can answer questions correctly or
@@ -627,8 +983,10 @@
   L.debug = {
     answerIndex: function () { return sess && sess.current ? sess.current.answer : null; },
     coachAnswerIndex: function () { return coach && coach.q ? coach.q.answer : null; },
+    factAnswer: function () { return fl && fl.queue[fl.i] ? fl.queue[fl.i].answer : null; },
+    factFact: function () { return fl && fl.queue[fl.i] ? fl.queue[fl.i].id : null; },
     screen: function () {
-      return ['home', 'quiz', 'coach', 'result', 'write', 'wResult']
+      return ['home', 'quiz', 'coach', 'result', 'write', 'wResult', 'fluency', 'fResult']
         .filter(function (id) { return !$(id).classList.contains('hide'); })[0] || null;
     }
   };

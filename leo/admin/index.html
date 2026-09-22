@@ -72,6 +72,40 @@
       <div class="sub" style="margin-top:8px">A bar <b>above</b> the line means he is doing better than expected at that difficulty; <b>below</b> means that band is hard for him.</div>
     </div>
 
+    <h2>Reading <span class="n" id="libN"></span></h2>
+    <div id="libBlock">
+      <div class="card">
+        <div class="ftracks" id="libStats"></div>
+        <div class="sub" style="margin-top:10px">Listening and reading together count the same as reading alone. For a child whose decoding is the bottleneck, listening still builds vocabulary, sentence rhythm and stamina — and it is how he will meet the language the OC paper uses. The split below is worth watching: if it is all one column, that is worth a nudge.</div>
+      </div>
+      <h3 class="sub2">Books</h3>
+      <div class="card scroll"><table id="libTable"></table></div>
+    </div>
+
+    <h2>Number facts <span class="n" id="factsN"></span></h2>
+    <div id="factsBlock">
+      <div class="card">
+        <div class="ftracks" id="factTracks"></div>
+        <div class="sub" style="margin-top:10px">A fact counts as <b>known</b> only when he answers it correctly <b>and</b> within three seconds, twice running. A right-but-slow answer means he is still working it out rather than recalling it — the two look identical on a normal test.</div>
+      </div>
+
+      <h3 class="sub2">Times tables, fact by fact</h3>
+      <div class="card scroll">
+        <div id="factGrid"></div>
+        <div class="legend" style="margin-top:12px">
+          <span><i class="dot" style="background:var(--good)"></i> Known by heart</span>
+          <span><i class="dot" style="background:var(--warn)"></i> Nearly there</span>
+          <span><i class="dot" style="background:var(--serious)"></i> Right, but counting it out</span>
+          <span><i class="dot" style="background:var(--critical)"></i> Getting it wrong</span>
+          <span><i class="dot" style="background:var(--faint);border:1px solid var(--line)"></i> Not tried</span>
+        </div>
+        <div class="sub" style="margin-top:8px">Each cell is one fact. The number in it is his typical thinking time in seconds — measured to his first keypress, so it is thinking, not typing.</div>
+      </div>
+
+      <h3 class="sub2">Slowest right now</h3>
+      <div class="card scroll"><table id="factTable"></table></div>
+    </div>
+
     <h2>Daily practice <span class="n" id="daysN"></span></h2>
     <div class="card viz"><div id="chartDays"></div></div>
 
@@ -180,9 +214,15 @@
 <script src="../js/curriculum.js"></script>
 <script src="../js/writing.js"></script>
 <script src="../js/content-literacy.js"></script>
+  <script src="../js/content-reading.js"></script>
+  <script src="../js/content-reading-oc.js"></script>
 <script src="../js/bank.js"></script>
 <script src="../js/bank-measure.js"></script>
 <script src="../js/bank-verbal.js"></script>
+  <script src="../js/bank-argue.js"></script>
+  <script src="../js/bank-spatial.js"></script>
+<script src="../js/books.js"></script>
+<script src="../js/facts.js"></script>
 <script src="../js/store.js"></script>
 <script src="../js/norms.js"></script>
 <script src="../js/engine.js"></script>

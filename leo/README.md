@@ -37,8 +37,94 @@ and it is ticked off; get it wrong and it explains that specific question and of
 easier one of the same type. An explanation a child only nods at does not stick — doing
 one is what makes it stick.
 
+**Choosing and answering are two separate taps.** Picking an option only highlights
+it; nothing is recorded until *Check my answer*, and tapping a different option moves
+the highlight. A stray tap on a phone used to commit an answer outright and there was
+no way back.
+
 The home screen also chooses when answers appear: straight away, or held to the end like
 a real exam. Either way the fix-up round runs afterwards.
+
+## Fast maths — number-fact fluency
+
+The quiz asks whether he can *work something out*. This asks whether he can *recall
+it*. Those are different skills and need different machinery, so this is a separate
+mode rather than more question types.
+
+Three sets, matching the gaps his practice actually shows:
+
+| Set | Facts | What it covers |
+|---|---|---|
+| Add & take away to 20 | 116 | Number bonds both ways, including bridging ten |
+| Counting in 6s 7s 8s 9s | 40 | The ladder up each table, with the arc picture |
+| Times tables 6 7 8 9 | 88 | × and ÷ to 12, both directions |
+
+**Answers are typed, not chosen.** Four options let you work backwards from the
+answers, which is exactly the habit this mode exists to make unnecessary. A large
+keypad handles it on a tablet; a physical keyboard works too.
+
+**The clock measures time to the first keypress, not time to submit.** Leo's
+processing speed sits at the 6th percentile, so total time would largely measure how
+fast he can find digits on a keypad. Time-to-first-key is thinking time, which is the
+thing worth knowing. **Nothing is ever marked wrong for being slow** — speed is
+diagnosis, never grade, and there is no countdown anywhere.
+
+**A fact counts as known only after two correct answers under three seconds, on
+separate sittings.** One fast answer is luck; a right-but-slow answer means he is
+still counting it out. Those two look identical on an ordinary test — both are just a
+tick — and separating them is the entire point of the mode.
+
+Scheduling is Leitner-style, derived from the log rather than stored: wrong sends a
+fact back to box 0, right-and-fast moves it up one, right-but-slow leaves it where it
+is. Boxes come round after 0, 1, 3, 7 and 21 days. **30% of every set is reserved for
+facts he has not met yet** — without that reserve the ones he keeps getting wrong are
+permanently due and crowd out the rest of the table, which a simulation over 14
+sessions showed happening (57 of 88 facts never appeared at all).
+
+The dashboard draws the whole times-table grid, one cell per fact, coloured green /
+amber / orange / red for known, nearly, right-but-counting, and getting-it-wrong, with
+his typical thinking time in the cell. A topic score of "80% right" cannot tell you
+*which* four facts are missing; this can.
+
+Storage is an **append-only attempt log**. Box and fluency are derived on read rather
+than written down, so two devices merge by id with no conflict resolution and no
+last-write-wins — the same property the answer log has.
+
+## The reading shelf
+
+The single thing that will decide how Leo reads in two years is not this question
+bank. It is whether he reads most days. He did in Kindergarten, his teacher
+changed, and the habit went. This is the attempt at getting it back, and it is
+deliberately the least test-like part of the app.
+
+He adds a book — almost always one tap from a curated list, because making a child
+with a writing difficulty spell *Kenneth Grahame* to record that he read taxes the
+wrong skill. Every sitting puts a **sticker on the cover**, at a position derived
+from the entry id so it never moves between repaints. Finishing a book adds a
+ribbon.
+
+Four decisions, each from his profile rather than from what was easy:
+
+- **Listening counts the same.** He reads better silently than aloud and decoding
+  is the bottleneck; listening removes it while still building vocabulary, sentence
+  rhythm and stamina — which is what Victorian prose demands. A log that credited
+  only solo reading would quietly tell him the hardest thing is the only real one.
+- **No streak.** A streak punishes the day you miss, and the day you miss is
+  usually the day it was already hard. Stickers only ever accumulate.
+- **The reward attaches to the book**, not to a points total, so the effort is
+  visible on the thing that earned it.
+- **The suggestions are chosen for this reader** — Jacobs' *English Fairy Tales*
+  because the OC paper drew a passage straight from it, Banjo Paterson because it
+  is 1890s language a boy will actually finish, *Double Helix* because it is the
+  exact shape of the NAPLAN Year 3 reading magazine, and field guides to rocks and
+  fungi because that is where his background knowledge already runs deepest.
+
+The dashboard shows the split between reading alone, reading together and
+listening. If it collapses to one column, that is worth a nudge.
+
+Storage is one append-only log: a `book` entry adds a title, a `read` entry records
+a sitting, a `finished` entry closes it. The shelf is derived, so two devices merge
+by id with no conflict resolution.
 
 ## Writing
 
@@ -109,10 +195,96 @@ real variety):
 | Data & chance | 1,700 |
 | Patterns & algebra | 311 |
 | Grammar & spelling | 98 (hand-written) |
-| Reading | 42 (14 passages × 3 questions, hand-written) |
+| Number facts (fluency mode) | 244 (a fixed, deliberately finite set) |
+| Reading | 101 (32 passages, hand-written) |
 
 Reading and language are hand-written and therefore finite — extend them in
-`js/content-literacy.js`, which holds nothing but content.
+`js/content-literacy.js` and `js/content-reading.js`, which hold nothing but content.
+
+### Why the reading passages are about minerals, fungi and making things
+
+Background knowledge is the strongest single predictor of reading comprehension: a
+child reads well above his decoding level in a subject he already knows, because he
+is not spending effort working out what the words refer to. Leo can name hundreds of
+fungi and dozens of minerals on sight, so a passage about opal or mycorrhiza is
+*easier* for him than one about a wet sock, despite far harder vocabulary. The
+passages in `content-reading.js` use that.
+
+Minecraft appears as a bridge to the real subject — real geology, real circuits,
+real ecology — never as retold game lore. It earns the attention and then spends it
+on something true.
+
+The set covers what the OC reading paper actually contains, including **poetry**,
+which the bank previously had none of and which every source names as its hardest
+text type.
+
+`content-reading-oc.js` adds the paper's harder shapes, written after reading an
+actual OC reading sample:
+
+- **Extract matching** — several labelled texts and a statement to place against
+  one of them. The answer options *are* the labels, so the generator must not
+  shuffle them; the smoke test renders a few hundred of these and checks the labels
+  stay in order and still match the explanation, because a shuffle here would mark
+  the wrong extract correct on every attempt while looking perfectly normal.
+- **Paired texts** — two extracts on one idea, with questions answerable only by
+  holding both in mind. The sample paper's hardest question was of this kind.
+- **A poem that withholds its subject.** The sample used Tennyson's *Crossing the
+  Bar*, which never says "death"; the whole task is to arrive at it. The earlier
+  poems here state their contrast outright, which is a gentler exercise.
+
+That sample was harder than this bank had assumed — a ~900-word Victorian folk tale
+beside a Mark Twain extract, then policy prose with vocabulary like *heterogeneous*
+and *subsistence*. Register in this file is correspondingly heavier. Note that the
+real papers draw on public-domain classics precisely because they are free to
+reproduce, which is an option open to this bank too. Questions are tagged with the OC reading skill they exercise
+(comprehension, inference, evaluation, text structure, tone, vocabulary) so coverage
+can be checked rather than assumed.
+
+## Argument analysis (OC Thinking Skills)
+
+`bank-argue.js`, added after reading an actual Thinking Skills sample in which
+**four of ten questions were argument analysis** — a family this bank had none of.
+It could produce matrices, sequences, codes and ordering puzzles, but nothing that
+asked a child to find the flaw in someone's reasoning.
+
+| Family | What it asks |
+|---|---|
+| Finding the flaw | Name the reasoning error, usually reading a hedged claim ("many", "sometimes") as if it said "all" |
+| Weakening an argument | Which statement, if true, removes the mechanism the criticism depends on |
+| Main conclusion | Which sentence is the point, and which are the support for it |
+| Whose reasoning holds? | A chain of requirements, two speakers, necessary vs sufficient conditions |
+
+Generated rather than hand-written, because a fixed list is memorised in a
+fortnight and it is the shape that has to be learnt. Two properties the smoke test
+checks rather than assumes: distractors are **true statements that simply are not
+the answer** (an obviously silly distractor teaches a child to pick the
+serious-sounding one), and the answer is not parked in one position. The
+two-speaker form has four possible keys and all four occur.
+
+Contexts are drawn from subjects Leo already knows, so reading load does not
+obscure the reasoning, which is the thing being tested.
+
+## 3D spatial reasoning
+
+`bank-spatial.js` with the `cubes` renderer in `visuals.js`. Two solids built from
+unit cubes, drawn isometrically; one's gluing time is given and the other's is
+asked for. The trick the real question teaches is that you never count the cubes —
+you count the **joins**, get the rate per face, and apply it.
+
+This is here for a specific reason: visual-spatial reasoning at the 98th percentile
+against processing speed at the 6th means this is the one section where the
+strongest channel does the work and the weakest is barely involved. It also carries
+almost no reading load, which is where time is lost everywhere else.
+
+Solids are grown randomly rather than drawn by hand, so they do not repeat, and
+every generated pair is checked before use: the rate must divide evenly, the answer
+must be whole, and the marked option must equal the product the explanation prints.
+The smoke test re-runs that check over a few hundred generated questions, because a
+solid whose arithmetic does not close would teach something false while looking
+entirely plausible.
+
+Cubes are painted in order of `x+y+z` so nearer ones land on top of farther ones;
+without that the faces tangle and the drawing stops reading as a solid.
 
 ## Curriculum alignment
 
@@ -242,21 +414,22 @@ npm run smoke
 
 `test/smoke.mjs` drives the real app in Chromium: it sits a 12-question NAPLAN
 test answering 9 right and 3 wrong on purpose, checks the score, checks the
-difficulty ladder actually climbed, works the fix-up round, submits a piece of
+difficulty ladder actually climbed, works the fix-up round, drills a set of number
+facts through the keypad, submits a piece of
 writing both typed and as a photo of the page, and then opens the dashboard in a
 **separate browser profile**. That last part matters — a second profile shares no
-localStorage, so if the answers, sessions and writing all show up there, the
-record genuinely came back from the server.
+localStorage, so if the answers, sessions, writing and fact attempts all show up
+there, the record genuinely came back from the server.
 
-It asserts 28 things and exits non-zero if any of them fail, so it can gate a
+It asserts 55 things and exits non-zero if any of them fail, so it can gate a
 deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
 
 It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and
 wipes that profile before and after, so runs are independent and it can never
 touch Leo's real record — including when `SMOKE_BASE` points at the deployed site.
 That isolation is what lets the counts be exact rather than "at least": a
-12-question test plus 3 fix-ups must leave exactly 15 answers, 2 sessions and 2
-pieces of writing. Without the wipe, a dev-server left running from a previous run
+12-question test plus 3 fix-ups must leave exactly 15 answers, 2 sessions, 2
+pieces of writing and 20 fact attempts. Without the wipe, a dev-server left running from a previous run
 carries its answers over and every count quietly asserts against stale data.
 
 To answer deliberately rather than by guessing, the test reads `LEO.debug`, a

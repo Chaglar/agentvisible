@@ -210,6 +210,119 @@
      into the ability model — a writing score is a rubric judgement, not an item
      response, and averaging the two would be dishonest. */
   var writeBlockHTML = null;   // the empty state must not destroy the markup it needs later
+  /* Same trap as the writing block: rendering the empty state destroys the markup
+     the populated state needs, so keep a copy and put it back. */
+  var factsBlockHTML = null;
+
+  var libBlockHTML = null;
+
+  function paintLibrary() {
+    var block = $('libBlock');
+    if (libBlockHTML === null) libBlockHTML = block.innerHTML;
+    var BK = L.books, log = S.load().library || [];
+    var books = BK.shelf(log), tot = BK.totals(log);
+    $('libN').textContent = tot.sittings ? tot.sittings + (tot.sittings === 1 ? ' sitting' : ' sittings') : '';
+    if (!books.length) {
+      block.innerHTML = '<div class="card empty">No books on the shelf yet. On the practice page, ' +
+        '<b>Add a book</b> — a sticker goes on the cover every time he reads it, and listening counts.</div>';
+      return;
+    }
+    if (!$('libTable')) block.innerHTML = libBlockHTML;
+
+    var how = tot.how || {}, hows = ['self', 'together', 'listen'];
+    var totalHow = hows.reduce(function (n2, k) { return n2 + (how[k] || 0); }, 0) || 1;
+    $('libStats').innerHTML =
+      '<div class="ftrack"><div class="t">📚 On the shelf</div><div class="v">' + tot.books +
+        ' <em>· ' + tot.finished + ' finished</em></div></div>' +
+      '<div class="ftrack"><div class="t">⏱ Time read</div><div class="v">' +
+        (tot.minutes >= 60 ? Math.round(tot.minutes / 60) + ' <em>hours</em>' : tot.minutes + ' <em>minutes</em>') +
+        '</div></div>' +
+      '<div class="ftrack"><div class="t">How he reads</div><div class="v" style="font-size:15px;line-height:1.5">' +
+        hows.map(function (k) {
+          return BK.HOW[k].emoji + ' ' + Math.round(100 * (how[k] || 0) / totalHow) + '%';
+        }).join(' · ') + '</div>' +
+        '<div class="bar">' + hows.map(function (k, i) {
+          var n2 = how[k] || 0;
+          return n2 ? '<i style="width:' + (100 * n2 / totalHow) + '%;background:var(--s' + (i + 1) + ')"></i>' : '';
+        }).join('') + '</div></div>';
+
+    $('libTable').innerHTML =
+      '<thead><tr><th>Book</th><th>Stickers</th><th>Minutes</th><th>How</th><th>Last read</th></tr></thead><tbody>' +
+      books.map(function (b) {
+        var h2 = {};
+        b.sessions.forEach(function (x) { h2[x.how || 'self'] = (h2[x.how || 'self'] || 0) + 1; });
+        var last = b.sessions.length ? b.sessions[b.sessions.length - 1].t : b.t;
+        return '<tr><td><b>' + esc(b.title) + '</b>' + (b.finished ? ' 🎀' : '') +
+          (b.author ? '<div class="sub">' + esc(b.author) + '</div>' : '') + '</td>' +
+          '<td>' + b.stickers.length + '</td><td>' + b.mins + '</td>' +
+          '<td>' + (Object.keys(h2).map(function (k) { return BK.HOW[k].emoji + h2[k]; }).join(' ') || '–') + '</td>' +
+          '<td>' + (last ? new Date(last).toLocaleDateString() : '–') + '</td></tr>';
+      }).join('') + '</tbody>';
+  }
+
+  function paintFacts() {
+    var block = $('factsBlock');
+    if (factsBlockHTML === null) factsBlockHTML = block.innerHTML;
+    var F = L.facts, log = S.load().facts || [];
+    $('factsN').textContent = log.length ? log.length + ' answers' : '';
+    if (!log.length) {
+      block.innerHTML = '<div class="card empty">No fact practice yet. On the practice page, pick one of the ' +
+        '<b>Fast maths</b> sets — he types the answer instead of choosing it, and the clock measures how long ' +
+        'he thinks before the first key.</div>';
+      return;
+    }
+    if (!$('factGrid')) block.innerHTML = factsBlockHTML;   // restore after an empty render
+
+    $('factTracks').innerHTML = Object.keys(F.TRACKS).map(function (k) {
+      var T = F.TRACKS[k], sum = F.summary(log, k), c = sum.counts, tot = sum.total;
+      var seg = function (n, col) { return n ? '<i style="width:' + (100 * n / tot) + '%;background:' + col + '"></i>' : ''; };
+      return '<div class="ftrack"><div class="t">' + T.emoji + ' ' + T.label + '</div>' +
+        '<div class="v">' + c.fluent + ' <em>of ' + tot + ' known</em></div>' +
+        '<div class="bar">' + seg(c.fluent, 'var(--good)') + seg(c.nearly, 'var(--warn)') +
+        seg(c.slow, 'var(--serious)') + seg(c.wrong, 'var(--critical)') + '</div></div>';
+    }).join('');
+
+    var rows = F.grid(log);
+    var cols = rows[0].cells.length;
+    var h = '<div class="fgrid" style="grid-template-columns:38px repeat(' + cols + ',1fr)">';
+    h += '<div></div>' + rows[0].cells.map(function (c) { return '<div class="hd">×' + c.n + '</div>'; }).join('');
+    rows.forEach(function (r) {
+      h += '<div class="rh">' + r.table + '</div>';
+      h += r.cells.map(function (c) {
+        var secs = c.ms == null ? '' : (c.ms / 1000).toFixed(1);
+        return '<div class="fcell ' + c.level + '" title="' + c.label + ' — ' +
+          ({ fluent: 'known by heart', nearly: 'nearly there', slow: 'right, but counting it out',
+             wrong: 'getting it wrong', 'new': 'not tried' }[c.level]) +
+          (secs ? ', typically ' + secs + 's' : '') + '">' + (secs || '·') + '</div>';
+      }).join('');
+    });
+    $('factGrid').innerHTML = h + '</div>';
+
+    // Worst first: wrong facts above merely slow ones, slowest first within each.
+    var idx = F.index(log);
+    var worst = F.all().map(function (f) { return { f: f, st: idx[f.id] }; })
+      .filter(function (x) { return x.st && x.st.seen && x.st.level !== 'fluent'; })
+      .sort(function (a, b) {
+        var aw = !a.st.lastOk, bw = !b.st.lastOk;          // wrong last time beats merely slow
+        if (aw !== bw) return aw ? -1 : 1;
+        return (b.st.medianMs || 0) - (a.st.medianMs || 0);
+      }).slice(0, 12);
+    $('factTable').innerHTML =
+      '<thead><tr><th>Fact</th><th>Answer</th><th>Typical think</th><th>Tried</th><th>State</th></tr></thead><tbody>' +
+      worst.map(function (x) {
+        return '<tr><td><b>' + F.prompt(x.f).replace('?', '…') + '</b></td><td>' + x.f.answer + '</td>' +
+          '<td>' + (x.st.medianMs == null ? '–' : (x.st.medianMs / 1000).toFixed(1) + 's') + '</td>' +
+          '<td>' + x.st.seen + '</td>' +
+          '<td>' + factState(x.st) + '</td></tr>';
+      }).join('') + '</tbody>';
+  }
+
+  function factState(st) {
+    if (!st.lastOk) return 'Got it wrong last time';
+    if (st.wrong) return 'Right now, wrong before';
+    return st.level === 'slow' ? 'Counting it out' : 'Nearly there';
+  }
+
   function paintWriting() {
     var block = $('writeBlock');
     if (writeBlockHTML === null) writeBlockHTML = block.innerHTML;
@@ -388,12 +501,14 @@
 
     var has = answers().length > 0;
     var hasWriting = (st.writing || []).length > 0;
-    $('empty').classList.toggle('hide', has || hasWriting);
-    $('dash').style.display = (has || hasWriting) ? '' : 'none';
-    if (!has) { paintWriting(); paintSettings(); return; }
+    var hasFacts = (st.facts || []).length > 0;
+    var hasBooks = (st.library || []).length > 0;
+    $('empty').classList.toggle('hide', has || hasWriting || hasFacts || hasBooks);
+    $('dash').style.display = (has || hasWriting || hasFacts || hasBooks) ? '' : 'none';
+    if (!has) { paintLibrary(); paintFacts(); paintWriting(); paintSettings(); return; }
 
     var stats = topicStats();
-    paintKpis(); paintAbility(); paintTopics(stats); paintLevels(); paintDays(); paintWriting(); paintRecs(stats); paintSessions(); paintSettings();
+    paintKpis(); paintAbility(); paintTopics(stats); paintLevels(); paintLibrary(); paintFacts(); paintDays(); paintWriting(); paintRecs(stats); paintSessions(); paintSettings();
   }
 
   /* ---------------- wiring ---------------- */

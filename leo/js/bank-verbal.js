@@ -10,7 +10,10 @@
     var pool = PASSAGES.filter(function (p) { return Math.abs(p.lv - lv) <= 1; });
     if (!pool.length) pool = PASSAGES;
     var p = rng.pick(pool), qq = rng.pick(p.qs);
-    var order = rng.shuffle(qq.c.map(function (c, i) { return { c: c, i: i }; }));
+    var idx = qq.c.map(function (c, i) { return { c: c, i: i }; });
+    // Extract-matching options ARE the labels A-D, so shuffling them would break the
+    // link to the extract each one names. Those sets opt out.
+    var order = qq.fixed ? idx : rng.shuffle(idx);
     return {
       topic: 'reading', level: lv, sub: p.title,
       passage: { title: p.title, text: p.text },
@@ -57,9 +60,17 @@
 
   topic('thinking', { label: 'Thinking skills', emoji: '🧩', strand: 'thinking', modes: ['oc'] }, function (lv, rng) {
     var q = { topic: 'thinking', level: lv };
-    var kinds = lv <= 2 ? ['odd', 'seq', 'matrix'] : lv === 3 ? ['odd', 'matrix', 'order', 'code'] :
-                lv === 4 ? ['order', 'matrix', 'code', 'balance', 'must'] : ['order', 'must', 'balance', 'numlogic', 'code'];
+    var kinds = lv <= 2 ? ['odd', 'seq', 'matrix'] : lv === 3 ? ['odd', 'matrix', 'order', 'code', 'argue', 'solids'] :
+                lv === 4 ? ['order', 'matrix', 'code', 'balance', 'must', 'argue', 'argue', 'solids'] :
+                           ['order', 'must', 'balance', 'numlogic', 'code', 'argue', 'argue', 'argue', 'solids'];
     var kind = rng.pick(kinds);
+
+    // Argument analysis lives in bank-argue.js — four of the ten questions in the
+    // real Thinking Skills sample were of this kind, so it is weighted heavily.
+    if (kind === 'argue' && L.argue) return L.argue.pick(lv, rng);
+    // 3D spatial reasoning — the part of the paper that leans on visual-spatial
+    // ability and carries almost no reading load.
+    if (kind === 'solids' && L.spatial) return L.spatial.gen(lv, rng);
 
     if (kind === 'odd') {
       var groups = C.ODDONE;
