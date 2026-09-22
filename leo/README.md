@@ -90,6 +90,42 @@ Storage is an **append-only attempt log**. Box and fluency are derived on read r
 than written down, so two devices merge by id with no conflict resolution and no
 last-write-wins — the same property the answer log has.
 
+## The reading shelf
+
+The single thing that will decide how Leo reads in two years is not this question
+bank. It is whether he reads most days. He did in Kindergarten, his teacher
+changed, and the habit went. This is the attempt at getting it back, and it is
+deliberately the least test-like part of the app.
+
+He adds a book — almost always one tap from a curated list, because making a child
+with a writing difficulty spell *Kenneth Grahame* to record that he read taxes the
+wrong skill. Every sitting puts a **sticker on the cover**, at a position derived
+from the entry id so it never moves between repaints. Finishing a book adds a
+ribbon.
+
+Four decisions, each from his profile rather than from what was easy:
+
+- **Listening counts the same.** He reads better silently than aloud and decoding
+  is the bottleneck; listening removes it while still building vocabulary, sentence
+  rhythm and stamina — which is what Victorian prose demands. A log that credited
+  only solo reading would quietly tell him the hardest thing is the only real one.
+- **No streak.** A streak punishes the day you miss, and the day you miss is
+  usually the day it was already hard. Stickers only ever accumulate.
+- **The reward attaches to the book**, not to a points total, so the effort is
+  visible on the thing that earned it.
+- **The suggestions are chosen for this reader** — Jacobs' *English Fairy Tales*
+  because the OC paper drew a passage straight from it, Banjo Paterson because it
+  is 1890s language a boy will actually finish, *Double Helix* because it is the
+  exact shape of the NAPLAN Year 3 reading magazine, and field guides to rocks and
+  fungi because that is where his background knowledge already runs deepest.
+
+The dashboard shows the split between reading alone, reading together and
+listening. If it collapses to one column, that is worth a nudge.
+
+Storage is one append-only log: a `book` entry adds a title, a `read` entry records
+a sitting, a `finished` entry closes it. The shelf is derived, so two devices merge
+by id with no conflict resolution.
+
 ## Writing
 
 The one area his assessments show going backwards: alphabet writing fluency fell from
@@ -385,7 +421,7 @@ writing both typed and as a photo of the page, and then opens the dashboard in a
 localStorage, so if the answers, sessions, writing and fact attempts all show up
 there, the record genuinely came back from the server.
 
-It asserts 45 things and exits non-zero if any of them fail, so it can gate a
+It asserts 55 things and exits non-zero if any of them fail, so it can gate a
 deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
 
 It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and

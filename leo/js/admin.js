@@ -214,6 +214,52 @@
      the populated state needs, so keep a copy and put it back. */
   var factsBlockHTML = null;
 
+  var libBlockHTML = null;
+
+  function paintLibrary() {
+    var block = $('libBlock');
+    if (libBlockHTML === null) libBlockHTML = block.innerHTML;
+    var BK = L.books, log = S.load().library || [];
+    var books = BK.shelf(log), tot = BK.totals(log);
+    $('libN').textContent = tot.sittings ? tot.sittings + (tot.sittings === 1 ? ' sitting' : ' sittings') : '';
+    if (!books.length) {
+      block.innerHTML = '<div class="card empty">No books on the shelf yet. On the practice page, ' +
+        '<b>Add a book</b> — a sticker goes on the cover every time he reads it, and listening counts.</div>';
+      return;
+    }
+    if (!$('libTable')) block.innerHTML = libBlockHTML;
+
+    var how = tot.how || {}, hows = ['self', 'together', 'listen'];
+    var totalHow = hows.reduce(function (n2, k) { return n2 + (how[k] || 0); }, 0) || 1;
+    $('libStats').innerHTML =
+      '<div class="ftrack"><div class="t">📚 On the shelf</div><div class="v">' + tot.books +
+        ' <em>· ' + tot.finished + ' finished</em></div></div>' +
+      '<div class="ftrack"><div class="t">⏱ Time read</div><div class="v">' +
+        (tot.minutes >= 60 ? Math.round(tot.minutes / 60) + ' <em>hours</em>' : tot.minutes + ' <em>minutes</em>') +
+        '</div></div>' +
+      '<div class="ftrack"><div class="t">How he reads</div><div class="v" style="font-size:15px;line-height:1.5">' +
+        hows.map(function (k) {
+          return BK.HOW[k].emoji + ' ' + Math.round(100 * (how[k] || 0) / totalHow) + '%';
+        }).join(' · ') + '</div>' +
+        '<div class="bar">' + hows.map(function (k, i) {
+          var n2 = how[k] || 0;
+          return n2 ? '<i style="width:' + (100 * n2 / totalHow) + '%;background:var(--s' + (i + 1) + ')"></i>' : '';
+        }).join('') + '</div></div>';
+
+    $('libTable').innerHTML =
+      '<thead><tr><th>Book</th><th>Stickers</th><th>Minutes</th><th>How</th><th>Last read</th></tr></thead><tbody>' +
+      books.map(function (b) {
+        var h2 = {};
+        b.sessions.forEach(function (x) { h2[x.how || 'self'] = (h2[x.how || 'self'] || 0) + 1; });
+        var last = b.sessions.length ? b.sessions[b.sessions.length - 1].t : b.t;
+        return '<tr><td><b>' + esc(b.title) + '</b>' + (b.finished ? ' 🎀' : '') +
+          (b.author ? '<div class="sub">' + esc(b.author) + '</div>' : '') + '</td>' +
+          '<td>' + b.stickers.length + '</td><td>' + b.mins + '</td>' +
+          '<td>' + (Object.keys(h2).map(function (k) { return BK.HOW[k].emoji + h2[k]; }).join(' ') || '–') + '</td>' +
+          '<td>' + (last ? new Date(last).toLocaleDateString() : '–') + '</td></tr>';
+      }).join('') + '</tbody>';
+  }
+
   function paintFacts() {
     var block = $('factsBlock');
     if (factsBlockHTML === null) factsBlockHTML = block.innerHTML;
@@ -456,12 +502,13 @@
     var has = answers().length > 0;
     var hasWriting = (st.writing || []).length > 0;
     var hasFacts = (st.facts || []).length > 0;
-    $('empty').classList.toggle('hide', has || hasWriting || hasFacts);
-    $('dash').style.display = (has || hasWriting || hasFacts) ? '' : 'none';
-    if (!has) { paintFacts(); paintWriting(); paintSettings(); return; }
+    var hasBooks = (st.library || []).length > 0;
+    $('empty').classList.toggle('hide', has || hasWriting || hasFacts || hasBooks);
+    $('dash').style.display = (has || hasWriting || hasFacts || hasBooks) ? '' : 'none';
+    if (!has) { paintLibrary(); paintFacts(); paintWriting(); paintSettings(); return; }
 
     var stats = topicStats();
-    paintKpis(); paintAbility(); paintTopics(stats); paintLevels(); paintFacts(); paintDays(); paintWriting(); paintRecs(stats); paintSessions(); paintSettings();
+    paintKpis(); paintAbility(); paintTopics(stats); paintLevels(); paintLibrary(); paintFacts(); paintDays(); paintWriting(); paintRecs(stats); paintSessions(); paintSettings();
   }
 
   /* ---------------- wiring ---------------- */

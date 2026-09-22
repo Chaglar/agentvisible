@@ -29,8 +29,8 @@
       model: null,
       xp: 0, best: 0,
       streak: { days: 0, last: '' },
-      sessions: [], answers: [], writing: [], facts: [],
-      pending: { sessions: [], answers: [], writing: [], facts: [] }   // not yet acknowledged by the server
+      sessions: [], answers: [], writing: [], facts: [], library: [],
+      pending: { sessions: [], answers: [], writing: [], facts: [], library: [] }   // not yet acknowledged by the server
     };
   }
 
@@ -78,8 +78,10 @@
       if (!S.state.pending) S.state.pending = { sessions: [], answers: [], writing: [], facts: [] };
       if (!S.state.pending.writing) S.state.pending.writing = [];
       if (!S.state.pending.facts) S.state.pending.facts = [];
+      if (!S.state.pending.library) S.state.pending.library = [];
       if (!S.state.writing) S.state.writing = [];
       if (!S.state.facts) S.state.facts = [];
+      if (!S.state.library) S.state.library = [];
       // fact attempts written before ids existed still have to merge exactly once
       S.state.facts.forEach(function (f, i) { if (!f.fid) f.fid = (f.fact || 'f') + ':' + (f.t || i); });
       // v1 records predate answer ids; give them stable ones so they merge exactly once
@@ -127,6 +129,7 @@
       st.sessions = mergeById(st.sessions, rs.sessions || [], function (x) { return x.id; });
       st.writing = mergeById(st.writing || [], rs.writing || [], function (x) { return x.id; });
       st.facts = mergeById(st.facts || [], rs.facts || [], factId);
+      st.library = mergeById(st.library || [], rs.library || [], function (x) { return x.id; });
       // A blank field on the server must not clobber a value we already hold — an
       // older record with an empty date of birth would otherwise wipe the default
       // and silently switch the dashboard back to the year-group comparison.
@@ -150,10 +153,12 @@
         if (!res.ok) return st;
         var p = st.pending;
         if ((p.answers && p.answers.length) || (p.sessions && p.sessions.length) ||
-            (p.writing && p.writing.length) || (p.facts && p.facts.length)) {
-          return S.call('POST', { answers: p.answers, sessions: p.sessions, writing: p.writing, facts: p.facts })
+            (p.writing && p.writing.length) || (p.facts && p.facts.length) ||
+            (p.library && p.library.length)) {
+          return S.call('POST', { answers: p.answers, sessions: p.sessions, writing: p.writing,
+                                  facts: p.facts, library: p.library })
             .then(function (r2) {
-            if (r2.ok) { st.pending = { sessions: [], answers: [], writing: [], facts: [] }; S.applyRemote(r2); }
+            if (r2.ok) { st.pending = { sessions: [], answers: [], writing: [], facts: [], library: [] }; S.applyRemote(r2); }
             return st;
           });
         }
@@ -179,6 +184,17 @@
       S.save();
       S.sync();                                  // fire and forget; the queue covers failure
       return pct;
+    },
+
+    /* The reading shelf. Also append-only: a 'book' entry adds a title, a 'read'
+       entry records a sitting. Which books exist and how many stickers each has
+       are derived in books.js, so nothing here is ever edited in place. */
+    pushLibrary: function (entries) {
+      var st = S.load();
+      st.library = mergeById(st.library || [], entries || [], function (x) { return x.id; });
+      st.pending.library = mergeById(st.pending.library, entries || [], function (x) { return x.id; });
+      S.save();
+      return S.sync();
     },
 
     /* number-fact attempts. An append-only log: box and fluency are derived from it
@@ -275,6 +291,7 @@
       st.pending.sessions = st.sessions.slice();
       st.pending.writing = st.writing.slice();
       st.pending.facts = (st.facts || []).slice();
+      st.pending.library = (st.library || []).slice();
       S.save();
       return S.sync().then(function () { return st; });
     },

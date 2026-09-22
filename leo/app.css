@@ -298,3 +298,48 @@ h2{font-size:18px;margin:26px 0 10px;letter-spacing:-.01em}
 .argbox{background:var(--bg);border:1px solid var(--line);border-left:3px solid var(--acc);
   border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:16px;line-height:1.55;font-weight:400}
 .argbox p+p{margin-top:9px}
+
+/* ---------- the reading shelf ---------- */
+/* A cover he can see filling up. The sticker is attached to the book rather than
+   counted into a total, because that is what makes the effort visible. */
+.shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:12px}
+.bk{position:relative;background:var(--card);border:0;padding:0;cursor:pointer;text-align:left;
+  border-radius:10px;box-shadow:var(--shadow);transition:transform .1s ease}
+.bk:active{transform:scale(.97)}
+.bk .cov{position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;
+  background:linear-gradient(150deg,hsl(var(--h) 62% 52%),hsl(var(--h) 55% 38%));
+  border:1px solid rgba(0,0,0,.18)}
+.bk .cov::before{content:"";position:absolute;left:0;top:0;bottom:0;width:9px;
+  background:linear-gradient(90deg,rgba(0,0,0,.28),rgba(0,0,0,0))}
+.bk .cov .tt{position:absolute;left:16px;right:9px;top:11px;color:#fff;font-size:12px;font-weight:800;
+  line-height:1.25;text-shadow:0 1px 2px rgba(0,0,0,.3);word-break:break-word}
+.bk .st{position:absolute;font-size:21px;line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
+.bk .ribbon{position:absolute;right:6px;bottom:6px;font-size:20px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
+.bk .cnt{display:block;font-size:12px;color:var(--mut);margin-top:5px;font-weight:600;padding:0 2px 4px}
+.bk.done .cov{opacity:.82}
+
+.pick{display:block;width:100%;text-align:left;background:var(--card);border:2px solid var(--line);
+  border-radius:14px;padding:12px 13px;margin-bottom:9px;cursor:pointer}
+.pick:active{border-color:var(--acc)}
+.pick .t{font-weight:800;font-size:16px}
+.pick .a{font-size:13px;color:var(--mut);margin-top:1px}
+.pick .k{font-size:14px;margin-top:5px;line-height:1.45}
+.pick .tag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;
+  color:var(--acc);margin-top:6px}
+
+.hows{display:grid;gap:9px}
+.hows button{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:var(--card);
+  border:2px solid var(--line);border-radius:14px;padding:12px 13px;cursor:pointer;font-size:16px;font-weight:600}
+.hows button.on{border-color:var(--acc);background:var(--bg)}
+.hows button .e{font-size:22px}
+.hows button .n{display:block;font-size:13px;color:var(--mut);font-weight:500;margin-top:1px}
+.seg.wide{display:grid;grid-template-columns:repeat(4,1fr)}
+#bookOwn{width:100%;padding:13px 14px;font:inherit;border:2px solid var(--line);border-radius:14px;
+  background:var(--card);color:var(--ink)}
+#logCover{display:flex;justify-content:center}
+#logCover .bk{width:132px;pointer-events:none}
+
+/* the sticker landing */
+@keyframes stick{0%{transform:scale(2.4) rotate(0deg);opacity:0}60%{opacity:1}100%{transform:scale(1)}}
+.bk .st.new{animation:stick .5s cubic-bezier(.2,1.4,.4,1) both}
+@media (prefers-reduced-motion:reduce){.bk .st.new{animation:none}}

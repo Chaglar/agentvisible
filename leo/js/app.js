@@ -72,7 +72,7 @@
   }
 
   function show(id) {
-    ['home', 'quiz', 'coach', 'result', 'write', 'wResult', 'fluency', 'fResult']
+    ['home', 'quiz', 'coach', 'result', 'write', 'wResult', 'fluency', 'fResult', 'addBook', 'logRead']
       .forEach(function (s) { $(s).classList.toggle('hide', s !== id); });
     window.scrollTo(0, 0);
   }
@@ -104,6 +104,8 @@
         '<div class="e">' + K.emoji + '</div><div class="t">' + K.label + '</div>' +
         '<div class="n">' + K.blurb + (done ? ' · ' + done + ' done' : '') + '</div></button>';
     }).join('');
+
+    paintShelf();
 
     $('factCards').innerHTML = Object.keys(L.facts.TRACKS).map(function (k) {
       var T = L.facts.TRACKS[k], sum = L.facts.summary(st.facts || [], k);
@@ -691,6 +693,131 @@
       else if (!$('btnCheck').classList.contains('hide') && !$('btnCheck').disabled) { e.preventDefault(); pick(sess.sel); }
     }
   });
+
+  /* ---------- the reading shelf ---------- */
+  var BK = L.books;
+  var logBook = null, logHow = 'self', logMins = 10, justStuck = null;
+
+  function coverHTML(b, newestId) {
+    return '<div class="cov" style="--h:' + b.hue + '">' +
+      '<span class="tt">' + esc(b.title) + '</span>' +
+      b.stickers.map(function (st, i) {
+        var isNew = newestId && b.sessions[i] && b.sessions[i].id === newestId;
+        return '<span class="st' + (isNew ? ' new' : '') + '" style="left:' + st.x + '%;top:' + st.y +
+          '%;transform:rotate(' + st.rot + 'deg)">' + st.emoji + '</span>';
+      }).join('') +
+      (b.finished ? '<span class="ribbon">🎀</span>' : '') + '</div>';
+  }
+
+  function paintShelf() {
+    var st = S.load(), books = BK.shelf(st.library || []), tot = BK.totals(st.library || []);
+    $('shelfN').textContent = tot.stickers ? tot.stickers + (tot.stickers === 1 ? ' sticker' : ' stickers') : '';
+    if (!books.length) {
+      $('shelf').innerHTML = '<div class="sub" style="grid-column:1/-1">No books yet. Add one and every time you ' +
+        'read it, a sticker goes on the cover.</div>';
+      return;
+    }
+    $('shelf').innerHTML = books.map(function (b) {
+      return '<button class="bk' + (b.finished ? ' done' : '') + '" data-book="' + b.id + '">' +
+        coverHTML(b, justStuck) +
+        '<span class="cnt">' + (b.stickers.length || 'not yet') +
+        (b.stickers.length ? (b.stickers.length === 1 ? ' sticker' : ' stickers') : '') + '</span></button>';
+    }).join('');
+    justStuck = null;
+  }
+
+  function openAddBook() {
+    var have = {};
+    BK.shelf(S.load().library || []).forEach(function (b) { have[b.id] = 1; });
+    $('bookPicks').innerHTML = BK.SUGGESTED.filter(function (p) { return !have[p.id]; }).map(function (p) {
+      return '<button class="pick" data-pick="' + p.id + '">' +
+        '<div class="t">' + esc(p.title) + '</div>' +
+        (p.author ? '<div class="a">' + esc(p.author) + '</div>' : '') +
+        '<div class="k">' + esc(p.kid) + '</div>' +
+        '<span class="tag">' + p.tag + '</span></button>';
+    }).join('') || '<div class="sub">You have added all the suggestions. Type your own below.</div>';
+    $('bookOwn').value = '';
+    show('addBook');
+  }
+
+  function addBook(id, title, author) {
+    S.pushLibrary([{ id: id, kind: 'book', title: title, author: author || '', t: Date.now() }]);
+    paintHome();
+    openLog(id);
+  }
+
+  function openLog(id) {
+    var b = BK.shelf(S.load().library || []).filter(function (x) { return x.id === id; })[0];
+    if (!b) return;
+    logBook = b; logHow = 'self'; logMins = 10;
+    $('logCover').innerHTML = '<div class="bk">' + coverHTML(b) + '</div>';
+    $('logTitle').textContent = b.title;
+    $('logMeta').textContent = b.sessions.length
+      ? b.stickers.length + (b.stickers.length === 1 ? ' sticker' : ' stickers') + ' so far · ' + b.mins + ' minutes'
+      : 'Nothing on this cover yet.';
+    $('logHow').innerHTML = Object.keys(BK.HOW).map(function (k) {
+      var h = BK.HOW[k];
+      return '<button data-how="' + k + '"' + (k === logHow ? ' class="on"' : '') + '>' +
+        '<span class="e">' + h.emoji + '</span><span>' + h.label +
+        '<span class="n">' + h.note + '</span></span></button>';
+    }).join('');
+    Array.prototype.forEach.call($('logMins').children, function (b2) {
+      b2.classList.toggle('on', +b2.dataset.m === logMins);
+    });
+    $('logFinish').classList.toggle('hide', b.finished);
+    show('logRead');
+  }
+
+  function saveRead() {
+    if (!logBook) return;
+    var id = logBook.id + ':' + Date.now();
+    S.pushLibrary([{ id: id, kind: 'read', book: logBook.id, how: logHow, mins: logMins, t: Date.now() }]);
+    justStuck = id;
+    var st = S.load();
+    var b = BK.shelf(st.library).filter(function (x) { return x.id === logBook.id; })[0];
+    var line = BK.praise(b, BK.totals(st.library));
+    beep('ok');
+    popup('🎉', 'Sticker on the book!', line || (b.stickers.length + ' on this cover now'), 2200);
+    show('home'); paintHome();
+  }
+
+  function finishBook() {
+    if (!logBook) return;
+    S.pushLibrary([{ id: logBook.id + ':fin:' + Date.now(), kind: 'finished', book: logBook.id, t: Date.now() }]);
+    confetti(3600); beep('up');
+    popup('🎀', 'Finished!', esc(logBook.title), 2600);
+    show('home'); paintHome();
+  }
+
+  $('btnAddBook').addEventListener('click', openAddBook);
+  $('bookCancel').addEventListener('click', function () { show('home'); paintHome(); });
+  $('bookPicks').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-pick]'); if (!b) return;
+    var p = BK.SUGGESTED.filter(function (x) { return x.id === b.dataset.pick; })[0];
+    if (p) addBook(p.id, p.title, p.author);
+  });
+  $('bookOwnAdd').addEventListener('click', function () {
+    var v = ($('bookOwn').value || '').trim().slice(0, 80);
+    if (!v) return;
+    addBook('own:' + Date.now(), v, '');
+  });
+  $('bookOwn').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('bookOwnAdd').click(); });
+  $('shelf').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-book]'); if (b) openLog(b.dataset.book);
+  });
+  $('logHow').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-how]'); if (!b) return;
+    logHow = b.dataset.how;
+    Array.prototype.forEach.call($('logHow').children, function (x) { x.classList.toggle('on', x === b); });
+  });
+  $('logMins').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-m]'); if (!b) return;
+    logMins = +b.dataset.m;
+    Array.prototype.forEach.call($('logMins').children, function (x) { x.classList.toggle('on', x === b); });
+  });
+  $('logSave').addEventListener('click', saveRead);
+  $('logFinish').addEventListener('click', finishBook);
+  $('logBack').addEventListener('click', function () { show('home'); paintHome(); });
 
   /* ---------- fast maths ---------- */
   /* Answers are typed, and the clock runs from the question appearing to the FIRST

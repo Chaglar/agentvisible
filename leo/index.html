@@ -57,6 +57,11 @@
       </button>
     </div>
 
+    <h2>My books <span class="n" id="shelfN"></span></h2>
+    <p class="sub" style="margin-bottom:10px">Every time you read, a sticker goes on the book. Listening counts. Reading together counts.</p>
+    <div class="shelf" id="shelf"></div>
+    <button class="big ghost" id="btnAddBook" style="margin-top:10px">＋ Add a book</button>
+
     <h2>Writing</h2>
     <p class="sub" style="margin-bottom:10px">Write it on paper, take a photo, and get it marked — spelling, letters and all.</p>
     <div class="drills" id="writeCards"></div>
@@ -101,6 +106,42 @@
       <button class="big hide" id="btnNext">Next question →</button>
     </div>
     <button class="big ghost" id="btnQuit" style="margin-top:12px">Stop and go back</button>
+  </section>
+
+  <!-- ============ BOOKS ============ -->
+  <section id="addBook" class="hide">
+    <div class="card">
+      <h1>What are you reading?</h1>
+      <p class="sub">Tap one. These were picked for you.</p>
+      <div id="bookPicks"></div>
+      <div style="margin-top:16px">
+        <div style="font-weight:700;margin-bottom:6px">Something else?</div>
+        <input id="bookOwn" type="text" placeholder="Type the name of your book" autocomplete="off">
+        <button class="big" id="bookOwnAdd">Add it →</button>
+      </div>
+      <button class="big ghost" id="bookCancel">Back</button>
+    </div>
+  </section>
+
+  <section id="logRead" class="hide">
+    <div class="card">
+      <div id="logCover"></div>
+      <h1 id="logTitle" style="margin-top:12px"></h1>
+      <p class="sub" id="logMeta"></p>
+
+      <div style="font-weight:700;margin:16px 0 8px">How did you read it?</div>
+      <div class="hows" id="logHow"></div>
+
+      <div style="font-weight:700;margin:16px 0 8px">About how long?</div>
+      <div class="seg wide" id="logMins">
+        <button data-m="5">5 min</button><button data-m="10" class="on">10 min</button>
+        <button data-m="20">20 min</button><button data-m="30">30+ min</button>
+      </div>
+
+      <button class="big" id="logSave">Put a sticker on it →</button>
+      <button class="big ghost" id="logFinish">I finished this book 🎀</button>
+      <button class="big ghost" id="logBack">Back</button>
+    </div>
   </section>
 
   <!-- ============ FAST MATHS ============ -->
@@ -254,6 +295,7 @@
   <script src="js/content-reading-oc.js"></script>
 <script src="js/coach.js"></script>
 <script src="js/writing.js"></script>
+  <script src="js/books.js"></script>
 <script src="js/bank.js"></script>
 <script src="js/bank-measure.js"></script>
 <script src="js/bank-verbal.js"></script>

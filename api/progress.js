@@ -14,7 +14,7 @@
  * falls back to local-only storage rather than breaking.
  *
  * GET  /api/progress?profile=leo   -> { ok, configured, state }
- * POST /api/progress               -> merge { profile, answers[], sessions[], writing[], facts[], patch{} }
+ * POST /api/progress               -> merge { profile, answers[], sessions[], writing[], facts[], library[], patch{} }
  * DELETE /api/progress?profile=leo -> wipe that profile
  *
  * Merging is by id and is idempotent, so a retried or duplicated POST cannot
@@ -27,6 +27,7 @@ const MAX_ANSWERS = 20000;
 const MAX_SESSIONS = 2000;
 const MAX_WRITING = 500;
 const MAX_FACTS = 20000;
+const MAX_LIBRARY = 5000;
 
 function store() {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -59,7 +60,8 @@ function blankState() {
     sessions: [],
     answers: [],
     writing: [],
-    facts: []
+    facts: [],
+    library: []
   };
 }
 
@@ -72,6 +74,7 @@ function dayOf(ts) {
 function derive(state) {
   if (!Array.isArray(state.writing)) state.writing = [];
   if (!Array.isArray(state.facts)) state.facts = [];
+  if (!Array.isArray(state.library)) state.library = [];
   const a = state.answers;
   state.xp = a.reduce((sum, x) => sum + (x.ok ? 10 + (x.lv || 3) * 2 : 2), 0);
   state.best = state.sessions.reduce((m, s) => (s.n ? Math.max(m, Math.round(100 * s.ok / s.n)) : m), 0);
@@ -147,6 +150,7 @@ module.exports = async (req, res) => {
       state.sessions = mergeById(state.sessions, body.sessions || [], s => s.id).slice(-MAX_SESSIONS);
       state.writing = mergeById(state.writing || [], body.writing || [], w => w.id).slice(-MAX_WRITING);
       state.facts = mergeById(state.facts || [], body.facts || [], factId).slice(-MAX_FACTS);
+      state.library = mergeById(state.library || [], body.library || [], e => e.id).slice(-MAX_LIBRARY);
       if (body.patch && typeof body.patch === 'object') {
         if (body.patch.profile) Object.assign(state.profile, body.patch.profile);
         if (body.patch.settings) Object.assign(state.settings, body.patch.settings);

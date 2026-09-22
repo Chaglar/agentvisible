@@ -151,8 +151,64 @@ check('fix-up round completes', /^\d+\/\d+$/.test(fixScore), 'fixed ' + fixScore
 const fixups = Number(fixScore.split('/')[1]);
 await shot(page, '07-fixups-done');
 
+/* ---------------- the reading shelf ---------------- */
+await page.click('#btnHome');                      // the fix-up round ends on the result screen
+await page.waitForSelector('#home:not(.hide)');
+check('shelf starts empty', /No books yet/.test(await page.locator('#shelf').textContent()));
+await page.click('#btnAddBook');
+await page.waitForSelector('#addBook:not(.hide)');
+check('books are suggested, not typed', (await page.locator('[data-pick]').count()) >= 8,
+  (await page.locator('[data-pick]').count()) + ' suggestions');
+await page.click('[data-pick="banjo"]');
+await page.waitForSelector('#logRead:not(.hide)');
+check('listening is offered as an equal way to read',
+  (await page.locator('#logHow [data-how="listen"]').count()) === 1 &&
+  (await page.locator('#logHow [data-how="together"]').count()) === 1);
+await page.click('#logHow [data-how="listen"]');
+await page.click('#logMins button[data-m="20"]');
+await shot(page, '15-book-log');
+await page.click('#logSave');
+await page.waitForSelector('#home:not(.hide)');
+await page.waitForTimeout(400);
+check('a sticker lands on the cover', (await page.locator('#shelf .st').count()) === 1);
+
+for (let i = 0; i < 4; i++) {
+  await page.click('#shelf [data-book="banjo"]');
+  await page.waitForSelector('#logRead:not(.hide)');
+  await page.click('#logSave');
+  await page.waitForSelector('#home:not(.hide)');
+  await page.waitForTimeout(90);
+}
+const stickers = await page.locator('#shelf .st').count();
+check('stickers accumulate', stickers === 5, stickers + ' after 5 sittings');
+
+/* A sticker placed off the cover reads as one silently going missing — the signed
+   shift that caused exactly that is why this is checked rather than eyeballed. */
+const placed = await page.evaluate(() => {
+  const B = window.LEO.books;
+  let out = { n: 0, bad: 0, emoji: {} };
+  for (let i = 0; i < 4000; i++) {
+    const s = B.placeSticker('bk' + i + ':' + (1700000000000 + i * 371));
+    out.n++;
+    if (!(s.x >= 5 && s.x <= 82 && s.y >= 30 && s.y <= 84 && s.rot >= -20 && s.rot <= 20)) out.bad++;
+    out.emoji[s.emoji] = 1;
+  }
+  out.distinct = Object.keys(out.emoji).length;
+  return out;
+});
+check('stickers stay on the cover and vary',
+  placed.bad === 0 && placed.distinct >= 10,
+  `${placed.n} placed, ${placed.bad} off-cover, ${placed.distinct} different stickers`);
+
+await page.click('#shelf [data-book="banjo"]');
+await page.waitForSelector('#logRead:not(.hide)');
+await page.click('#logFinish');
+await page.waitForSelector('#home:not(.hide)');
+await page.waitForTimeout(600);
+check('finishing a book shows a ribbon', (await page.locator('#shelf .ribbon').count()) === 1);
+await shot(page, '16-shelf');
+
 /* ---------------- fast maths ---------------- */
-await page.click('#btnHome');
 check('fact sets offered', (await page.locator('[data-fact]').count()) === 3);
 await page.click('[data-fact="tables"]');
 await page.waitForSelector('#fluency:not(.hide)');
@@ -233,12 +289,13 @@ await shot(page, '10-writing-photo');
 const kidState = await page.evaluate(() => {
   const st = window.LEO.store.load();
   return { answers: st.answers.length, sessions: st.sessions.length, writing: st.writing.length,
-           facts: st.facts.length,
+           facts: st.facts.length, library: st.library.length,
            pendingAnswers: st.pending.answers.length, pendingWriting: st.pending.writing.length,
-           pendingFacts: st.pending.facts.length };
+           pendingFacts: st.pending.facts.length, pendingLibrary: st.pending.library.length };
 });
 check('nothing left unsynced',
-  kidState.pendingAnswers === 0 && kidState.pendingWriting === 0 && kidState.pendingFacts === 0,
+  kidState.pendingAnswers === 0 && kidState.pendingWriting === 0 && kidState.pendingFacts === 0 &&
+  kidState.pendingLibrary === 0,
   JSON.stringify(kidState));
 // The record was wiped at the start, so these are exact, not "at least".
 const want = { answers: 12 + fixups, sessions: 2, writing: 2, facts: FACTS_N };
@@ -260,12 +317,13 @@ await dash.waitForTimeout(1500);
 const seen = await dash.evaluate(() => {
   const st = window.LEO.store.load();
   return { answers: st.answers.length, sessions: st.sessions.length, writing: st.writing.length,
-           facts: st.facts.length };
+           facts: st.facts.length, library: st.library.length };
 });
 check('fresh device sees the answers', seen.answers === kidState.answers, `${seen.answers} vs ${kidState.answers}`);
 check('fresh device sees the sessions', seen.sessions === kidState.sessions, `${seen.sessions} vs ${kidState.sessions}`);
 check('fresh device sees the writing', seen.writing === kidState.writing, `${seen.writing} vs ${kidState.writing}`);
 check('fresh device sees the fact attempts', seen.facts === kidState.facts, `${seen.facts} vs ${kidState.facts}`);
+check('fresh device sees the reading shelf', seen.library === kidState.library, `${seen.library} vs ${kidState.library}`);
 
 check('percentile reported', /\d/.test(await dash.locator('.kpi .v').first().textContent()),
   (await dash.locator('.kpi .v').first().textContent()).trim());
@@ -276,7 +334,9 @@ check('accuracy-by-difficulty chart drawn', (await dash.locator('#chartLevels sv
 check('writing section populated', (await dash.locator('#writeTable tbody tr').count()) >= 2);
 check('writing score chart drawn', (await dash.locator('#chartWriting svg').count()) === 1);
 check('session log lists the rounds', (await dash.locator('#sessionTable tbody tr').count()) >= 2);
-check('number-fact section populated', (await dash.locator('.ftrack').count()) === 3);
+check('reading panel populated', (await dash.locator('#libTable tbody tr').count()) === 1);
+check('reading panel shows how he reads', /🎧/.test(await dash.locator('#libStats').textContent()));
+check('number-fact section populated', (await dash.locator('.ftrack').count()) === 6);
 check('fact heatmap drawn', (await dash.locator('#factGrid .fcell').count()) === 44);
 check('heatmap separates wrong from slow',
   (await dash.locator('#factGrid .fcell:not(.new)').count()) > 0,
