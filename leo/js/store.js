@@ -29,8 +29,8 @@
       model: null,
       xp: 0, best: 0,
       streak: { days: 0, last: '' },
-      sessions: [], answers: [],
-      pending: { sessions: [], answers: [] }   // not yet acknowledged by the server
+      sessions: [], answers: [], writing: [],
+      pending: { sessions: [], answers: [], writing: [] }   // not yet acknowledged by the server
     };
   }
 
@@ -74,7 +74,9 @@
       for (k in b) if (S.state[k] === undefined) S.state[k] = b[k];
       for (k in b.profile) if (S.state.profile[k] === undefined) S.state.profile[k] = b.profile[k];
       for (k in b.settings) if (S.state.settings[k] === undefined) S.state.settings[k] = b.settings[k];
-      if (!S.state.pending) S.state.pending = { sessions: [], answers: [] };
+      if (!S.state.pending) S.state.pending = { sessions: [], answers: [], writing: [] };
+      if (!S.state.pending.writing) S.state.pending.writing = [];
+      if (!S.state.writing) S.state.writing = [];
       // v1 records predate answer ids; give them stable ones so they merge exactly once
       S.state.answers.forEach(function (a, i) {
         if (!a.aid) a.aid = (a.sid || 'v1') + ':' + (a.t || i) + ':' + i;
@@ -118,6 +120,7 @@
       var rs = res.state;
       st.answers = mergeById(st.answers, rs.answers || [], answerId);
       st.sessions = mergeById(st.sessions, rs.sessions || [], function (x) { return x.id; });
+      st.writing = mergeById(st.writing || [], rs.writing || [], function (x) { return x.id; });
       // A blank field on the server must not clobber a value we already hold — an
       // older record with an empty date of birth would otherwise wipe the default
       // and silently switch the dashboard back to the year-group comparison.
@@ -140,9 +143,9 @@
         S.applyRemote(res);
         if (!res.ok) return st;
         var p = st.pending;
-        if ((p.answers && p.answers.length) || (p.sessions && p.sessions.length)) {
-          return S.call('POST', { answers: p.answers, sessions: p.sessions }).then(function (r2) {
-            if (r2.ok) { st.pending = { sessions: [], answers: [] }; S.applyRemote(r2); }
+        if ((p.answers && p.answers.length) || (p.sessions && p.sessions.length) || (p.writing && p.writing.length)) {
+          return S.call('POST', { answers: p.answers, sessions: p.sessions, writing: p.writing }).then(function (r2) {
+            if (r2.ok) { st.pending = { sessions: [], answers: [], writing: [] }; S.applyRemote(r2); }
             return st;
           });
         }
@@ -170,6 +173,17 @@
       return pct;
     },
 
+    /* a marked piece of writing; the photo itself is never stored or sent on */
+    pushWriting: function () {
+      var st = S.load();
+      var unsent = st.writing.filter(function (w) {
+        return !st.pending.writing.some(function (p) { return p.id === w.id; });
+      });
+      st.pending.writing = mergeById(st.pending.writing, unsent, function (x) { return x.id; });
+      S.save();
+      return S.sync();
+    },
+
     patch: function (obj) {
       var st = S.load();
       if (obj.profile) Object.assign(st.profile, obj.profile);
@@ -187,6 +201,23 @@
       st.streak.days = (st.streak.last === yd) ? st.streak.days + 1 : 1;
       st.streak.last = d; S.save();
       return st.streak.days;
+    },
+
+    writingStats: function () {
+      var w = S.load().writing || [];
+      if (!w.length) return null;
+      var dims = ['handwriting', 'spelling', 'punctuation', 'ideas', 'structure'];
+      var avg = {};
+      dims.forEach(function (d) {
+        var v = w.filter(function (x) { return x.scores && x.scores[d]; }).map(function (x) { return x.scores[d]; });
+        avg[d] = v.length ? v.reduce(function (a, b) { return a + b; }, 0) / v.length : null;
+      });
+      var words = w.map(function (x) { return x.words || 0; });
+      return {
+        n: w.length, avg: avg, latest: w[w.length - 1],
+        medianWords: words.slice().sort(function (a, b) { return a - b; })[Math.floor(words.length / 2)],
+        all: w
+      };
     },
 
     reset: function (alsoServer) {
@@ -216,6 +247,7 @@
       if (o.model) st.model = o.model;
       st.pending.answers = st.answers.slice();
       st.pending.sessions = st.sessions.slice();
+      st.pending.writing = st.writing.slice();
       S.save();
       return S.sync().then(function () { return st; });
     },

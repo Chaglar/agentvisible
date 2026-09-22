@@ -44,6 +44,40 @@ kv.listen(0, () => {
       });
       return;
     }
+    if (u.pathname.replace(/\/+$/, '').endsWith('/api/writing')) {
+      let body = ''; req.on('data', c => body += c);
+      req.on('end', () => {
+        let parsed = {}; try { parsed = JSON.parse(body || '{}'); } catch (e) {}
+        // A canned assessment, so the UI can be driven without spending money.
+        // Set ANTHROPIC_API_KEY and run the real api/writing.js to test for real.
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, configured: true, assessment: {
+          legible: true,
+          transcription: 'The octopus is called Bob. He liv in a cave and he is verry shy.',
+          word_count: 14, sentence_count: 2,
+          spelling: [
+            { written: 'liv', correct: 'lives', hint: 'He does it now, so it needs an -es on the end.' },
+            { written: 'verry', correct: 'very', hint: 'Only one r in very.' }
+          ],
+          letter_formation: parsed.image ? [
+            { issue: 'reversal', letters: 'the b in Bob', note: 'The circle is on the left. For b, the line comes first, then the circle.' },
+            { issue: 'baseline', letters: 'cave, shy', note: 'The tails of the y and the e drop below the line and then the next word starts high.' }
+          ] : [],
+          punctuation: [{ issue: 'Missing capital after a full stop', example: 'he is verry shy → He is very shy' }],
+          strengths: ['You gave the octopus a name and a home — that is two facts in one sentence.',
+                      'Both sentences have a full stop.'],
+          fix_next: [
+            { what: 'lives, not liv', how: 'Say the sentence out loud. If it sounds like now, the verb needs its ending.',
+              example: 'He lives in a cave.' },
+            { what: 'Capital after a full stop', how: 'Every time you put a full stop, the next letter is a capital.',
+              example: 'He lives in a cave and he is very shy.' }
+          ],
+          to_leo: 'Bob is a good name and I like that you told me where he lives. Two things: lives needs its ending, and a full stop is always followed by a capital letter.',
+          scores: { handwriting: 3, spelling: 2, punctuation: 3, ideas: 4, structure: 3 }
+        } }));
+      });
+      return;
+    }
     let p = decodeURIComponent(u.pathname);
     if (p.endsWith('/')) p += 'index.html';
     fs.readFile(path.join(process.cwd(), p), (e, d) => {

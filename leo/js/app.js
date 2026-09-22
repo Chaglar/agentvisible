@@ -53,7 +53,7 @@
   }
 
   function show(id) {
-    ['home', 'quiz', 'coach', 'result'].forEach(function (s) { $(s).classList.toggle('hide', s !== id); });
+    ['home', 'quiz', 'coach', 'result', 'write', 'wResult'].forEach(function (s) { $(s).classList.toggle('hide', s !== id); });
     window.scrollTo(0, 0);
   }
 
@@ -77,6 +77,13 @@
     var fb = st.settings.feedback || 'instant';
     Array.prototype.forEach.call($('fbSeg').children, function (b) { b.classList.toggle('on', b.dataset.fb === fb); });
     paintSync();
+
+    $('writeCards').innerHTML = Object.keys(L.writing.KINDS).map(function (k) {
+      var K = L.writing.KINDS[k], done = (st.writing || []).filter(function (w) { return w.kind === k; }).length;
+      return '<button class="drill" data-write="' + k + '">' +
+        '<div class="e">' + K.emoji + '</div><div class="t">' + K.label + '</div>' +
+        '<div class="n">' + K.blurb + (done ? ' · ' + done + ' done' : '') + '</div></button>';
+    }).join('');
 
     var weak = L.engine.weakest().filter(function (t) { return t.meta.modes.indexOf('naplan') >= 0 || t.meta.modes.indexOf('oc') >= 0; }).slice(0, 6);
     $('drills').innerHTML = weak.map(function (t) {
@@ -188,6 +195,162 @@
       }, 1000);
     }
     step();
+  }
+
+  /* ---------- writing ----------
+     Photograph what he wrote on paper and have it marked. Paper rather than a
+     keyboard because letter formation is the skill that slipped, and because the
+     real Year 3 NAPLAN writing test is handwritten. The clock counts up and never
+     runs out. */
+  var wr = null;   // { task, startedAt, tick, dataUrl }
+
+  function startWriting(kind) {
+    var task = L.writing.pick(kind);
+    wr = { task: task, startedAt: Date.now(), dataUrl: null };
+    show('write');
+    $('wKind').textContent = L.writing.KINDS[kind].emoji + ' ' + L.writing.KINDS[kind].label;
+    $('wTitle').textContent = task.title;
+    $('wMins').textContent = 'about ' + task.mins + ' min';
+    $('wSym').textContent = task.sym;
+    $('wPrompt').innerHTML = task.prompt;
+    $('wFocus').textContent = task.focus;
+    $('wError').innerHTML = '';
+    wShow('pick');
+    clearInterval(wr.tick);
+    wr.tick = setInterval(function () {
+      var s = Math.round((Date.now() - wr.startedAt) / 1000);
+      $('wClock').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    }, 1000);
+    $('wClock').textContent = '0:00';
+  }
+
+  function wShow(which) {
+    ['wPick', 'wTyped', 'wPreview', 'wBusy'].forEach(function (id) {
+      $(id).classList.toggle('hide', id !== 'w' + which.charAt(0).toUpperCase() + which.slice(1));
+    });
+    $('wTaskCard').querySelector('.wsym').style.display = which === 'busy' ? 'none' : '';
+  }
+
+  /* Phone photos are many megabytes and mostly wasted detail. Scale the long edge
+     to 1600px — enough to read a child's handwriting, a fraction of the upload. */
+  function shrink(file) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var max = 1600, w = img.width, h = img.height;
+        if (Math.max(w, h) > max) { var r = max / Math.max(w, h); w = Math.round(w * r); h = Math.round(h * r); }
+        var cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        var ctx = cv.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(cv.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('That file is not an image we can read.')); };
+      img.src = url;
+    });
+  }
+
+  function wError(msg) {
+    $('wError').innerHTML = '<div class="fb no" style="margin-top:14px"><div class="h">⚠ Could not mark it</div>' + msg + '</div>';
+  }
+
+  function sendWriting(payload) {
+    wShow('busy');
+    $('wError').innerHTML = '';
+    $('wBusyText').textContent = payload.image ? 'Reading your handwriting…' : 'Reading what you wrote…';
+    var headers = { 'Content-Type': 'application/json' };
+    var k = S.getKey(); if (k) headers['x-leo-key'] = k;
+    var api = /\/admin\/?$/.test(location.pathname) ? '../../api/writing' : '/api/writing';
+    fetch(api, { method: 'POST', headers: headers, body: JSON.stringify(payload) })
+      .then(function (r) { return r.json().catch(function () { return { ok: false, reason: 'The server sent back something unreadable (' + r.status + ').' }; }); })
+      .then(function (res) {
+        if (!res.ok) { wShow(payload.image ? 'preview' : 'typed'); return wError(res.reason || 'Something went wrong.'); }
+        recordWriting(res.assessment, payload);
+        showWritingResult(res.assessment);
+      })
+      .catch(function (e) {
+        wShow(payload.image ? 'preview' : 'typed');
+        wError('Could not reach the server — ' + e.message);
+      });
+  }
+
+  function recordWriting(a, payload) {
+    var st = S.load();
+    st.writing = st.writing || [];
+    st.writing.push({
+      id: 'w' + Date.now(), t: Date.now(), taskId: wr.task.id, kind: wr.task.kind,
+      title: wr.task.title, secs: Math.round((Date.now() - wr.startedAt) / 1000),
+      typed: !payload.image,
+      words: a.word_count, sentences: a.sentence_count,
+      scores: a.scores, spelling: (a.spelling || []).map(function (s2) { return s2.written + '→' + s2.correct; }),
+      fix: (a.fix_next || []).map(function (f) { return f.what; }),
+      transcription: String(a.transcription || '').slice(0, 1200),
+      toLeo: a.to_leo || ''
+    });
+    if (st.writing.length > 300) st.writing = st.writing.slice(-300);
+    S.save();
+    S.pushWriting();
+  }
+
+  function showWritingResult(a) {
+    clearInterval(wr.tick);
+    show('wResult');
+    var dims = [['handwriting', 'Letters'], ['spelling', 'Spelling'], ['punctuation', 'Punct.'], ['ideas', 'Ideas'], ['structure', 'Order']];
+    $('wScores').innerHTML = dims.map(function (d) {
+      var v = (a.scores && a.scores[d[0]]) || 0;
+      var col = v >= 4 ? 'var(--good)' : v >= 3 ? 'var(--acc)' : 'var(--bad)';
+      return '<div><div class="s">' + d[1] + '</div><div class="n" style="color:' + col + '">' + v + '</div>' +
+        '<div class="b"><i style="width:' + (v / 5 * 100) + '%;background:' + col + '"></i></div></div>';
+    }).join('');
+    $('wToLeo').textContent = a.to_leo || '';
+
+    var h = '';
+    if (a.strengths && a.strengths.length) {
+      h += '<div class="wsec"><h3>What worked</h3><div class="card">' +
+        a.strengths.map(function (s2) { return '<div class="wgood">' + esc(s2) + '</div>'; }).join('') + '</div></div>';
+    }
+    if (a.fix_next && a.fix_next.length) {
+      h += '<div class="wsec"><h3>🎯 ' + (a.fix_next.length === 1 ? 'One thing' : 'Two things') + ' to fix next time</h3>' +
+        a.fix_next.map(function (f) {
+          return '<div class="wfix"><div class="t">' + esc(f.what) + '</div><div class="h">' + esc(f.how) + '</div>' +
+            (f.example ? '<div class="e">' + esc(f.example) + '</div>' : '') + '</div>';
+        }).join('') + '</div>';
+    }
+    if (a.spelling && a.spelling.length) {
+      h += '<div class="wsec"><h3>🔤 Spelling</h3><div class="card">' + a.spelling.map(function (s2) {
+        return '<div class="wrow"><div><span class="bad">' + esc(s2.written) + '</span> → <span class="good">' +
+          esc(s2.correct) + '</span><div class="hint">' + esc(s2.hint) + '</div></div></div>';
+      }).join('') + '</div></div>';
+    } else {
+      h += '<div class="wsec"><h3>🔤 Spelling</h3><div class="card"><div class="wgood">Every word spelled correctly.</div></div></div>';
+    }
+    if (a.letter_formation && a.letter_formation.length) {
+      h += '<div class="wsec"><h3>✍️ Your letters</h3><div class="card">' + a.letter_formation.map(function (f) {
+        return '<div class="wrow"><div><b>' + esc(f.letters) + '</b><div class="hint">' + esc(f.note) + '</div></div></div>';
+      }).join('') + '</div></div>';
+    }
+    if (a.punctuation && a.punctuation.length) {
+      h += '<div class="wsec"><h3>. ? ! Punctuation</h3><div class="card">' + a.punctuation.map(function (p) {
+        return '<div class="wrow"><div>' + esc(p.issue) + (p.example ? '<div class="hint">' + esc(p.example) + '</div>' : '') + '</div></div>';
+      }).join('') + '</div></div>';
+    }
+    h += '<div class="wsec"><h3>What you wrote</h3><div class="wtrans">' + esc(a.transcription || '') + '</div>' +
+      '<div class="sub" style="margin-top:6px">' + (a.word_count || 0) + ' words · ' + spentLabel() + '</div></div>';
+    $('wFeedback').innerHTML = h;
+    confetti(1200); beep('up');
+    paintHome();
+  }
+
+  function spentLabel() {
+    var secs = Math.round((Date.now() - wr.startedAt) / 1000);
+    if (secs < 90) return secs + ' seconds';
+    return Math.round(secs / 60) + ' minutes';
+  }
+
+  function esc(s2) {
+    return String(s2 == null ? '' : s2).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   /* ---------- coach: the after-the-test teaching step ----------
@@ -397,7 +560,32 @@
     if (m) { startSession({ mode: m.dataset.mode }); return; }
     var d = e.target.closest('[data-drill]');
     if (d) { startSession({ mode: 'drill', topic: d.dataset.drill }); return; }
+    var w = e.target.closest('[data-write]');
+    if (w) { startWriting(w.dataset.write); return; }
   });
+  $('wFile').addEventListener('change', function (e) {
+    var f = e.target.files[0]; if (!f) return;
+    $('wError').innerHTML = '';
+    shrink(f).then(function (url) {
+      wr.dataUrl = url; $('wImg').src = url; wShow('preview');
+    }).catch(function (err) { wError(err.message); });
+    e.target.value = '';
+  });
+  $('wType').addEventListener('click', function () { wShow('typed'); $('wText').focus(); });
+  $('wBackPick').addEventListener('click', function () { wShow('pick'); });
+  $('wRetake').addEventListener('click', function () { wr.dataUrl = null; wShow('pick'); });
+  $('wSend').addEventListener('click', function () {
+    sendWriting({ image: wr.dataUrl, taskPrompt: wr.task.prompt, kind: wr.task.kind, minutes: wr.task.mins });
+  });
+  $('wSendTyped').addEventListener('click', function () {
+    var t = $('wText').value.trim();
+    if (t.length < 5) return wError('Write a bit more first.');
+    sendWriting({ typed: t, taskPrompt: wr.task.prompt, kind: wr.task.kind, minutes: wr.task.mins });
+  });
+  $('wQuit').addEventListener('click', function () { clearInterval(wr && wr.tick); show('home'); paintHome(); });
+  $('wDone').addEventListener('click', function () { show('home'); paintHome(); });
+  $('wAgain').addEventListener('click', function () { startWriting(wr.task.kind); });
+
   $('btnNext').addEventListener('click', step);
   $('btnFix').addEventListener('click', function () { if (lastItems) startCoach(lastItems); });
   $('cNext').addEventListener('click', coachStep);

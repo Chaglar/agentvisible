@@ -75,6 +75,23 @@
     <h2>Daily practice <span class="n" id="daysN"></span></h2>
     <div class="card viz"><div id="chartDays"></div></div>
 
+    <h2>Writing <span class="n" id="writeN"></span></h2>
+    <div id="writeBlock">
+      <div class="grid two">
+        <div class="card viz"><div style="font-weight:700;font-size:14px;margin-bottom:10px">Scores over time</div>
+          <div id="chartWriting"></div>
+          <div class="legend" id="writeLegend"></div>
+          <div class="sub" style="margin-top:8px">1–5 against what is typical for Year 2. 3 is on track.</div>
+        </div>
+        <div class="card"><div style="font-weight:700;font-size:14px;margin-bottom:10px">Latest piece</div>
+          <div id="writeLatest"></div>
+        </div>
+      </div>
+      <div class="card scroll" style="margin-top:12px"><table id="writeTable"></table></div>
+      <div class="card" style="margin-top:12px"><div style="font-weight:700;font-size:14px;margin-bottom:8px">Words he keeps getting wrong</div>
+        <div id="writeWords"></div></div>
+    </div>
+
     <h2>What to do next</h2>
     <div class="grid" id="recs" style="gap:10px"></div>
 
@@ -161,6 +178,7 @@
 
 <script src="../js/visuals.js"></script>
 <script src="../js/curriculum.js"></script>
+<script src="../js/writing.js"></script>
 <script src="../js/content-literacy.js"></script>
 <script src="../js/bank.js"></script>
 <script src="../js/bank-measure.js"></script>
