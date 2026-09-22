@@ -25,24 +25,40 @@
   }
 
   /* ---------- confetti ---------- */
+  /* The first version scattered pieces up to half a screen ABOVE the viewport and
+     ran for a second or so, so most of them never came into view and the ones that
+     did were gone before he looked up. Pieces now start just above the fold, are
+     recycled when they fall off the bottom, and fade out at the end — so the
+     duration actually is how long he sees it. */
   function confetti(ms) {
     var cv = $('confetti'), ctx = cv.getContext('2d');
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var total = reduce ? 900 : (ms || 3000);
     cv.width = innerWidth; cv.height = innerHeight; cv.classList.remove('hide');
     var cols = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#4a3aa7'];
-    var bits = Array.from({ length: 90 }, function () {
-      return { x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * .5, w: 6 + Math.random() * 7,
-               h: 8 + Math.random() * 9, v: 2 + Math.random() * 3.4, a: Math.random() * 6.28,
-               s: (Math.random() - .5) * .22, c: cols[(Math.random() * cols.length) | 0] };
-    });
-    var end = Date.now() + (ms || 1700);
+    function spawn(first) {
+      return { x: Math.random() * cv.width,
+               y: first ? -20 - Math.random() * cv.height * .35 : -20 - Math.random() * 120,
+               w: 6 + Math.random() * 7, h: 8 + Math.random() * 9,
+               v: 2 + Math.random() * 3.4, drift: (Math.random() - .5) * 1.1,
+               a: Math.random() * 6.28, s: (Math.random() - .5) * .22,
+               c: cols[(Math.random() * cols.length) | 0] };
+    }
+    var bits = Array.from({ length: 110 }, function () { return spawn(true); });
+    var started = Date.now(), end = started + total, FADE = 700;
     (function frame() {
+      var left = end - Date.now();
       ctx.clearRect(0, 0, cv.width, cv.height);
-      bits.forEach(function (b) {
-        b.y += b.v; b.a += b.s;
+      ctx.globalAlpha = left < FADE ? Math.max(0, left / FADE) : 1;
+      bits.forEach(function (b, i) {
+        b.y += b.v; b.x += b.drift; b.a += b.s;
+        // keep the screen full for the whole run instead of emptying after one pass
+        if (b.y > cv.height + 30 && left > FADE) bits[i] = spawn(false);
         ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.a);
         ctx.fillStyle = b.c; ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); ctx.restore();
       });
-      if (Date.now() < end) requestAnimationFrame(frame);
+      ctx.globalAlpha = 1;
+      if (left > 0) requestAnimationFrame(frame);
       else { ctx.clearRect(0, 0, cv.width, cv.height); cv.classList.add('hide'); }
     })();
   }
@@ -147,6 +163,9 @@
     $('qVis').style.display = q.visual ? 'flex' : 'none';
     $('qFeedback').innerHTML = '';
     $('btnNext').classList.add('hide');
+    sess.sel = null;
+    $('btnCheck').classList.remove('hide');
+    $('btnCheck').disabled = true;
 
     var visualChoices = q.choices.some(function (c) { return c.visual; });
     var box = $('qChoices');
@@ -157,13 +176,28 @@
         (c.visual ? V.render(c.visual) : '<span>' + c.text + '</span>') + '</button>';
     }).join('');
     Array.prototype.forEach.call(box.children, function (b) {
-      b.addEventListener('click', function () { pick(+b.dataset.i); });
+      b.addEventListener('click', function () { select(+b.dataset.i); });
     });
   }
 
-  function pick(idx) {
+  /* Choosing and answering are two separate acts. A stray tap on a phone used to
+     commit an answer outright; now it only highlights, and nothing is recorded
+     until "Check my answer". Tapping another option just moves the highlight. */
+  function select(idx) {
     if ($('qChoices').dataset.done) return;
+    sess.sel = idx;
+    Array.prototype.forEach.call($('qChoices').children, function (b, i) {
+      b.classList.toggle('sel', i === idx);
+    });
+    $('btnCheck').disabled = false;
+    beep('tick');
+  }
+
+  function pick(idx) {
+    if ($('qChoices').dataset.done || idx == null) return;
     $('qChoices').dataset.done = '1';
+    $('btnCheck').classList.add('hide');
+    Array.prototype.forEach.call($('qChoices').children, function (b) { b.classList.remove('sel'); });
     var res = sess.answer(idx);
     var kids = $('qChoices').children;
     if (sess.feedback === 'instant') {
@@ -353,7 +387,7 @@
     h += '<div class="wsec"><h3>What you wrote</h3><div class="wtrans">' + esc(a.transcription || '') + '</div>' +
       '<div class="sub" style="margin-top:6px">' + (a.word_count || 0) + ' words · ' + spentLabel() + '</div></div>';
     $('wFeedback').innerHTML = h;
-    confetti(1200); beep('up');
+    confetti(2600); beep('up');
     paintHome();
   }
 
@@ -448,6 +482,9 @@
     $('cQVis').style.display = q.visual ? 'flex' : 'none';
     $('cQFeedback').innerHTML = '';
     $('cNext').classList.add('hide');
+    coach.sel = null;
+    $('cCheck').classList.remove('hide');
+    $('cCheck').disabled = true;
     var visualChoices = q.choices.some(function (c) { return c.visual; });
     var box = $('cQChoices');
     box.className = 'choices' + (visualChoices ? ' grid4' : '');
@@ -458,15 +495,27 @@
         (c.visual ? V.render(c.visual) : '<span>' + c.text + '</span>') + '</button>';
     }).join('');
     Array.prototype.forEach.call(box.children, function (b) {
-      b.addEventListener('click', function () { coachAnswer(+b.dataset.i); });
+      b.addEventListener('click', function () { coachSelect(+b.dataset.i); });
     });
     window.scrollTo(0, 0);
   }
 
+  function coachSelect(idx) {
+    if ($('cQChoices').dataset.done) return;
+    coach.sel = idx;
+    Array.prototype.forEach.call($('cQChoices').children, function (b, i) {
+      b.classList.toggle('sel', i === idx);
+    });
+    $('cCheck').disabled = false;
+    beep('tick');
+  }
+
   function coachAnswer(idx) {
     var box = $('cQChoices');
-    if (box.dataset.done) return;
+    if (box.dataset.done || idx == null) return;
     box.dataset.done = '1';
+    $('cCheck').classList.add('hide');
+    Array.prototype.forEach.call(box.children, function (b) { b.classList.remove('sel'); });
     var q = coach.q, ok = idx === q.answer, f = coach.list[coach.i];
     var at = Date.now();
     coach.logged.push({
@@ -534,7 +583,7 @@
     $('rLbl').textContent = n === total ? 'You fixed every one of them. That is the whole point.'
       : n ? 'You fixed ' + n + ' of ' + total + '. The rest we do again tomorrow.'
           : 'These are the hard ones. Coming back to them tomorrow is how they get easy.';
-    if (n) { confetti(1300); beep('up'); }
+    if (n) { confetti(3200); beep('up'); }
     paintHome();
   }
 
@@ -556,7 +605,7 @@
     if (wrongs.length) $('btnFix').textContent = '🛠 Let\u2019s fix the ' + wrongs.length +
       (wrongs.length === 1 ? ' one you got wrong' : ' you got wrong');
     lastItems = r.items;
-    if (r.pct >= 65) { confetti(); beep('up'); }
+    if (r.pct >= 65) { confetti(r.pct >= 90 ? 4200 : 3200); beep('up'); }
     if (r.streak > 1) setTimeout(function () { popup('🔥', r.streak + ' days in a row', 'Keep the streak alive tomorrow'); }, 700);
 
     $('rList').innerHTML = r.items.map(function (a, i) {
@@ -600,7 +649,9 @@
   $('wDone').addEventListener('click', function () { show('home'); paintHome(); });
   $('wAgain').addEventListener('click', function () { startWriting(wr.task.kind); });
 
+  $('btnCheck').addEventListener('click', function () { pick(sess && sess.sel); });
   $('btnNext').addEventListener('click', step);
+  $('cCheck').addEventListener('click', function () { coachAnswer(coach && coach.sel); });
   $('btnFix').addEventListener('click', function () { if (lastItems) startCoach(lastItems); });
   $('cNext').addEventListener('click', coachStep);
   $('cSkip').addEventListener('click', function () {
@@ -625,14 +676,20 @@
       if (/^[1-5]$/.test(e.key) && !$('cQChoices').dataset.done && !$('cTry').classList.contains('hide')) {
         var cb = $('cQChoices').children[+e.key - 1]; if (cb) cb.click();
       }
-      if ((e.key === 'Enter' || e.key === ' ') && !$('cNext').classList.contains('hide')) { e.preventDefault(); coachStep(); }
+      if (e.key === 'Enter' || e.key === ' ') {
+        if (!$('cNext').classList.contains('hide')) { e.preventDefault(); coachStep(); }
+        else if (!$('cCheck').classList.contains('hide') && !$('cCheck').disabled) { e.preventDefault(); coachAnswer(coach.sel); }
+      }
       return;
     }
     if ($('quiz').classList.contains('hide')) return;
     if (/^[1-4]$/.test(e.key) && !$('qChoices').dataset.done) {
       var b = $('qChoices').children[+e.key - 1]; if (b) b.click();
     }
-    if ((e.key === 'Enter' || e.key === ' ') && !$('btnNext').classList.contains('hide')) { e.preventDefault(); step(); }
+    if (e.key === 'Enter' || e.key === ' ') {
+      if (!$('btnNext').classList.contains('hide')) { e.preventDefault(); step(); }
+      else if (!$('btnCheck').classList.contains('hide') && !$('btnCheck').disabled) { e.preventDefault(); pick(sess.sel); }
+    }
   });
 
   /* ---------- fast maths ---------- */
@@ -762,7 +819,7 @@
         }).join('')
       : '<p class="sub" style="margin-top:16px">Nothing slow, nothing wrong. That set is solid.</p>';
 
-    if (ok === fl.done.length) confetti(1400);
+    if (ok === fl.done.length) confetti(4200);
     show('fResult');
     paintHome();
   }

@@ -79,7 +79,7 @@ await page.click('[data-mode="naplan"]');
 await page.waitForSelector('#qChoices .ch');
 await shot(page, '02-question');
 
-let intendedCorrect = 0;
+let intendedCorrect = 0, changedSelection = false;
 const levels = [];
 for (let i = 0; i < 12; i++) {
   await page.waitForSelector('#qChoices .ch');
@@ -91,7 +91,22 @@ for (let i = 0; i < 12; i++) {
   // answer the first nine right, the last three wrong, so the fix-up round has work
   const right = i < 9;
   if (right) intendedCorrect++;
+  if (i === 1 && n > 1) {
+    // tap the wrong one first, then move the highlight — a mis-tap must be undoable
+    await page.click(`#qChoices .ch >> nth=${(correct + 1) % n}`);
+    await page.click(`#qChoices .ch >> nth=${correct}`);
+    changedSelection = (await page.locator('#qChoices .ch.sel').count()) === 1 &&
+      await page.locator(`#qChoices .ch >> nth=${correct}`).evaluate(e => e.classList.contains('sel'));
+  }
   await page.click(`#qChoices .ch >> nth=${right ? correct : (correct + 1) % n}`);
+  if (i === 0) {
+    // choosing must not answer: nothing is recorded until "Check my answer"
+    check('a tap only highlights, it does not answer',
+      (await page.locator('#qChoices .ch.sel').count()) === 1 &&
+      (await page.locator('#qFeedback').textContent()).trim() === '');
+    await shot(page, '03-chosen');
+  }
+  await page.click('#btnCheck');
   if (i === 0) await shot(page, '03-feedback');
   await page.click('#btnNext');
 }
@@ -102,6 +117,7 @@ const scoreText = await page.locator('#rScore').textContent();
 check('test completes and scores', scoreText === `${intendedCorrect}/12`, `showed ${scoreText}, expected ${intendedCorrect}/12`);
 check('difficulty climbed with success', Math.max(...levels) > levels[0], `ladder went ${levels[0]} → ${Math.max(...levels)}`);
 check('every question listed on the result', (await page.locator('#rList .rrow').count()) === 12);
+check('a selection can be changed before checking', changedSelection);
 check('fix-up round offered', await page.locator('#btnFix').isVisible());
 await shot(page, '04-result');
 
@@ -121,6 +137,7 @@ while (guard++ < 40) {
   if (tryVisible && !answered) {
     const ci = await page.evaluate(() => window.LEO.debug.coachAnswerIndex());
     await page.click(`#cQChoices .ch >> nth=${ci}`);            // get the retry right
+    await page.click('#cCheck');
     await page.waitForTimeout(150);
     if (!fixedOne) { await shot(page, '06-fixed'); fixedOne = true; }
   } else {

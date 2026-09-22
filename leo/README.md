@@ -37,6 +37,11 @@ and it is ticked off; get it wrong and it explains that specific question and of
 easier one of the same type. An explanation a child only nods at does not stick — doing
 one is what makes it stick.
 
+**Choosing and answering are two separate taps.** Picking an option only highlights
+it; nothing is recorded until *Check my answer*, and tapping a different option moves
+the highlight. A stray tap on a phone used to commit an answer outright and there was
+no way back.
+
 The home screen also chooses when answers appear: straight away, or held to the end like
 a real exam. Either way the fix-up round runs afterwards.
 
@@ -295,7 +300,7 @@ writing both typed and as a photo of the page, and then opens the dashboard in a
 localStorage, so if the answers, sessions, writing and fact attempts all show up
 there, the record genuinely came back from the server.
 
-It asserts 41 things and exits non-zero if any of them fail, so it can gate a
+It asserts 43 things and exits non-zero if any of them fail, so it can gate a
 deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
 
 It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and

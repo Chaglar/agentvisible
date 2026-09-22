@@ -270,3 +270,12 @@ h2{font-size:18px;margin:26px 0 10px;letter-spacing:-.01em}
 .frow .f{font-weight:700;min-width:96px}
 .frow .ms{margin-left:auto;color:var(--mut);font-size:14px}
 .frow.bad .f{color:var(--bad)}
+
+/* A chosen-but-not-yet-committed option. Distinct from .right/.wrong, which only
+   appear after the answer is checked — a tap should never decide anything on its own. */
+.ch.sel{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 10%,var(--card))}
+.ch.sel .k{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+@supports not (background:color-mix(in srgb,red 10%,blue)){.ch.sel{background:var(--bg)}}
+
+.sub2{font-size:15px;font-weight:800;margin:16px 0 2px;letter-spacing:.2px}
+.sub2:first-of-type{margin-top:10px}
