@@ -115,9 +115,12 @@ Four decisions, each from his profile rather than from what was easy:
   visible on the thing that earned it.
 - **The suggestions are chosen for this reader** — Jacobs' *English Fairy Tales*
   because the OC paper drew a passage straight from it, Banjo Paterson because it
-  is 1890s language a boy will actually finish, *Double Helix* because it is the
-  exact shape of the NAPLAN Year 3 reading magazine, and field guides to rocks and
+  is 1890s language a boy will actually finish, a science magazine because the NAPLAN Year 3
+  reading test *is* a magazine of mixed short texts, and field guides to rocks and
   fungi because that is where his background knowledge already runs deepest.
+  (The original suggestion here was CSIRO's *Double Helix*; it stopped publishing
+  in June 2025. Back issues still stand, but the live alternatives are National
+  Geographic Kids or Aquila.)
 
 ### Reading the books in the app
 
