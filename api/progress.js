@@ -25,6 +25,7 @@
 const KEY_PREFIX = 'leo:progress:';
 const MAX_ANSWERS = 20000;
 const MAX_SESSIONS = 2000;
+const MAX_WRITING = 500;
 
 function store() {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -55,7 +56,8 @@ function blankState() {
     xp: 0, best: 0,
     streak: { days: 0, last: '' },
     sessions: [],
-    answers: []
+    answers: [],
+    writing: []
   };
 }
 
@@ -66,6 +68,7 @@ function dayOf(ts) {
 
 /* xp, best and streak are functions of the answer log, so recompute rather than trust */
 function derive(state) {
+  if (!Array.isArray(state.writing)) state.writing = [];
   const a = state.answers;
   state.xp = a.reduce((sum, x) => sum + (x.ok ? 10 + (x.lv || 3) * 2 : 2), 0);
   state.best = state.sessions.reduce((m, s) => (s.n ? Math.max(m, Math.round(100 * s.ok / s.n)) : m), 0);
@@ -138,6 +141,7 @@ module.exports = async (req, res) => {
 
       state.answers = mergeById(state.answers, body.answers || [], answerId).slice(-MAX_ANSWERS);
       state.sessions = mergeById(state.sessions, body.sessions || [], s => s.id).slice(-MAX_SESSIONS);
+      state.writing = mergeById(state.writing || [], body.writing || [], w => w.id).slice(-MAX_WRITING);
       if (body.patch && typeof body.patch === 'object') {
         if (body.patch.profile) Object.assign(state.profile, body.patch.profile);
         if (body.patch.settings) Object.assign(state.settings, body.patch.settings);

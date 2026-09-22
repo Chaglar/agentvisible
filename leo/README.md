@@ -40,6 +40,43 @@ one is what makes it stick.
 The home screen also chooses when answers appear: straight away, or held to the end like
 a real exam. Either way the fix-up round runs afterwards.
 
+## Writing
+
+The one area his assessments show going backwards: alphabet writing fluency fell from
+the 98th percentile at four to the 47th at six, and his teacher reports writing and
+spelling behind. Multiple-choice spelling measures recognition; none of the rest of the
+app measures production. This does.
+
+He picks a task, writes it **on paper**, photographs it, and gets it marked. Paper
+rather than a keyboard for two reasons: letter formation is the skill that slipped and a
+keyboard measures none of it, and the real Year 3 NAPLAN writing test is handwritten in
+40 minutes. Typing is offered as a fallback, and when he types, nothing is said about
+handwriting.
+
+Three lengths, because fluency comes from writing often and briefly rather than once a
+week at length: **one sentence** (~2 min), **a paragraph** (~7 min), and a **full NAPLAN
+piece** (40 min, narrative or persuasive, in the shape of the real paper). 17 tasks. The
+clock counts up and never runs out — a countdown would measure his processing speed,
+which sits at the 6th percentile, instead of his writing.
+
+The marking returns: a verbatim transcription (errors kept), misspellings with a hint
+each, letter-formation notes from the image (reversals, baseline, sizing, spacing),
+punctuation, what genuinely worked quoted from his own writing, **at most two** things to
+fix next — a child with a writing aversion given nine corrections writes less next time,
+not more — a short note addressed to him, and 1–5 scores on letters, spelling,
+punctuation, ideas and structure. Those scores drive a section of the dashboard; they are
+deliberately kept out of the ability model, because a rubric judgement is not an item
+response and averaging the two would be dishonest.
+
+**Setup.** `api/writing.js` calls Claude (`claude-opus-5`) with the photo and a JSON
+schema. Add `ANTHROPIC_API_KEY` to the Vercel project; without it the endpoint reports
+`configured: false` and the rest of the app is unaffected. Roughly a couple of cents per
+piece. Server-side refusal fallbacks are enabled; if your account lacks that beta, remove
+the `betas` and `fallbacks` lines from the request.
+
+**Privacy.** The photo is held in memory for the length of the request and never written
+to storage. Only the derived assessment is returned, and only that is kept in the record.
+
 ### Why the lessons are shaped this way
 
 They follow Leo's assessment profile rather than a generic teaching style: visual-spatial
@@ -163,6 +200,7 @@ than one child; the value is scrubbed to `[a-z0-9_-]`.
 
 ```
 api/progress.js           server-side record
+api/writing.js            marks a photographed piece of writing
 leo/
   index.html              student app
   app.css
@@ -170,6 +208,7 @@ leo/
   admin.css
   js/
     curriculum.js         Australian Curriculum v9 mapping and the two test specs
+    writing.js            the writing tasks
     content-literacy.js   passages, spelling, grammar, punctuation, thinking-skills banks
     visuals.js            every question picture, as inline SVG
     bank.js               generators: number, add/sub, mult/div, fractions, patterns
@@ -192,3 +231,35 @@ node dev-server.js      # static site + the real API against an in-memory store
 
 `dev-server.js` lives at the repository root. Vercel only executes files under `api/`,
 so it is never deployed.
+
+## Smoke test
+
+```
+npm install             # playwright
+node dev-server.js &    # port 8788
+npm run smoke
+```
+
+`test/smoke.mjs` drives the real app in Chromium: it sits a 12-question NAPLAN
+test answering 9 right and 3 wrong on purpose, checks the score, checks the
+difficulty ladder actually climbed, works the fix-up round, submits a piece of
+writing both typed and as a photo of the page, and then opens the dashboard in a
+**separate browser profile**. That last part matters — a second profile shares no
+localStorage, so if the answers, sessions and writing all show up there, the
+record genuinely came back from the server.
+
+It asserts 28 things and exits non-zero if any of them fail, so it can gate a
+deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
+
+It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and
+wipes that profile before and after, so runs are independent and it can never
+touch Leo's real record — including when `SMOKE_BASE` points at the deployed site.
+That isolation is what lets the counts be exact rather than "at least": a
+12-question test plus 3 fix-ups must leave exactly 15 answers, 2 sessions and 2
+pieces of writing. Without the wipe, a dev-server left running from a previous run
+carries its answers over and every count quietly asserts against stale data.
+
+To answer deliberately rather than by guessing, the test reads `LEO.debug`, a
+read-only hook in `app.js` that reports the current question's answer index and
+which screen is showing. It exposes nothing a child could not read off the screen
+a second later by pressing a button.

@@ -205,6 +205,80 @@
     CH.days($('chartDays'), { days: out });
   }
 
+  /* ---------------- writing ----------------
+     His one declining area, so it gets its own section rather than being folded
+     into the ability model — a writing score is a rubric judgement, not an item
+     response, and averaging the two would be dishonest. */
+  var writeBlockHTML = null;   // the empty state must not destroy the markup it needs later
+  function paintWriting() {
+    var block = $('writeBlock');
+    if (writeBlockHTML === null) writeBlockHTML = block.innerHTML;
+    var w = (S.load().writing || []).filter(function (x) { return x.t >= since(); });
+    $('writeN').textContent = w.length ? w.length + (w.length === 1 ? ' piece' : ' pieces') : '';
+    if (!w.length) {
+      block.innerHTML = '<div class="card empty">No writing marked yet. On the practice page, pick a writing task, ' +
+        'write it on paper, and photograph it.</div>';
+      return;
+    }
+    if (!$('chartWriting')) block.innerHTML = writeBlockHTML;   // restore after an empty render
+    var DIMS = [['handwriting', 'Letters', 'var(--s1)'], ['spelling', 'Spelling', 'var(--s2)'],
+                ['punctuation', 'Punctuation', 'var(--s3)'], ['ideas', 'Ideas', 'var(--good)'],
+                ['structure', 'Structure', 'var(--serious)']];
+    CH.lines($('chartWriting'), {
+      yMin: 0, yMax: 5, ticks: [1, 2, 3, 4, 5],
+      series: DIMS.map(function (d) {
+        return { label: d[1], color: d[2],
+          points: w.filter(function (x) { return x.scores && x.scores[d[0]]; })
+                   .map(function (x) { return { y: x.scores[d[0]], label: fmtDate(x.t) }; }) };
+      })
+    });
+    $('writeLegend').innerHTML = DIMS.map(function (d) {
+      return '<span><i class="dot" style="background:' + d[2] + '"></i> ' + d[1] + '</span>';
+    }).join('');
+
+    var last = w[w.length - 1];
+    $('writeLatest').innerHTML =
+      '<div class="sub">' + fmtDate(last.t) + ' · ' + esc(last.title || last.kind) + ' · ' +
+      (last.words || 0) + ' words in ' + Math.round((last.secs || 0) / 60) + ' min' +
+      (last.typed ? ' · typed' : ' · handwritten') + '</div>' +
+      (last.toLeo ? '<div style="margin-top:10px;font-size:14.5px;line-height:1.55">' + esc(last.toLeo) + '</div>' : '') +
+      (last.fix && last.fix.length ? '<div style="margin-top:10px"><b style="font-size:13px">Told to fix next:</b><div class="sub">' +
+        last.fix.map(esc).join(' · ') + '</div></div>' : '');
+
+    var head = '<thead><tr><th>Date</th><th>Task</th><th class="num">Words</th><th class="num">Min</th>' +
+      DIMS.map(function (d) { return '<th class="num">' + d[1].slice(0, 5) + '</th>'; }).join('') + '<th class="num">Spelling slips</th></tr></thead>';
+    var body = w.slice().reverse().slice(0, 15).map(function (x) {
+      return '<tr><td>' + fmtDate(x.t) + '</td><td>' + esc(x.title || x.kind) + '</td>' +
+        '<td class="num">' + (x.words || 0) + '</td><td class="num">' + Math.round((x.secs || 0) / 60) + '</td>' +
+        DIMS.map(function (d) {
+          var v = x.scores && x.scores[d[0]];
+          return '<td class="num" style="color:' + (v >= 4 ? 'var(--good)' : v >= 3 ? 'var(--ink)' : 'var(--critical)') + '">' + (v || '—') + '</td>';
+        }).join('') +
+        '<td class="num">' + ((x.spelling || []).length) + '</td></tr>';
+    }).join('');
+    $('writeTable').innerHTML = head + '<tbody>' + body + '</tbody>';
+
+    var counts = {};
+    w.forEach(function (x) {
+      (x.spelling || []).forEach(function (pair) {
+        var k = String(pair).split('→')[0].toLowerCase().trim();
+        if (k) counts[k] = (counts[k] || 0) + 1;
+      });
+    });
+    var rep = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
+    $('writeWords').innerHTML = rep.length
+      ? rep.slice(0, 20).map(function (k) {
+          return '<span class="pill" style="margin:0 6px 6px 0;display:inline-block' +
+            (counts[k] > 1 ? ';border-color:var(--critical);color:var(--critical)' : '') + '">' +
+            esc(k) + (counts[k] > 1 ? ' ×' + counts[k] : '') + '</span>';
+        }).join('')
+      : '<div class="sub">No spelling errors recorded yet.</div>';
+  }
+
+  function esc(s2) {
+    return String(s2 == null ? '' : s2).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
   /* ---------------- recommendations ---------------- */
   function paintRecs(stats) {
     var out = [], all = answers(), a = N.ability(all);
@@ -313,12 +387,13 @@
       (st.answers.length ? ' · last practised ' + fmtDate(st.answers[st.answers.length - 1].t) : '');
 
     var has = answers().length > 0;
-    $('empty').classList.toggle('hide', has);
-    $('dash').style.display = has ? '' : 'none';
-    if (!has) { paintSettings(); return; }
+    var hasWriting = (st.writing || []).length > 0;
+    $('empty').classList.toggle('hide', has || hasWriting);
+    $('dash').style.display = (has || hasWriting) ? '' : 'none';
+    if (!has) { paintWriting(); paintSettings(); return; }
 
     var stats = topicStats();
-    paintKpis(); paintAbility(); paintTopics(stats); paintLevels(); paintDays(); paintRecs(stats); paintSessions(); paintSettings();
+    paintKpis(); paintAbility(); paintTopics(stats); paintLevels(); paintDays(); paintWriting(); paintRecs(stats); paintSessions(); paintSettings();
   }
 
   /* ---------------- wiring ---------------- */

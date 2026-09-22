@@ -80,6 +80,36 @@
     svg.addEventListener('mouseleave', function () { hideTip(); if (cross) { cross.remove(); cross = null; } });
   };
 
+  /* ---------- several series on one shared axis ---------- */
+  C.lines = function (el, cfg) {
+    var series = cfg.series.filter(function (s) { return s.points.length; });
+    if (!series.length) { el.innerHTML = '<div class="empty">No data yet.</div>'; return; }
+    var n = Math.max.apply(null, series.map(function (s) { return s.points.length; }));
+    var W = 720, H = 240, pad = { l: 34, r: 74, t: 16, b: 34 };
+    var X = function (i) { return pad.l + (W - pad.l - pad.r) * (n === 1 ? .5 : i / (n - 1)); };
+    var Y = function (v) { return pad.t + (H - pad.t - pad.b) * (1 - (v - cfg.yMin) / (cfg.yMax - cfg.yMin)); };
+    var out = '';
+    (cfg.ticks || []).forEach(function (t2) {
+      out += '<line x1="' + pad.l + '" y1="' + Y(t2) + '" x2="' + (W - pad.r) + '" y2="' + Y(t2) +
+        '" stroke="' + LINE + '" stroke-width="1"/>' + txt(pad.l - 8, Y(t2) + 4, String(t2), { a: 'end', size: 11 });
+    });
+    series.forEach(function (s2, si) {
+      out += '<polyline points="' + s2.points.map(function (p, i) { return X(i) + ',' + Y(p.y); }).join(' ') +
+        '" fill="none" stroke="' + s2.color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+      s2.points.forEach(function (p, i) {
+        out += '<circle cx="' + X(i) + '" cy="' + Y(p.y) + '" r="4" fill="' + s2.color +
+          '" stroke="var(--card)" stroke-width="2"><title>' + esc(s2.label + ': ' + p.y + (p.label ? ' · ' + p.label : '')) + '</title></circle>';
+      });
+      var last = s2.points[s2.points.length - 1];
+      out += txt(X(s2.points.length - 1) + 9, Y(last.y) + 4, s2.label, { a: 'start', size: 11.5, w: 700, fill: s2.color });
+    });
+    var every = Math.max(1, Math.ceil(n / 6));
+    (series[0].points || []).forEach(function (p, i) {
+      if (i % every === 0 || i === n - 1) out += txt(X(i), H - 10, p.label || '', { size: 11 });
+    });
+    el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '">' + out + '</svg>';
+  };
+
   /* ---------- horizontal bars (topic percentiles) ---------- */
   C.hbar = function (el, cfg) {
     var rows = cfg.rows;
