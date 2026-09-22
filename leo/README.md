@@ -204,6 +204,30 @@ reproduce, which is an option open to this bank too. Questions are tagged with t
 (comprehension, inference, evaluation, text structure, tone, vocabulary) so coverage
 can be checked rather than assumed.
 
+## Argument analysis (OC Thinking Skills)
+
+`bank-argue.js`, added after reading an actual Thinking Skills sample in which
+**four of ten questions were argument analysis** — a family this bank had none of.
+It could produce matrices, sequences, codes and ordering puzzles, but nothing that
+asked a child to find the flaw in someone's reasoning.
+
+| Family | What it asks |
+|---|---|
+| Finding the flaw | Name the reasoning error, usually reading a hedged claim ("many", "sometimes") as if it said "all" |
+| Weakening an argument | Which statement, if true, removes the mechanism the criticism depends on |
+| Main conclusion | Which sentence is the point, and which are the support for it |
+| Whose reasoning holds? | A chain of requirements, two speakers, necessary vs sufficient conditions |
+
+Generated rather than hand-written, because a fixed list is memorised in a
+fortnight and it is the shape that has to be learnt. Two properties the smoke test
+checks rather than assumes: distractors are **true statements that simply are not
+the answer** (an obviously silly distractor teaches a child to pick the
+serious-sounding one), and the answer is not parked in one position. The
+two-speaker form has four possible keys and all four occur.
+
+Contexts are drawn from subjects Leo already knows, so reading load does not
+obscure the reasoning, which is the thing being tested.
+
 ## Curriculum alignment
 
 `js/curriculum.js` maps every topic and level onto Australian Curriculum v9 content

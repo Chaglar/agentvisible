@@ -60,9 +60,14 @@
 
   topic('thinking', { label: 'Thinking skills', emoji: '🧩', strand: 'thinking', modes: ['oc'] }, function (lv, rng) {
     var q = { topic: 'thinking', level: lv };
-    var kinds = lv <= 2 ? ['odd', 'seq', 'matrix'] : lv === 3 ? ['odd', 'matrix', 'order', 'code'] :
-                lv === 4 ? ['order', 'matrix', 'code', 'balance', 'must'] : ['order', 'must', 'balance', 'numlogic', 'code'];
+    var kinds = lv <= 2 ? ['odd', 'seq', 'matrix'] : lv === 3 ? ['odd', 'matrix', 'order', 'code', 'argue'] :
+                lv === 4 ? ['order', 'matrix', 'code', 'balance', 'must', 'argue', 'argue'] :
+                           ['order', 'must', 'balance', 'numlogic', 'code', 'argue', 'argue', 'argue'];
     var kind = rng.pick(kinds);
+
+    // Argument analysis lives in bank-argue.js — four of the ten questions in the
+    // real Thinking Skills sample were of this kind, so it is weighted heavily.
+    if (kind === 'argue' && L.argue) return L.argue.pick(lv, rng);
 
     if (kind === 'odd') {
       var groups = C.ODDONE;
