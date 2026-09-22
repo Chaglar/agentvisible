@@ -343,3 +343,34 @@ h2{font-size:18px;margin:26px 0 10px;letter-spacing:-.01em}
 @keyframes stick{0%{transform:scale(2.4) rotate(0deg);opacity:0}60%{opacity:1}100%{transform:scale(1)}}
 .bk .st.new{animation:stick .5s cubic-bezier(.2,1.4,.4,1) both}
 @media (prefers-reduced-motion:reduce){.bk .st.new{animation:none}}
+
+/* ---------- the reader ---------- */
+/* Short line, generous leading, size in his hands. Crowded text is the thing that
+   makes a page look unreadable before a word of it has been tried. */
+.rdBar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;padding:8px 0 10px;
+  background:var(--bg);border-bottom:1px solid var(--line);margin-bottom:6px}
+.rdBtn{background:var(--card);border:1px solid var(--line);border-radius:10px;min-width:42px;height:38px;
+  font-size:17px;font-weight:800;cursor:pointer;line-height:1}
+.rdBtn sup{font-size:10px}
+.rdWho{flex:1;min-width:0;line-height:1.25}
+.rdWho b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rdWho span{font-size:12px;color:var(--mut)}
+.rdTip{background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:8px 11px;
+  font-size:13.5px;color:var(--mut);margin-bottom:12px}
+
+.rdBody{max-width:34em;margin:0 auto;font-size:var(--rd,19px);line-height:1.75;letter-spacing:.005em}
+.rdBody p{margin:0 0 1.05em;text-wrap:pretty}
+.rdBody p.verse{white-space:normal;line-height:1.85;margin-left:2px}
+.rdTitle{font-size:1.25em;margin:2px 0 1em;line-height:1.3}
+.rdBody w{cursor:pointer;border-radius:4px;padding:0 1px;margin:0 -1px}
+.rdBody w:active,.rdBody w.said{background:var(--acc);color:var(--acc-ink)}
+.rdFoot{max-width:34em;margin:22px auto 0;display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:8px;align-items:start}
+.rdFoot .big{margin-top:0;padding:13px 6px;font-size:15px}
+
+.cpList{margin-top:14px;border-top:1px solid var(--line)}
+.cpRow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;
+  border-bottom:1px solid var(--line);padding:12px 2px;cursor:pointer;font:inherit;color:inherit}
+.cpRow .n{width:26px;color:var(--mut);font-size:13px;font-variant-numeric:tabular-nums}
+.cpRow .t{flex:1;font-weight:600}
+.cpRow .m{font-size:12px;color:var(--mut)}
+.cpRow.read .t{color:var(--mut)}

@@ -72,7 +72,7 @@
   }
 
   function show(id) {
-    ['home', 'quiz', 'coach', 'result', 'write', 'wResult', 'fluency', 'fResult', 'addBook', 'logRead']
+    ['home', 'quiz', 'coach', 'result', 'write', 'wResult', 'fluency', 'fResult', 'addBook', 'logRead', 'chapters', 'reader']
       .forEach(function (s) { $(s).classList.toggle('hide', s !== id); });
     window.scrollTo(0, 0);
   }
@@ -743,8 +743,19 @@
   function addBook(id, title, author) {
     S.pushLibrary([{ id: id, kind: 'book', title: title, author: author || '', t: Date.now() }]);
     paintHome();
+    cpId = id;
+    if (READABLE[id]) return openChapters(id);   // we hold the text — go straight to it
     openLog(id);
   }
+
+  /* Which suggestions we hold the full text of. Uses L.reader rather than the RD
+     alias below: `var` hoists the declaration but not the assignment, and this runs
+     first. */
+  var READABLE = {};
+  L.reader.index().then(function (ix) {
+    ix.forEach(function (b) { READABLE[b.id] = b; });
+    paintHome();
+  }).catch(function () {});
 
   function openLog(id) {
     var b = BK.shelf(S.load().library || []).filter(function (x) { return x.id === id; })[0];
@@ -765,6 +776,8 @@
       b2.classList.toggle('on', +b2.dataset.m === logMins);
     });
     $('logFinish').classList.toggle('hide', b.finished);
+    $('logReadHere').classList.toggle('hide', !READABLE[id]);
+    cpId = id;
     show('logRead');
   }
 
@@ -805,6 +818,7 @@
   $('shelf').addEventListener('click', function (e) {
     var b = e.target.closest('[data-book]'); if (b) openLog(b.dataset.book);
   });
+  $('logReadHere').addEventListener('click', function () { openChapters(cpId); });
   $('logHow').addEventListener('click', function (e) {
     var b = e.target.closest('[data-how]'); if (!b) return;
     logHow = b.dataset.how;
@@ -818,6 +832,126 @@
   $('logSave').addEventListener('click', saveRead);
   $('logFinish').addEventListener('click', finishBook);
   $('logBack').addEventListener('click', function () { show('home'); paintHome(); });
+
+  /* ---------- reading the books in the app ---------- */
+  var RD = L.reader, rd = null;   // { book, ch }
+
+  function openChapters(id) {
+    RD.load(id).then(function (b) {
+      var at = RD.lastAt(id), read = readChapters(id);
+      $('cpTitle').textContent = b.title;
+      $('cpMeta').textContent = b.author + ' · ' + b.year + ' · ' + b.chapters.length +
+        (b.verse ? ' poems' : ' chapters') + ' · ' + b.source;
+      $('cpResume').classList.toggle('hide', !at);
+      if (at) $('cpResume').textContent = 'Carry on — ' + b.chapters[at.ch].t + ' →';
+      $('cpList').innerHTML = b.chapters.map(function (c, i) {
+        var words = c.p.join(' ').split(/\s+/).length;
+        return '<button class="cpRow' + (read[i] ? ' read' : '') + '" data-ch="' + i + '">' +
+          '<span class="n">' + (read[i] ? '✓' : i + 1) + '</span>' +
+          '<span class="t">' + esc(c.t) + '</span>' +
+          '<span class="m">' + (words < 400 ? '~1 min' : Math.round(words / 130) + ' min') + '</span></button>';
+      }).join('');
+      show('chapters');
+    }).catch(function (e) {
+      popup('😕', 'Could not open that book', e.message, 2600);
+    });
+  }
+
+  // Which chapters he has finished, derived from the same library log as the stickers
+  function readChapters(id) {
+    var out = {};
+    (S.load().library || []).forEach(function (e) {
+      if (e && e.kind === 'read' && e.book === id && e.ch != null) out[e.ch] = 1;
+    });
+    return out;
+  }
+
+  function openReader(id, ch, jumpTo) {
+    RD.load(id).then(function (b) {
+      rd = { book: b, ch: ch };
+      var p = RD.prefs();
+      $('rdBook').textContent = b.title;
+      $('rdCh').textContent = b.chapters[ch].t + ' · ' + (ch + 1) + ' of ' + b.chapters.length;
+      $('rdBody').style.setProperty('--rd', RD.SIZES[p.size] + 'px');
+      $('rdBody').innerHTML = RD.chapterHTML(b, ch);
+      $('rdTip').classList.toggle('hide', !RD.canSpeak);
+      $('rdPrev').disabled = ch === 0;
+      $('rdNext').disabled = ch >= b.chapters.length - 1;
+      show('reader');
+      if (jumpTo) {
+        setTimeout(function () {
+          var el = $('rdBody');
+          window.scrollTo(0, el.offsetTop + el.scrollHeight * jumpTo);
+        }, 30);
+      }
+    });
+  }
+
+  var markTick = null;
+  window.addEventListener('scroll', function () {
+    if (!rd || $('reader').classList.contains('hide')) return;
+    clearTimeout(markTick);
+    markTick = setTimeout(function () {
+      var el = $('rdBody');
+      var r = Math.min(1, Math.max(0, (window.scrollY - el.offsetTop) / Math.max(1, el.scrollHeight)));
+      RD.mark(rd.book.id, rd.ch, r);
+    }, 400);
+  }, { passive: true });
+
+  $('rdBody').addEventListener('click', function (e) {
+    var w = e.target.closest('w');
+    if (!w) return;
+    if (!RD.say(w.textContent)) return;
+    var prev = $('rdBody').querySelector('w.said');
+    if (prev) prev.classList.remove('said');
+    w.classList.add('said');
+    setTimeout(function () { w.classList.remove('said'); }, 900);
+  });
+
+  function resize(d) {
+    var p = RD.prefs();
+    p.size = Math.max(0, Math.min(RD.SIZES.length - 1, p.size + d));
+    RD.savePrefs(p);
+    $('rdBody').style.setProperty('--rd', RD.SIZES[p.size] + 'px');
+  }
+  $('rdBigger').addEventListener('click', function () { resize(1); });
+  $('rdSmaller').addEventListener('click', function () { resize(-1); });
+  $('rdBack').addEventListener('click', function () { openChapters(rd.book.id); });
+  $('rdPrev').addEventListener('click', function () { if (rd.ch > 0) { openReader(rd.book.id, rd.ch - 1); window.scrollTo(0, 0); } });
+  $('rdNext').addEventListener('click', function () { if (rd.ch < rd.book.chapters.length - 1) { openReader(rd.book.id, rd.ch + 1); window.scrollTo(0, 0); } });
+
+  /* Reading here records itself: the chapter is logged as a sitting, which is what
+     puts the sticker on the cover. No separate step to remember. */
+  $('rdDone').addEventListener('click', function () {
+    if (!rd) return;
+    var b = rd.book, words = b.chapters[rd.ch].p.join(' ').split(/\s+/).length;
+    var mins = Math.max(2, Math.round(words / 130));
+    var have = BK.shelf(S.load().library || []).some(function (x) { return x.id === b.id; });
+    var entries = [];
+    if (!have) entries.push({ id: b.id, kind: 'book', title: b.title, author: b.author, t: Date.now() });
+    entries.push({ id: b.id + ':' + Date.now(), kind: 'read', book: b.id, how: 'self',
+                   mins: mins, ch: rd.ch, t: Date.now() });
+    if (rd.ch >= b.chapters.length - 1) {
+      entries.push({ id: b.id + ':fin:' + Date.now(), kind: 'finished', book: b.id, t: Date.now() });
+    }
+    justStuck = entries[entries.length - 1].id;
+    S.pushLibrary(entries);
+    beep('ok');
+    if (rd.ch >= b.chapters.length - 1) { confetti(3600); popup('🎀', 'You finished it!', esc(b.title), 2800); }
+    else popup('🎉', 'Sticker on the book!', b.chapters[rd.ch].t, 2200);
+    show('home'); paintHome();
+  });
+
+  $('cpBack').addEventListener('click', function () { show('home'); paintHome(); });
+  $('cpResume').addEventListener('click', function () {
+    var at = RD.lastAt(rd && rd.book ? rd.book.id : cpId);
+    openReader(cpId, at ? at.ch : 0, at ? at.at : 0);
+  });
+  var cpId = null;
+  $('cpList').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-ch]');
+    if (b) { openReader(cpId, +b.dataset.ch); window.scrollTo(0, 0); }
+  });
 
   /* ---------- fast maths ---------- */
   /* Answers are typed, and the clock runs from the question appearing to the FIRST

@@ -159,6 +159,36 @@ await page.click('#btnAddBook');
 await page.waitForSelector('#addBook:not(.hide)');
 check('books are suggested, not typed', (await page.locator('[data-pick]').count()) >= 8,
   (await page.locator('[data-pick]').count()) + ' suggestions');
+/* A book we hold the text of goes straight to its contents; one we do not goes to
+   the sticker log. Both paths matter. */
+await page.click('[data-pick="alice"]');
+await page.waitForSelector('#chapters:not(.hide)', { timeout: 15000 });
+const chapters = await page.locator('.cpRow').count();
+check('a book opens its own chapter list', chapters === 12, chapters + ' chapters');
+check('the source is credited',
+  /Project Gutenberg/.test(await page.locator('#cpMeta').textContent()),
+  (await page.locator('#cpMeta').textContent()).trim());
+await page.click('.cpRow[data-ch="0"]');
+await page.waitForSelector('#reader:not(.hide)');
+await page.waitForTimeout(300);
+const tappable = await page.locator('#rdBody w').count();
+check('the real text is there, every word tappable', tappable > 1500, tappable + ' words');
+check('it is the actual book',
+  /Alice was beginning to get very tired/.test(await page.locator('#rdBody p').first().textContent()));
+const sizeBefore = await page.evaluate(() => getComputedStyle(document.getElementById('rdBody')).fontSize);
+await page.click('#rdBigger');
+await page.click('#rdBigger');
+const sizeAfter = await page.evaluate(() => getComputedStyle(document.getElementById('rdBody')).fontSize);
+check('he can make the text bigger', parseInt(sizeAfter) > parseInt(sizeBefore),
+  sizeBefore + ' → ' + sizeAfter);
+await shot(page, '17-reading');
+await page.click('#rdDone');                       // finishing a chapter logs the sitting
+await page.waitForSelector('#home:not(.hide)');
+await page.waitForTimeout(700);
+check('reading in the app earns its own sticker', (await page.locator('#shelf .st').count()) === 1);
+
+await page.click('#btnAddBook');
+await page.waitForSelector('#addBook:not(.hide)');
 await page.click('[data-pick="banjo"]');
 await page.waitForSelector('#logRead:not(.hide)');
 check('listening is offered as an equal way to read',
@@ -170,7 +200,7 @@ await shot(page, '15-book-log');
 await page.click('#logSave');
 await page.waitForSelector('#home:not(.hide)');
 await page.waitForTimeout(400);
-check('a sticker lands on the cover', (await page.locator('#shelf .st').count()) === 1);
+check('a sticker lands on the cover', (await page.locator('#shelf .st').count()) === 2);
 
 for (let i = 0; i < 4; i++) {
   await page.click('#shelf [data-book="banjo"]');
@@ -180,7 +210,7 @@ for (let i = 0; i < 4; i++) {
   await page.waitForTimeout(90);
 }
 const stickers = await page.locator('#shelf .st').count();
-check('stickers accumulate', stickers === 5, stickers + ' after 5 sittings');
+check('stickers accumulate', stickers === 6, stickers + ' after 5 sittings plus a chapter read');
 
 /* A sticker placed off the cover reads as one silently going missing — the signed
    shift that caused exactly that is why this is checked rather than eyeballed. */
@@ -334,7 +364,8 @@ check('accuracy-by-difficulty chart drawn', (await dash.locator('#chartLevels sv
 check('writing section populated', (await dash.locator('#writeTable tbody tr').count()) >= 2);
 check('writing score chart drawn', (await dash.locator('#chartWriting svg').count()) === 1);
 check('session log lists the rounds', (await dash.locator('#sessionTable tbody tr').count()) >= 2);
-check('reading panel populated', (await dash.locator('#libTable tbody tr').count()) === 1);
+check('reading panel populated', (await dash.locator('#libTable tbody tr').count()) === 2,
+  (await dash.locator('#libTable tbody tr').count()) + ' books listed');
 check('reading panel shows how he reads', /🎧/.test(await dash.locator('#libStats').textContent()));
 check('number-fact section populated', (await dash.locator('.ftrack').count()) === 6);
 check('fact heatmap drawn', (await dash.locator('#factGrid .fcell').count()) === 44);

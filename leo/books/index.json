@@ -1,0 +1,52 @@
+[
+ {
+  "id": "alice",
+  "title": "Alice's Adventures in Wonderland",
+  "author": "Lewis Carroll",
+  "year": 1865,
+  "n": 12,
+  "words": 26379,
+  "verse": false,
+  "kb": 141
+ },
+ {
+  "id": "justso",
+  "title": "Just So Stories",
+  "author": "Rudyard Kipling",
+  "year": 1902,
+  "n": 12,
+  "words": 28657,
+  "verse": false,
+  "kb": 153
+ },
+ {
+  "id": "wind",
+  "title": "The Wind in the Willows",
+  "author": "Kenneth Grahame",
+  "year": 1908,
+  "n": 12,
+  "words": 58316,
+  "verse": false,
+  "kb": 318
+ },
+ {
+  "id": "jacobs",
+  "title": "English Fairy Tales",
+  "author": "Joseph Jacobs",
+  "year": 1890,
+  "n": 44,
+  "words": 50138,
+  "verse": false,
+  "kb": 258
+ },
+ {
+  "id": "stevenson",
+  "title": "A Child's Garden of Verses",
+  "author": "Robert Louis Stevenson",
+  "year": 1885,
+  "n": 63,
+  "words": 7501,
+  "verse": true,
+  "kb": 41
+ }
+]

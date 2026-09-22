@@ -138,9 +138,37 @@
         <button data-m="20">20 min</button><button data-m="30">30+ min</button>
       </div>
 
-      <button class="big" id="logSave">Put a sticker on it →</button>
+      <button class="big" id="logReadHere">📖 Read it here →</button>
+      <button class="big ghost" id="logSave">Put a sticker on it →</button>
       <button class="big ghost" id="logFinish">I finished this book 🎀</button>
       <button class="big ghost" id="logBack">Back</button>
+    </div>
+  </section>
+
+  <!-- ============ READER ============ -->
+  <section id="reader" class="hide">
+    <div class="rdBar">
+      <button id="rdBack" class="rdBtn" title="Back">‹</button>
+      <div class="rdWho"><b id="rdBook"></b><span id="rdCh"></span></div>
+      <button id="rdSmaller" class="rdBtn" title="Smaller text">A<sup>-</sup></button>
+      <button id="rdBigger" class="rdBtn" title="Bigger text">A<sup>+</sup></button>
+    </div>
+    <div id="rdTip" class="rdTip hide">Tap any word to hear it.</div>
+    <div id="rdBody" class="rdBody"></div>
+    <div class="rdFoot">
+      <button class="big ghost" id="rdPrev">‹ Before</button>
+      <button class="big" id="rdDone">Finished this bit →</button>
+      <button class="big ghost" id="rdNext">Next ›</button>
+    </div>
+  </section>
+
+  <section id="chapters" class="hide">
+    <div class="card">
+      <h1 id="cpTitle"></h1>
+      <p class="sub" id="cpMeta"></p>
+      <button class="big" id="cpResume">Carry on reading →</button>
+      <div id="cpList" class="cpList"></div>
+      <button class="big ghost" id="cpBack">Back to the shelf</button>
     </div>
   </section>
 
@@ -296,6 +324,7 @@
 <script src="js/coach.js"></script>
 <script src="js/writing.js"></script>
   <script src="js/books.js"></script>
+  <script src="js/reader.js"></script>
 <script src="js/bank.js"></script>
 <script src="js/bank-measure.js"></script>
 <script src="js/bank-verbal.js"></script>

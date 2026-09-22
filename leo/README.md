@@ -119,6 +119,40 @@ Four decisions, each from his profile rather than from what was easy:
   exact shape of the NAPLAN Year 3 reading magazine, and field guides to rocks and
   fungi because that is where his background knowledge already runs deepest.
 
+### Reading the books in the app
+
+Five books are here in full, not as extracts, and can be read inside the app:
+
+| | | |
+|---|---|---|
+| *Alice's Adventures in Wonderland* | Lewis Carroll, 1865 | 12 chapters |
+| *The Wind in the Willows* | Kenneth Grahame, 1908 | 12 chapters |
+| *Just So Stories* | Rudyard Kipling, 1902 | 12 stories |
+| *English Fairy Tales* | Joseph Jacobs, 1890 | 44 tales |
+| *A Child's Garden of Verses* | R. L. Stevenson, 1885 | 63 poems |
+
+171,000 words. All five are **public domain** (Project Gutenberg #11, #289, #2781,
+#7439, #25609), so the complete text is here legitimately rather than by anyone's
+indulgence, and each file credits its source. They are fetched only when opened, so
+the app does not carry 900 KB it may never use. The modern suggestions — *Double
+Helix*, Minecraft handbooks, field guides — stay as shelf entries to log, because
+their text is not ours to reproduce.
+
+Three things in the reader exist for this reader in particular:
+
+- **Tap any word to hear it.** Decoding is the bottleneck and he reads better
+  silently than aloud, so the usual repair — "sound it out" — is the one thing that
+  does not help. Tapping speaks the word and he keeps going instead of stopping at
+  the wall, with nobody needing to sit beside him. It uses the browser's own speech
+  synthesis: no key, no cost, nothing uploaded.
+- **Type size is his to set**, on a short measure with generous leading, and the
+  setting is remembered. Crowded text is what makes a page look unreadable before a
+  word of it has been tried.
+- **It remembers where he was**, per chapter, so picking a book back up is one tap.
+
+Finishing a chapter logs the sitting itself, so reading in the app puts its own
+sticker on the cover — the reader and the shelf are the same thing.
+
 The dashboard shows the split between reading alone, reading together and
 listening. If it collapses to one column, that is worth a nudge.
 
@@ -421,7 +455,7 @@ writing both typed and as a photo of the page, and then opens the dashboard in a
 localStorage, so if the answers, sessions, writing and fact attempts all show up
 there, the record genuinely came back from the server.
 
-It asserts 55 things and exits non-zero if any of them fail, so it can gate a
+It asserts 61 things and exits non-zero if any of them fail, so it can gate a
 deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
 
 It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and
