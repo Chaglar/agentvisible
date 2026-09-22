@@ -24,6 +24,7 @@
     <div class="spacer"></div>
     <span class="chip" id="chipXp">⚡ 0</span>
     <span class="chip" id="chipStreak">🔥 0</span>
+    <span class="chip" id="chipSync" title="Where your progress is saved">⟳</span>
     <button class="iconbtn" id="btnSound" title="Sound on/off">🔊</button>
   </div>
 
@@ -40,6 +41,7 @@
         </div>
         <div class="m-foot">
           <span class="tag">Adapts as you go</span><span class="tag">12 questions</span><span class="tag" id="naplanLv">Starts at level 3</span>
+          <span class="tag">Like the real Year 3 test: reading, language and numeracy</span>
         </div>
       </button>
       <button class="mode oc" data-mode="oc">
@@ -49,6 +51,7 @@
         </div>
         <div class="m-foot">
           <span class="tag">Hard from the start</span><span class="tag">12 questions</span><span class="tag">Exam style — answers at the end</span>
+          <span class="tag">Maths questions have 5 choices, like the real paper</span>
         </div>
       </button>
     </div>
@@ -69,7 +72,7 @@
     </div>
     <div id="noteSlot"></div>
     <div class="qcard">
-      <div class="qmeta"><span id="qTopic"></span><span>·</span><span id="qSub"></span></div>
+      <div class="qmeta"><span id="qTopic"></span><span>·</span><span id="qSub"></span><span class="spacer" style="flex:1"></span><span id="qYear" class="yr"></span></div>
       <div id="qPassage"></div>
       <div class="qtext" id="qText"></div>
       <div class="vis" id="qVis"></div>
@@ -102,6 +105,8 @@
 </div>
 
 <script src="js/visuals.js"></script>
+<script src="js/curriculum.js"></script>
+<script src="js/content-literacy.js"></script>
 <script src="js/bank.js"></script>
 <script src="js/bank-measure.js"></script>
 <script src="js/bank-verbal.js"></script>

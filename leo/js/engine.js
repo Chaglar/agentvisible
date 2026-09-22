@@ -16,18 +16,18 @@
 
   var PLANS = {
     naplan: {
-      label: 'NAPLAN practice', tr: 'NAPLAN provası', emoji: '🎯',
+      label: 'NAPLAN practice', emoji: '🎯',
       pool: [['multdiv', 1.9], ['fractions', 1.9], ['number', 1.2], ['addsub', 1.2], ['patterns', 1.0],
              ['measurement', 1.1], ['geometry', 1.0], ['data', 1.0], ['reading', 1.3], ['language', 1.1]],
       adaptive: 'block', block: 5, start: null, feedback: 'instant', length: 12
     },
     oc: {
-      label: 'OC test practice', tr: 'OC sınav provası', emoji: '🏅',
+      label: 'OC test practice', emoji: '🏅',
       pool: [['thinking', 2.4], ['reasoning', 2.0], ['reading', 1.4], ['multdiv', 0.7], ['fractions', 0.7], ['patterns', 0.6]],
       adaptive: 'fixed', ladder: [3, 4, 4, 5, 4, 5, 5, 4, 5, 5, 5, 5, 4, 5, 5], feedback: 'end', length: 12
     },
     drill: {
-      label: 'Focus drill', tr: 'Hedefli çalışma', emoji: '⚡',
+      label: 'Focus drill', emoji: '⚡',
       pool: null, adaptive: 'step', feedback: 'instant', length: 10
     }
   };
@@ -118,6 +118,7 @@
         } while (tries < 14 && (recent.indexOf(sig(q)) >= 0 || S.sessionSigs.indexOf(sig(q)) >= 0));
         S.sessionSigs.push(sig(q));
         q.meta = gen;
+        q.cur = L.curriculum ? L.curriculum.forQuestion(q.topic, lv) : null;
         S.current = q; S.shownAt = Date.now();
         var note = S.blockNote; S.blockNote = null;
         return { q: q, i: S.i, total: length, level: lv, note: note };
@@ -126,8 +127,10 @@
       answer: function (choiceIdx) {
         var q = S.current, ms = Date.now() - S.shownAt;
         var ok = choiceIdx === q.answer ? 1 : 0;
+        var at = Date.now(), cur = L.curriculum ? L.curriculum.forQuestion(q.topic, q.level) : { yr: null };
         S.items.push({
-          t: Date.now(), sid: S.id, m: mode, tp: q.topic, sub: q.sub || '', lv: q.level,
+          t: at, aid: S.id + ':' + at + ':' + S.i, sid: S.id, m: mode,
+          tp: q.topic, sub: q.sub || '', lv: q.level, yr: cur.yr,
           ok: ok, ms: Math.min(ms, 600000), nc: q.choices.length,
           prompt: q.prompt, chosen: choiceIdx
         });
@@ -161,7 +164,9 @@
           n: S.items.length, ok: okN, lvEnd: S.level
         };
         var before = L.norms.ability(L.store.load().answers.slice(-200));
-        var light = S.items.map(function (a) { return { t: a.t, sid: a.sid, m: a.m, tp: a.tp, sub: a.sub, lv: a.lv, ok: a.ok, ms: a.ms, nc: a.nc }; });
+        var light = S.items.map(function (a) {
+          return { t: a.t, aid: a.aid, sid: a.sid, m: a.m, tp: a.tp, sub: a.sub, lv: a.lv, yr: a.yr, ok: a.ok, ms: a.ms, nc: a.nc };
+        });
         L.store.logSession(sess, light);
         var stx = L.store.load();
         stx.recentSigs = (recent.concat(S.sessionSigs)).slice(-150);

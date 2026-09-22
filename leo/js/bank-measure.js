@@ -3,13 +3,15 @@
   var L = root.LEO, V = L.vis, B = L.bank, topic = B.topic, mc = B._mc, near = B._near, NAMES = B._NAMES, fr = L.fr;
 
   /* ========================= MEASUREMENT ========================= */
-  topic('measurement', { label: 'Measurement & time', tr: 'Ölçme ve zaman', emoji: '📏', strand: 'numeracy', modes: ['naplan'] }, function (lv, rng) {
+  topic('measurement', { label: 'Measurement & time', emoji: '📏', strand: 'numeracy', modes: ['naplan'] }, function (lv, rng) {
     var q = { topic: 'measurement', level: lv }, name = rng.pick(NAMES);
-    var kinds = lv === 1 ? ['clock', 'longer'] :
-                lv === 2 ? ['clock', 'ruler', 'money'] :
-                lv === 3 ? ['clock', 'ruler', 'jug', 'money', 'mass'] :
-                lv === 4 ? ['clock', 'money', 'area', 'jug', 'convert'] :
-                           ['elapsed', 'convert', 'money', 'area', 'perimeter'];
+    // Levels 1-3 stay on Year 2 content: informal units, calendars, clock to the
+    // quarter-hour, money. Formal units (cm, mL, g) start at level 4, which is Year 3.
+    var kinds = lv === 1 ? ['clock', 'longer', 'informal'] :
+                lv === 2 ? ['clock', 'informal', 'calendar', 'money'] :
+                lv === 3 ? ['clock', 'money', 'calendar', 'mass', 'informal'] :
+                lv === 4 ? ['clock', 'ruler', 'jug', 'money', 'area'] :
+                           ['elapsed', 'convert', 'area', 'perimeter', 'money'];
     var kind = rng.pick(kinds);
 
     if (kind === 'clock' || kind === 'elapsed') {
@@ -48,7 +50,7 @@
     }
     if (kind === 'longer') {
       var lens = [], guard = 0;
-      while (lens.length < 3 && guard++ < 60) { var c = rng.int(2, 8); if (lens.indexOf(c) < 0) lens.push(c); }
+      while (lens.length < 4 && guard++ < 80) { var c = rng.int(2, 8); if (lens.indexOf(c) < 0) lens.push(c); }
       var wantLong = rng.chance(0.5);
       var target = wantLong ? Math.max.apply(null, lens) : Math.min.apply(null, lens);
       q.sub = 'Longer or shorter';
@@ -58,6 +60,51 @@
       q.answer = lens.indexOf(target);
       q.explain = 'They all start at 0, so just look at where each one stops. The ' + (wantLong ? 'longest' : 'shortest') +
         ' reaches <b>' + target + ' cm</b>.';
+      return q;
+    }
+    if (kind === 'informal') {                    // AC9M2M01 — measuring with uniform informal units
+      var unit = rng.pick([['paperclip', '📎'], ['block', '🧱'], ['cube', '🧊'], ['pencil', '✏️'], ['step', '👣']]);
+      var obj = rng.pick([['desk', '🪑'], ['book', '📗'], ['shoe', '👟'], ['bag', '🎒'], ['ribbon', '🎀']]);
+      var howMany = rng.int(4, 9);
+      if (rng.chance(0.4)) {                      // why the units must be the same size
+        q.sub = 'Informal units';
+        q.prompt = 'Two children measure the same ' + obj[0] + '. One says it is 6 ' + unit[0] +
+          's long, the other says 9. What is the most likely reason?';
+        Object.assign(q, mc(rng, 'Their ' + unit[0] + 's were different sizes',
+          ['One of them counted wrong', 'The ' + obj[0] + ' changed size', 'Both answers are wrong']));
+        q.explain = 'A measuring unit only works if every one is <b>the same size</b>. Different ' + unit[0] +
+          's give different counts for the same ' + obj[0] + '.';
+        return q;
+      }
+      q.sub = 'Informal units';
+      q.prompt = 'The ' + obj[1] + ' ' + obj[0] + ' is measured with ' + unit[1] + ' ' + unit[0] +
+        's laid end to end, with no gaps. How long is it?';
+      q.visual = { type: 'emojiRow', items: Array.from({ length: howMany }, function () { return unit[1]; }), cell: 32 };
+      Object.assign(q, mc(rng, howMany + ' ' + unit[0] + 's',
+        [(howMany + 1) + ' ' + unit[0] + 's', (howMany - 1) + ' ' + unit[0] + 's', (howMany + 2) + ' ' + unit[0] + 's']));
+      q.explain = 'Count the ' + unit[0] + 's: <b>' + howMany + '</b>. They must touch with no gaps and no overlaps, or the count is wrong.';
+      return q;
+    }
+    if (kind === 'calendar') {                    // AC9M2M03 — days between events on a calendar
+      var DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      var MONTHS = [['January', 31], ['March', 31], ['April', 30], ['June', 30], ['September', 30], ['November', 30]];
+      if (rng.chance(0.45)) {
+        var d0 = rng.int(0, 6), add = rng.int(2, 9);
+        q.sub = 'Calendar';
+        q.prompt = 'Today is <b>' + DAYS[d0] + '</b>. What day will it be in <b>' + add + ' days</b>?';
+        Object.assign(q, mc(rng, DAYS[(d0 + add) % 7],
+          [DAYS[(d0 + add + 1) % 7], DAYS[(d0 + add - 1) % 7], DAYS[(d0 + add + 2) % 7]]));
+        q.explain = 'Count on ' + add + ' days from ' + DAYS[d0] + '. Every <b>7</b> days lands back on ' + DAYS[d0] +
+          ', so ' + add + ' days is ' + Math.floor(add / 7) + ' whole week' + (Math.floor(add / 7) === 1 ? '' : 's') +
+          ' and ' + (add % 7) + ' more → <b>' + DAYS[(d0 + add) % 7] + '</b>.';
+        return q;
+      }
+      var mon = rng.pick(MONTHS), start = rng.int(2, 12), gap = rng.int(4, 16);
+      q.sub = 'Calendar';
+      q.prompt = 'Sports day is ' + mon[0] + ' ' + start + '. The school concert is ' + mon[0] + ' ' + (start + gap) +
+        '. How many days apart are they?';
+      Object.assign(q, mc(rng, gap, [gap + 1, gap - 1, start + gap, gap + 7]));
+      q.explain = (start + gap) + ' − ' + start + ' = <b>' + gap + ' days</b>.';
       return q;
     }
     if (kind === 'ruler') {
@@ -126,7 +173,7 @@
   });
 
   /* ========================= GEOMETRY ========================= */
-  topic('geometry', { label: 'Shape & space', tr: 'Geometri', emoji: '🔺', strand: 'numeracy', modes: ['naplan'] }, function (lv, rng) {
+  topic('geometry', { label: 'Shape & space', emoji: '🔺', strand: 'numeracy', modes: ['naplan'] }, function (lv, rng) {
     var q = { topic: 'geometry', level: lv };
     var d2 = [['triangle', 3, 3], ['square', 4, 4], ['rectangle', 4, 4], ['pentagon', 5, 5], ['hexagon', 6, 6], ['octagon', 8, 8], ['rhombus', 4, 4], ['trapezium', 4, 4], ['circle', 0, 0], ['oval', 0, 0]];
     var solids = [['cube', 6, 12, 8], ['sphere', 1, 0, 0], ['cone', 2, 1, 1], ['cylinder', 3, 2, 0], ['pyramid', 5, 8, 5], ['prism', 6, 12, 8]];
@@ -219,15 +266,15 @@
   });
 
   /* ========================= DATA & CHANCE ========================= */
-  topic('data', { label: 'Data & chance', tr: 'Veri ve olasılık', emoji: '📊', strand: 'numeracy', modes: ['naplan'] }, function (lv, rng) {
+  topic('data', { label: 'Data & chance', emoji: '📊', strand: 'numeracy', modes: ['naplan'] }, function (lv, rng) {
     var q = { topic: 'data', level: lv };
     var cats = rng.sample([['Cats', '🐱'], ['Dogs', '🐶'], ['Fish', '🐟'], ['Birds', '🐦'], ['Rabbits', '🐰'], ['Frogs', '🐸']], 4);
     var counts = cats.map(function () { return rng.int(1, 8); });
     while (new Set(counts).size < counts.length) counts[rng.int(0, counts.length - 1)] = rng.int(1, 9);
 
     if (lv <= 2) {
-      var rows = cats.slice(0, 3).map(function (c, i) { return { label: c[0], count: counts[i], sym: c[1] }; });
-      var idx = rng.int(0, 2), mostIdx = counts.slice(0, 3).indexOf(Math.max.apply(null, counts.slice(0, 3)));
+      var rows = cats.slice(0, 4).map(function (c, i) { return { label: c[0], count: counts[i], sym: c[1] }; });
+      var idx = rng.int(0, 3), mostIdx = counts.slice(0, 4).indexOf(Math.max.apply(null, counts.slice(0, 4)));
       var askMost = lv === 2 && rng.chance(0.5);
       q.sub = 'Picture graph';
       q.prompt = askMost ? 'Which pet do the <b>most</b> children have?' : 'How many children chose <b>' + rows[idx].label + '</b>?';

@@ -29,7 +29,7 @@
   /* ---------- line chart with an uncertainty band ---------- */
   C.line = function (el, cfg) {
     var pts = cfg.points;
-    if (!pts.length) { el.innerHTML = '<div class="empty">Henüz veri yok.</div>'; return; }
+    if (!pts.length) { el.innerHTML = '<div class="empty">No data yet.</div>'; return; }
     var W = 720, H = 240, pad = { l: 44, r: 16, t: 16, b: 34 };
     var ymin = cfg.yMin, ymax = cfg.yMax;
     var X = function (i) { return pad.l + (W - pad.l - pad.r) * (pts.length === 1 ? .5 : i / (pts.length - 1)); };
@@ -83,7 +83,7 @@
   /* ---------- horizontal bars (topic percentiles) ---------- */
   C.hbar = function (el, cfg) {
     var rows = cfg.rows;
-    if (!rows.length) { el.innerHTML = '<div class="empty">Henüz veri yok.</div>'; return; }
+    if (!rows.length) { el.innerHTML = '<div class="empty">No data yet.</div>'; return; }
     var rowH = 30, labelW = 176, W = 720, H = rows.length * rowH + 30, max = cfg.max || 100;
     var X = function (v) { return labelW + (W - labelW - 46) * v / max; };
     var out = '';
@@ -113,7 +113,7 @@
   /* ---------- vertical bars + an expectation line (same % axis) ---------- */
   C.barLine = function (el, cfg) {
     var bars = cfg.bars;
-    if (!bars.some(function (b) { return b.n; })) { el.innerHTML = '<div class="empty">Henüz veri yok.</div>'; return; }
+    if (!bars.some(function (b) { return b.n; })) { el.innerHTML = '<div class="empty">No data yet.</div>'; return; }
     var W = 720, H = 250, pad = { l: 42, r: 14, t: 18, b: 44 }, n = bars.length;
     var slot = (W - pad.l - pad.r) / n, bw = Math.min(64, slot - 16);
     var Y = function (v) { return pad.t + (H - pad.t - pad.b) * (1 - v / 100); };
@@ -130,7 +130,7 @@
         out += txt(cx, Y(b.value) - 7, Math.round(b.value) + '%', { size: 11.5, w: 700, fill: 'var(--ink)' });
       }
       out += txt(cx, H - 24, b.label, { size: 11.5, fill: 'var(--ink)', w: 600 });
-      out += txt(cx, H - 9, b.n ? b.n + ' soru' : '—', { size: 10.5 });
+      out += txt(cx, H - 9, b.n ? b.n + ' questions' : '—', { size: 10.5 });
     });
     var lp = bars.map(function (b, i) { return (pad.l + slot * i + slot / 2) + ',' + Y(b.expected); });
     out += '<polyline points="' + lp.join(' ') + '" fill="none" stroke="' + S2 + '" stroke-width="2" stroke-dasharray="6 4"/>';
@@ -141,7 +141,7 @@
     Array.prototype.forEach.call(el.querySelectorAll('.vb'), function (b) {
       var d = bars[+b.dataset.i];
       b.addEventListener('mousemove', function (e) {
-        showTip('<b>' + esc(d.label) + '</b>Gerçek: ' + Math.round(d.value) + '% · Model beklentisi: ' + Math.round(d.expected) + '%<br>' + d.n + ' soru', e.clientX, e.clientY);
+        showTip('<b>' + esc(d.label) + '</b>Actual: ' + Math.round(d.value) + '% · Model expects: ' + Math.round(d.expected) + '%<br>' + d.n + ' questions', e.clientX, e.clientY);
       });
       b.addEventListener('mouseleave', hideTip);
     });
@@ -161,7 +161,7 @@
     el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '">' + out + '</svg>';
     Array.prototype.forEach.call(el.querySelectorAll('.db'), function (b) {
       var x = d[+b.dataset.i];
-      b.addEventListener('mousemove', function (e) { showTip('<b>' + esc(x.full) + '</b>' + x.n + ' soru', e.clientX, e.clientY); });
+      b.addEventListener('mousemove', function (e) { showTip('<b>' + esc(x.full) + '</b>' + x.n + ' questions', e.clientX, e.clientY); });
       b.addEventListener('mouseleave', hideTip);
     });
   };

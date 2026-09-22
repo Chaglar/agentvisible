@@ -39,12 +39,13 @@
   L.fr = fr;
 
   // build 4 multiple-choice options around a correct value
-  function mc(rng, correct, distractors, fmt) {
+  function mc(rng, correct, distractors, fmt, want) {
+    want = want || 4;                     // OC Mathematical Reasoning uses five options
     fmt = fmt || function (v) { return String(v); };
     var key = function (v) { return typeof v === 'object' ? JSON.stringify(v) : String(v); };
     var opts = [correct], seen = {}; seen[key(correct)] = 1;
     distractors.forEach(function (d) {
-      if (opts.length >= 4 || d == null) return;
+      if (opts.length >= want || d == null) return;
       if (typeof d === 'number' && (!isFinite(d) || d < 0)) return;
       if (seen[key(d)]) return;
       seen[key(d)] = 1; opts.push(d);
@@ -52,9 +53,9 @@
     // top up numeric options so every question offers a full set of four
     if (typeof correct === 'number') {
       var spread = 1;
-      while (opts.length < 4 && spread < 40) {
+      while (opts.length < want && spread < 60) {
         [correct + spread, correct - spread].forEach(function (d) {
-          if (opts.length >= 4 || d < 0 || seen[key(d)]) return;
+          if (opts.length >= want || d < 0 || seen[key(d)]) return;
           seen[key(d)] = 1; opts.push(d);
         });
         spread++;
@@ -83,7 +84,7 @@
   /* =========================================================
      NUMBER & PLACE VALUE
      ========================================================= */
-  topic('number', { label: 'Number & place value', tr: 'Sayılar ve basamak değeri', emoji: '🔢', strand: 'numeracy', modes: ['naplan'] }, function (lv, rng) {
+  topic('number', { label: 'Number & place value', emoji: '🔢', strand: 'numeracy', modes: ['naplan'] }, function (lv, rng) {
     var q = { topic: 'number', level: lv };
     var kind = rng.pick(lv <= 2 ? ['mab', 'compare', 'seqnum'] : lv === 3 ? ['mab', 'expanded', 'between', 'compare'] : ['place', 'expanded', 'order', 'round', 'between']);
 
@@ -156,7 +157,7 @@
   /* =========================================================
      ADDITION & SUBTRACTION
      ========================================================= */
-  topic('addsub', { label: 'Addition & subtraction', tr: 'Toplama ve çıkarma', emoji: '➕', strand: 'numeracy', modes: ['naplan'] }, function (lv, rng) {
+  topic('addsub', { label: 'Addition & subtraction', emoji: '➕', strand: 'numeracy', modes: ['naplan'] }, function (lv, rng) {
     var q = { topic: 'addsub', level: lv }, name = rng.pick(NAMES);
     if (lv === 1) {
       var a = rng.int(3, 9), b = rng.int(3, 9);
@@ -224,14 +225,24 @@
   /* =========================================================
      MULTIPLICATION & DIVISION  (7s and 8s weighted up)
      ========================================================= */
-  topic('multdiv', { label: 'Multiplication & division', tr: 'Çarpma ve bölme', emoji: '✖️', strand: 'numeracy', modes: ['naplan', 'oc'], focus: true }, function (lv, rng) {
+  topic('multdiv', { label: 'Multiplication & division', emoji: '✖️', strand: 'numeracy', modes: ['naplan', 'oc'], focus: true }, function (lv, rng) {
     var q = { topic: 'multdiv', level: lv }, name = rng.pick(NAMES);
     var SYM = ['🍎', '⭐', '🐠', '🍓', '🧁', '🐞', '🌸', '⚽'];
     // table choice: from level 3 up, 7 and 8 dominate on purpose
-    var table = lv === 1 ? rng.pick([2, 5, 10]) :
+    var table = lv === 1 ? rng.pick([2, 2, 5, 10]) :
                 lv === 2 ? rng.pick([2, 3, 4, 5, 6, 10]) :
                 rng.pick([7, 7, 7, 8, 8, 8, 6, 9, 4]);
 
+    if (lv === 1 && rng.chance(0.4)) {            // AC9M2A03 — doubling and halving
+      var base1 = rng.int(3, 12), dbl = rng.chance(0.5);
+      q.sub = dbl ? 'Doubling' : 'Halving';
+      q.prompt = dbl ? 'What is <b>double ' + base1 + '</b>?' : 'What is <b>half of ' + (base1 * 2) + '</b>?';
+      q.visual = { type: 'tenframe', frames: dbl ? [Math.min(base1, 10), Math.max(0, base1 - 10)] : [Math.min(base1 * 2, 10), Math.max(0, base1 * 2 - 10)] };
+      Object.assign(q, mc(rng, dbl ? base1 * 2 : base1, [base1 + 2, base1 * 2 + 1, base1 - 1]));
+      q.explain = dbl ? base1 + ' + ' + base1 + ' = <b>' + (base1 * 2) + '</b>. Doubling is just adding the number to itself.'
+        : 'Split ' + (base1 * 2) + ' into two equal parts: ' + base1 + ' + ' + base1 + ' = ' + (base1 * 2) + ', so half is <b>' + base1 + '</b>.';
+      return q;
+    }
     if (lv <= 2 && rng.chance(0.55)) {
       var rows = Math.min(table, 6), cols = rng.int(2, 6);
       q.sub = rows + '× array'; q.prompt = 'How many altogether?';
@@ -309,21 +320,36 @@
   /* =========================================================
      FRACTIONS  (widest ladder — known soft spot)
      ========================================================= */
-  topic('fractions', { label: 'Fractions', tr: 'Kesirler', emoji: '🍕', strand: 'numeracy', modes: ['naplan', 'oc'], focus: true }, function (lv, rng) {
+  topic('fractions', { label: 'Fractions', emoji: '🍕', strand: 'numeracy', modes: ['naplan', 'oc'], focus: true }, function (lv, rng) {
     var q = { topic: 'fractions', level: lv }, name = rng.pick(NAMES);
     var shapes = ['circle', 'bar', 'grid'];
 
     if (lv === 1) {
-      var den = rng.pick([2, 4]), num = 1, shp = rng.pick(shapes);
-      q.sub = 'Halves & quarters'; q.prompt = 'What fraction of the shape is coloured?';
-      q.visual = { type: 'fracShape', shape: shp, parts: den, shaded: num, cols: 2 };
-      Object.assign(q, mc(rng, num + '/' + den, ['1/' + (den === 2 ? 4 : 2), (den - 1) + '/' + den, '2/' + den, '1/3'],
-        function (s) { var p = s.split('/'); return fr(p[0], p[1]); }));
-      q.explain = 'The shape is cut into <b>' + den + '</b> equal parts and <b>' + num + '</b> is coloured, so ' + fr(num, den) + '. The bottom number counts all the parts.';
+      // Year 1 / early Year 2: one half, then one quarter. AC9M1N02, AC9M2N03.
+      var den = rng.pick([2, 2, 4]), shp = rng.pick(shapes);
+      var col = V.C[rng.int(0, 5)];
+      if (rng.chance(0.35)) {                       // half of a small collection
+        var each1 = rng.int(2, 6), tot1 = each1 * 2, sym1 = rng.pick(['🍪', '🍎', '⭐', '🐟', '🧸']);
+        q.sub = 'Half of a group';
+        q.prompt = 'There are ' + tot1 + ' ' + sym1 + '. Half of them are put in a box. How many is that?';
+        q.visual = { type: 'emojiRow', items: Array.from({ length: tot1 }, function () { return sym1; }), cell: 34 };
+        Object.assign(q, mc(rng, each1, [tot1, each1 + 1, each1 - 1, tot1 - 1]));
+        q.explain = 'Half means <b>two equal parts</b>. Share ' + tot1 + ' into 2 equal groups: <b>' + each1 + '</b> in each.';
+        q.explainVisual = { type: 'groups', groups: 2, per: each1, sym: sym1 };
+        return q;
+      }
+      q.sub = den === 2 ? 'Halves' : 'Quarters';
+      q.prompt = 'What fraction of the shape is coloured?';
+      q.visual = { type: 'fracShape', shape: shp, parts: den, shaded: 1, cols: 2, color: col };
+      Object.assign(q, mc(rng, '1/' + den, ['1/' + (den === 2 ? 4 : 2), (den - 1) + '/' + den, '2/' + den, '1/8'],
+        function (s2) { var p = s2.split('/'); return fr(p[0], p[1]); }));
+      q.explain = 'The shape is cut into <b>' + den + '</b> equal parts and <b>1</b> is coloured, so ' + fr(1, den) +
+        '. The bottom number counts <i>all</i> the parts, not just the white ones.';
       return q;
     }
     if (lv === 2) {
-      var d2 = rng.pick([3, 4, 5, 6, 8]), n2 = rng.int(1, d2 - 1), shp2 = rng.pick(shapes);
+      // Year 2 works in halves, quarters and eighths — reached by halving again and again
+      var d2 = rng.pick([2, 4, 4, 8, 8]), n2 = rng.int(1, d2 - 1), shp2 = rng.pick(shapes);
       if (rng.chance(0.45)) {                       // choose the picture that matches a fraction
         q.sub = 'Match the fraction'; q.prompt = 'Which picture shows ' + fr(n2, d2) + ' coloured?';
         var bar = function (p, sh) { return { visual: { type: 'fracShape', shape: 'bar', parts: p, shaded: sh, w: 120 } }; };
@@ -343,6 +369,18 @@
         q.explain = 'Look for <b>' + d2 + '</b> equal parts with <b>' + n2 + '</b> of them coloured.';
         return q;
       }
+      if (rng.chance(0.3)) {                        // folding: the Year 2 route to eighths
+        var folds = rng.int(1, 3), partsF = Math.pow(2, folds);
+        q.sub = 'Folding in half';
+        q.prompt = 'A strip of paper is folded in half <b>' + folds + ' time' + (folds > 1 ? 's' : '') +
+          '</b>, then opened out. How many equal parts are there?';
+        q.visual = { type: 'fracShape', shape: 'bar', parts: partsF, shaded: 1, w: 300 };
+        Object.assign(q, mc(rng, partsF, [folds, folds * 2, partsF + 2, partsF / 2]));
+        q.explain = 'Each fold doubles the parts: ' +
+          Array.from({ length: folds }, function (_, i) { return Math.pow(2, i + 1); }).join(' → ') +
+          '. So <b>' + partsF + '</b> equal parts — ' + (partsF === 2 ? 'halves' : partsF === 4 ? 'quarters' : 'eighths') + '.';
+        return q;
+      }
       q.sub = 'Naming fractions'; q.prompt = 'What fraction of the shape is coloured?';
       q.visual = { type: 'fracShape', shape: shp2, parts: d2, shaded: n2, cols: d2 > 4 ? 4 : 2 };
       Object.assign(q, mc(rng, n2 + '/' + d2, [(d2 - n2) + '/' + d2, n2 + '/' + (d2 - n2), (n2 + 1) + '/' + d2, n2 + '/' + (d2 + 1)],
@@ -350,8 +388,19 @@
       q.explain = '<b>' + d2 + '</b> equal parts in total, <b>' + n2 + '</b> coloured → ' + fr(n2, d2) + '. Careful: ' + fr(n2, d2 - n2) + ' would count only the white parts on the bottom.';
       return q;
     }
-    if (lv === 3) {                                  // fraction of a collection
-      var d3 = rng.pick([2, 3, 4]), each = rng.int(2, 5), total = d3 * each, n3 = rng.int(1, d3 - 1);
+    if (lv === 3) {                                  // Year 3: thirds, fifths, sixths; fraction of a collection
+      if (rng.chance(0.4)) {
+        var dn = rng.pick([3, 5, 6]), nn0 = rng.int(1, dn - 1), sh0 = rng.pick(shapes);
+        q.sub = 'Thirds, fifths and sixths';
+        q.prompt = 'What fraction of the shape is coloured?';
+        q.visual = { type: 'fracShape', shape: sh0, parts: dn, shaded: nn0, cols: 3, color: V.C[rng.int(0, 5)] };
+        Object.assign(q, mc(rng, nn0 + '/' + dn, [(dn - nn0) + '/' + dn, nn0 + '/' + (dn - nn0), (nn0 + 1) + '/' + dn, nn0 + '/' + (dn + 1)],
+          function (s3) { var p3 = s3.split('/'); return fr(p3[0], p3[1]); }));
+        q.explain = '<b>' + dn + '</b> equal parts, <b>' + nn0 + '</b> coloured → ' + fr(nn0, dn) +
+          '. Unlike halves and quarters you cannot reach ' + (dn === 3 ? 'thirds' : dn === 5 ? 'fifths' : 'sixths') + ' by folding in half.';
+        return q;
+      }
+      var d3 = rng.pick([3, 4, 5, 6]), each = rng.int(2, 5), total = d3 * each, n3 = rng.int(1, d3 - 1);
       var sym = rng.pick(['🍬', '🍓', '⭐', '🐟', '🧁']);
       q.sub = 'Fraction of a group';
       q.prompt = 'There are ' + total + ' ' + sym + '. ' + name + ' takes ' + fr(n3, d3) + ' of them. How many is that?';
@@ -450,7 +499,7 @@
   /* =========================================================
      PATTERNS & ALGEBRA
      ========================================================= */
-  topic('patterns', { label: 'Patterns & algebra', tr: 'Örüntü ve cebir', emoji: '🔷', strand: 'numeracy', modes: ['naplan', 'oc'] }, function (lv, rng) {
+  topic('patterns', { label: 'Patterns & algebra', emoji: '🔷', strand: 'numeracy', modes: ['naplan', 'oc'] }, function (lv, rng) {
     var q = { topic: 'patterns', level: lv };
     var shapeNames = ['circle', 'square', 'triangle', 'star', 'hexagon', 'rhombus'];
     if (lv <= 2 && rng.chance(0.55)) {
@@ -462,7 +511,8 @@
       items[missing] = '?';
       q.sub = 'Repeating pattern'; q.prompt = 'What comes next in the pattern?';
       q.visual = { type: 'seq', items: items, cell: 52 };
-      var opts = rng.shuffle([A, B, rng.pick(shapeNames.filter(function (s) { return s !== A && s !== B; }))]);
+      var extra = rng.shuffle(shapeNames.filter(function (s) { return s !== A && s !== B; })).slice(0, 2);
+      var opts = rng.shuffle([A, B].concat(extra));
       q.format = 'mc';
       q.choices = opts.map(function (nm) { return { visual: { type: 'shape', name: nm, size: 62, color: nm === A ? V.C[0] : nm === B ? V.C[1] : V.C[2] } }; });
       q.answer = opts.indexOf(correctName);
