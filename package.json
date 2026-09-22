@@ -4,5 +4,12 @@
   "description": "Static site. The one dependency is the Anthropic SDK, used by api/writing.js to mark handwriting.",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.1"
+  },
+  "scripts": {
+    "dev": "node dev-server.js",
+    "smoke": "node test/smoke.mjs"
   }
 }

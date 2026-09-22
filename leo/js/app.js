@@ -621,6 +621,18 @@
     if ((e.key === 'Enter' || e.key === ' ') && !$('btnNext').classList.contains('hide')) { e.preventDefault(); step(); }
   });
 
+  /* A read-only hook for the smoke test, so it can answer questions correctly or
+     wrongly on purpose instead of guessing. It exposes nothing a child could not
+     already read off the screen a moment later. */
+  L.debug = {
+    answerIndex: function () { return sess && sess.current ? sess.current.answer : null; },
+    coachAnswerIndex: function () { return coach && coach.q ? coach.q.answer : null; },
+    screen: function () {
+      return ['home', 'quiz', 'coach', 'result', 'write', 'wResult']
+        .filter(function (id) { return !$(id).classList.contains('hide'); })[0] || null;
+    }
+  };
+
   S.onchange = paintSync;
   paintHome();
   S.sync().then(paintHome);

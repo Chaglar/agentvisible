@@ -231,3 +231,35 @@ node dev-server.js      # static site + the real API against an in-memory store
 
 `dev-server.js` lives at the repository root. Vercel only executes files under `api/`,
 so it is never deployed.
+
+## Smoke test
+
+```
+npm install             # playwright
+node dev-server.js &    # port 8788
+npm run smoke
+```
+
+`test/smoke.mjs` drives the real app in Chromium: it sits a 12-question NAPLAN
+test answering 9 right and 3 wrong on purpose, checks the score, checks the
+difficulty ladder actually climbed, works the fix-up round, submits a piece of
+writing both typed and as a photo of the page, and then opens the dashboard in a
+**separate browser profile**. That last part matters — a second profile shares no
+localStorage, so if the answers, sessions and writing all show up there, the
+record genuinely came back from the server.
+
+It asserts 28 things and exits non-zero if any of them fail, so it can gate a
+deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
+
+It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and
+wipes that profile before and after, so runs are independent and it can never
+touch Leo's real record — including when `SMOKE_BASE` points at the deployed site.
+That isolation is what lets the counts be exact rather than "at least": a
+12-question test plus 3 fix-ups must leave exactly 15 answers, 2 sessions and 2
+pieces of writing. Without the wipe, a dev-server left running from a previous run
+carries its answers over and every count quietly asserts against stale data.
+
+To answer deliberately rather than by guessing, the test reads `LEO.debug`, a
+read-only hook in `app.js` that reports the current question's answer index and
+which screen is showing. It exposes nothing a child could not read off the screen
+a second later by pressing a button.
