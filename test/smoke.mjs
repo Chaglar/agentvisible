@@ -316,7 +316,8 @@ const dealt = await page.evaluate(() => {
     }
     return false;
   }
-  let hands = 0, stuck = 0, targets = 0, unreachable = 0, zero = 0, notZero = 0;
+  let hands = 0, stuck = 0, forced = 0, targets = 0, unreachable = 0, zero = 0, notZero = 0;
+  const pairs20 = {};
   ['gofish20', 'brainy20'].forEach(id => {
     const g = G.byId(id);
     for (let s = 0; s < 120; s++) {
@@ -325,6 +326,14 @@ const dealt = await page.evaluate(() => {
         const r = g.round(i, run, Math.random);
         hands++;
         if (!solvable(r.items, r.rule)) stuck++;
+        // one possible move is not a choice: the first Go Fish dealt 10+10 every time
+        if (G.countWins(r.items, r.rule) < 2) forced++;
+        if (id === 'gofish20' && r.rule.target === 20 && r.rule.min === 2) {
+          const v = r.items.map(c => c.v);
+          for (let x = 0; x < v.length; x++) for (let y = x + 1; y < v.length; y++) {
+            if (v[x] + v[y] === 20) pairs20[[v[x], v[y]].sort((a, b) => a - b).join('+')] = 1;
+          }
+        }
       }
     }
   });
@@ -349,10 +358,16 @@ const dealt = await page.evaluate(() => {
     }
     if (last === 0) zero++; else notZero++;
   }
-  return { hands, stuck, targets, unreachable, zero, notZero };
+  return { hands, stuck, forced, targets, unreachable, zero, notZero, pairs20: Object.keys(pairs20) };
 });
 check('every hand the app deals can actually be solved',
   dealt.stuck === 0, `${dealt.hands} hands, ${dealt.stuck} with no answer in them`);
+/* Two cards making 20 out of a 1-10 deck has exactly one answer, so the first
+   version of Go Fish dealt 10 + 10 every round and called it a game. */
+check('no hand is a forced move',
+  dealt.forced === 0, `${dealt.hands} hands, ${dealt.forced} with only one possible answer`);
+check('friends of 20 is more than 10 + 10',
+  dealt.pairs20.length >= 4, dealt.pairs20.sort().join(', '));
 check('Target Number targets are reachable from the dice on the table',
   dealt.unreachable === 0, `${dealt.targets} targets, ${dealt.unreachable} impossible`);
 check('Card Friends counts down to exactly nought',

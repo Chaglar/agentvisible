@@ -451,3 +451,7 @@ h2{font-size:18px;margin:26px 0 10px;letter-spacing:-.01em}
   .card{box-shadow:none;border:0;padding:0}
   .rpText{border:0;background:none;padding:0;font-size:12px}
 }
+.gnote{font-size:14.5px;line-height:1.5;color:var(--mut);margin-top:10px;padding-left:2px}
+.gnote::before{content:'🂡 ';}
+.pcard .face{position:absolute;bottom:14px;left:0;right:0;text-align:center;font-size:11px;font-weight:800;
+  letter-spacing:.06em;opacity:.65}

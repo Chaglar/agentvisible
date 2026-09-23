@@ -1152,6 +1152,8 @@
     $('giTitle').textContent = g.title;
     $('giKid').textContent = g.kid;
     $('giSheet').textContent = g.sheet;
+    $('giNote').textContent = g.note || '';
+    $('giNote').classList.toggle('hide', !g.note);
     $('giOpts').classList.toggle('hide', !g.options);
     if (g.options) {
       $('giOptLabel').textContent = g.options.label;
@@ -1177,8 +1179,14 @@
       return '<button class="die ' + cls + '" data-i="' + i + '" aria-label="' + c.v + '">' + cells + '</button>';
     }
     if (kind === 'tile') return '<button class="pcard tile ' + cls + '" data-i="' + i + '">' + c.v + '</button>';
+    /* Picture cards carry their number big and their letter small. The number is
+       what he is adding; the letter is so the card matches the one in his hand at
+       the kitchen table. */
+    var face = { 11: 'J', 12: 'Q', 13: 'K' }[c.v] || '';
     return '<button class="pcard ' + cls + (c.red ? ' red' : '') + '" data-i="' + i + '">' +
-      '<span class="s">' + c.s + '</span>' + c.v + '<span class="s2">' + c.s + '</span></button>';
+      '<span class="s">' + c.s + '</span>' + c.v +
+      (face ? '<span class="face">' + face + '</span>' : '') +
+      '<span class="s2">' + c.s + '</span></button>';
   }
 
   function startGame() {
