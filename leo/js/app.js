@@ -1456,7 +1456,13 @@
     var rep = GM.report(st.games || [], { name: st.profile.name || 'Leo' });
     return rep.title + '\n' + (who ? 'For ' + who + '\n' : '') + '\n' + rep.lines.join('\n');
   }
-  function paintReport() { $('rpText').textContent = reportText(); }
+  function paintReport() {
+    var st = S.load();
+    var who = ($('rpWho').value || '').trim() || teacherName();
+    $('rpSlide').innerHTML = L.report.render(st.games || [],
+      { name: st.profile.name || 'Leo', avatar: st.profile.avatar || '🦁', teacher: who });
+    $('rpText').textContent = reportText();          // the plain version, for email and copy
+  }
 
   document.addEventListener('click', function (e) {
     var t = e.target.closest ? e.target.closest('[data-game]') : null;

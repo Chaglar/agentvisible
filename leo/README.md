@@ -144,6 +144,27 @@ game, the strategies he reported, **what has not been played yet**, and a short
 "coming quickly / still being worked out" split. It is on the practice page under
 *Note for your teacher* and on the dashboard, with copy, email and print.
 
+**It is laid out to be glanced at, not read.** The first version was a block of
+monospace text — accurate, and nobody would have read it: a teacher with thirty of
+these has about twenty seconds per child. The sheet now leads with a ring (the
+proportion of rounds right), three numbers, and four weeks of days as squares, then
+nine tiles — one per game, each with a labelled bar — then the two columns and the
+strategies he reported. **It prints to exactly one A4 landscape page**, which the
+smoke test checks by printing it to PDF and counting the pages.
+
+The chart rules it follows, because they are the ones that go wrong:
+
+- **One measure per mark.** Accuracy is the bar; thinking time is a number beside
+  it. Two measures on one axis makes a chart that looks richer and says less.
+- **One hue, not a palette.** Nothing on the sheet is a category — it is all "how
+  much" — so it is a single blue ramp, light to dark, the steps validated against
+  both the light and the dark surface.
+- **Status never means anything by colour alone.** The two columns carry an icon
+  and a word as well, because a third of men read those two hues alike and half of
+  these sheets come out of a black-and-white printer.
+- **Every bar is labelled.** There is no axis to read off; the number sits with its
+  own bar. Nobody should have to measure anything.
+
 It contains **only the games** — no percentiles, no writing, no reading, nothing
 about the app's own assessment.
 
@@ -536,6 +557,7 @@ leo/
     bank-measure.js       generators: measurement, geometry, data & chance
     bank-verbal.js        generators: reading, language, thinking skills, maths reasoning
     games.js              the nine games from the teacher's sheet, and the note back to her
+    report.js             that note, laid out as a one-page sheet
     store.js              server sync plus a local cache and an offline queue
     norms.js              item response model, ability estimation, age percentiles
     engine.js             session construction and the adaptive rule
@@ -572,7 +594,7 @@ writing both typed and as a photo of the page, and then opens the dashboard in a
 localStorage, so if the answers, sessions, writing, fact attempts and games all show
 up there, the record genuinely came back from the server.
 
-It asserts 83 things and exits non-zero if any of them fail, so it can gate a
+It asserts 87 things and exits non-zero if any of them fail, so it can gate a
 deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
 
 It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and

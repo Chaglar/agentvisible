@@ -495,7 +495,34 @@ check('the teacher note says what has NOT been played', /Not played yet: .*Dots 
 check('the teacher note is addressed to the teacher', /For Mrs Smoke/.test(note));
 check('nothing but the games is in the note',
   !/NAPLAN|writing|percentile|reading/i.test(note));
+
+/* The note is a sheet, not a wall of monospace: nine tiles, a ring, four weeks of
+   days. The day squares are checked for COLOUR because a CSS specificity slip once
+   painted every one of them the empty shade — a fortnight of playing looked like
+   none, and nothing else on the page showed it. */
+const sheet = await page.evaluate(() => ({
+  tiles: document.querySelectorAll('#rpSlide .rtile').length,
+  played: document.querySelectorAll('#rpSlide .rtile:not(.off)').length,
+  ring: document.querySelectorAll('#rpSlide .rg circle').length,
+  cells: document.querySelectorAll('#rpSlide .strip i').length,
+  lit: [...document.querySelectorAll('#rpSlide .strip i')]
+    .filter(i => getComputedStyle(i).backgroundColor !== getComputedStyle(document.querySelector('#rpSlide .strip i.d0')).backgroundColor).length,
+  columns: document.querySelectorAll('#rpSlide .rcol').length
+}));
+check('the note is a sheet, not a wall of text',
+  sheet.tiles === 9 && sheet.ring === 2 && sheet.columns === 2 && sheet.cells === 28,
+  JSON.stringify(sheet));
+check('the games played have their own tile', sheet.played === 4, sheet.played + ' tiles with a score');
+check('a day that was played is actually coloured in', sheet.lit >= 1, sheet.lit + ' days lit');
 await shot(page, '20-teacher-note');
+
+/* One page. The first print stylesheet hid the rest of the app with
+   visibility:hidden, which keeps its height — the sheet came out on page one of
+   two, with a blank sheet of A4 behind it. */
+const pdfPath = path.join(SHOTS, 'teacher-note.pdf');
+await page.pdf({ path: pdfPath, format: 'A4', landscape: true, printBackground: true });
+const pdfPages = (fs.readFileSync(pdfPath).toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+check('the note prints on one page', pdfPages === 1, pdfPages + ' page(s)');
 await page.click('#rpBack');
 await page.waitForSelector('#home:not(.hide)');
 
@@ -585,7 +612,9 @@ check('fresh device sees the games from school', seen.games === kidState.games, 
 check('games panel lists all nine', (await dash.locator('#gameTable tbody tr').count()) === 9,
   (await dash.locator('#gameTable tbody tr').count()) + ' rows');
 check('the dashboard carries the note for the teacher',
-  /GAMES FROM THE SHEET/.test(await dash.locator('#gameReport').textContent()));
+  (await dash.locator('#gameSlide .rtile').count()) === 9 &&
+  /GAMES FROM THE SHEET/.test(await dash.locator('#gameReport').textContent()),
+  (await dash.locator('#gameSlide .rtile').count()) + ' tiles on the dashboard sheet');
 /* The name is typed on the tablet and must reach the laptop: it rides in the
    profile for exactly this reason, so a note printed from the dashboard is
    addressed the same way. */

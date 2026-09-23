@@ -129,3 +129,14 @@ label.rpWho{display:flex;align-items:center;gap:10px;font-size:13.5px;font-weigh
 label.rpWho input{font:15px/1.3 inherit;padding:9px 11px;border:1px solid var(--line);border-radius:9px;
   background:var(--card);color:var(--ink);min-width:220px}
 label.rpWho input:focus{outline:none;border-color:var(--acc)}
+
+/* printing the note: only the sheet goes on the paper */
+@media print{
+  body>*:not(.wrap){display:none !important}
+  .wrap>*:not(#dash){display:none !important}
+  #dash>*:not(#gamesBlock){display:none !important}
+  #gamesBlock>*:not(#reportCard){display:none !important}
+  #reportCard{border:0;box-shadow:none;padding:0}
+  #reportCard>*:not(#gameSlide){display:none !important}
+  .wrap{padding:0;max-width:none}
+}
