@@ -102,7 +102,7 @@ checked against the paper.
 | Cards & Numbers | 2-digit addition, place value | Arrange four cards into two 2-digit numbers, then type the total. It also says whether that was the biggest total those cards could make. |
 | Highest/Lowest Number Wins | Adding several numbers | Four or five cards, seeded so a double or a pair making ten is always there to find. |
 | Card Count | Doubles, flexible ways to make a number | Double both cards and add; then pick two other numbers that make the same total. |
-| Go Fish — Friends of 20 | Friends of 20, 25, 30 | Find the cards that make the target. |
+| Go Fish — Friends of 20 | Friends of 20, 25, 30 | Find the cards that make the target. Played with a full deck: J 11, Q 12, K 13. |
 | Brainy Cards Friends to 20 | Friends of 20, adding 3+ numbers | Three or more cards, exactly 20, bust if you go over. |
 | Card Friends | Subtraction from 100 | Add two cards, take them off the running total, down to nought. |
 | Times Table | Tables | The sheet's 2s, 5s, 10s and 3s, plus the 4s, 6s, 7s, 8s and 9s as the harder set. |
@@ -113,9 +113,15 @@ The app does the two jobs a parent at the kitchen table does badly: **it deals a
 it remembers**. It does not replace the partner — the first thing each game asks is
 who is playing, because these are partner games and the talk is half of them.
 
-**Every hand is built around a solution before the rest of the cards go in.** A
-randomly dealt hand often has no way to make 20 at all, and a child who cannot find
-one concludes he is the problem rather than the deal. The same goes for Target
+**Every hand is built around a solution before the rest of the cards go in** — and
+where it matters, around *more than one*. A randomly dealt hand often has no way to
+make 20 at all, and a child who cannot find one concludes he is the problem rather
+than the deal. The opposite failure is just as bad and is the one that actually
+shipped: two cards making 20 out of a 1–10 deck has exactly **one** answer, so Go
+Fish dealt 10 + 10 every single round. It is now played with a full deck, where 20
+is 7+13, 8+12, 9+11 or 10+10, and every hand is checked to hold at least two winning
+selections before it is dealt. (25 is dealt as three cards for the same reason: with
+two it is 12+13 and nothing else.) The same goes for Target
 Number: the target is chosen *from* what the five dice can actually reach, never
 picked first and hoped for. Both of those were wrong on the first attempt — Go Fish
 asked for three cards to make 40, which a ten-card deck cannot do — and the smoke
@@ -566,7 +572,7 @@ writing both typed and as a photo of the page, and then opens the dashboard in a
 localStorage, so if the answers, sessions, writing, fact attempts and games all show
 up there, the record genuinely came back from the server.
 
-It asserts 81 things and exits non-zero if any of them fail, so it can gate a
+It asserts 83 things and exits non-zero if any of them fail, so it can gate a
 deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
 
 It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and
