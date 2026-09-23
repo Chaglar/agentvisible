@@ -24,7 +24,8 @@
     return {
       v: 2,
       profileId: 'leo',
-      profile: { name: 'Leo', dob: '2018-08-15', year: 2, avatar: '🦁', country: 'AU' },
+      // `teacher` is the name the note home is addressed to; it syncs, her email does not
+      profile: { name: 'Leo', dob: '2018-08-15', year: 2, avatar: '🦁', country: 'AU', teacher: '' },
       settings: { sound: true, feedback: 'instant' },
       model: null,
       xp: 0, best: 0,

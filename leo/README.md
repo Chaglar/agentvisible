@@ -139,9 +139,14 @@ game, the strategies he reported, **what has not been played yet**, and a short
 *Note for your teacher* and on the dashboard, with copy, email and print.
 
 It contains **only the games** — no percentiles, no writing, no reading, nothing
-about the app's own assessment. The teacher's name and email are kept in
-`localStorage` on that device and never sent to the server: they are a third party's
-details and the record does not need them.
+about the app's own assessment.
+
+The teacher's **name** is typed once and rides along in the profile, so a note
+printed from the dashboard on the laptop is addressed the same way as one sent from
+the tablet. Her **email** stays in `localStorage` on the device that sends the mail
+and is never synced: it is a contact detail belonging to someone who never agreed to
+be in this record, and nothing here needs it except the mail button. Neither is in
+this repository.
 
 Storage is one append-only entry per sitting, with the per-round detail inside it.
 The report is derived on read, like everything else here.
@@ -561,7 +566,7 @@ writing both typed and as a photo of the page, and then opens the dashboard in a
 localStorage, so if the answers, sessions, writing, fact attempts and games all show
 up there, the record genuinely came back from the server.
 
-It asserts 80 things and exits non-zero if any of them fail, so it can gate a
+It asserts 81 things and exits non-zero if any of them fail, so it can gate a
 deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
 
 It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and

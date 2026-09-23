@@ -257,7 +257,11 @@
           '<td>' + (g.last ? fmtDate(g.last) : 'not yet') + '</td></tr>';
       }).join('') + '</tbody>';
 
-    $('gameReport').textContent = G.report(log, { name: S.load().profile.name || 'Leo' }).text;
+    var st = S.load();
+    var rep = G.report(log, { name: st.profile.name || 'Leo' });
+    var who = st.profile.teacher || '';
+    if (document.activeElement !== $('gameWho')) $('gameWho').value = who;
+    $('gameReport').textContent = rep.title + '\n' + (who ? 'For ' + who + '\n' : '') + '\n' + rep.lines.join('\n');
   }
 
   function paintLibrary() {
@@ -557,6 +561,12 @@
   }
 
   /* ---------------- wiring ---------------- */
+  /* The same field as the practice page: the name rides in the profile so it is
+     typed once, not once per device. */
+  document.addEventListener('change', function (e) {
+    if (!e.target.closest || !e.target.closest('#gameWho')) return;
+    S.patch({ profile: { teacher: $('gameWho').value.trim().slice(0, 60) } }).then(paintGames);
+  });
   document.addEventListener('click', function (e) {
     if (!e.target.closest || !e.target.closest('#btnCopyReport')) return;
     var txt = $('gameReport').textContent;

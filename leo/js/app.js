@@ -1418,25 +1418,35 @@
     paintHome();
   }
 
-  /* ----- the note for school ----- */
+  /* ----- the note for school -----
+   *
+   * The teacher's NAME rides along in the profile, so it is typed once and the
+   * dashboard on the laptop addresses the note the same way the tablet does. Her
+   * EMAIL stays in localStorage on the device that sends the mail: a contact
+   * detail belonging to someone who never agreed to be in this record, and
+   * nothing here needs it except the mail button. */
   var TEACHER = 'leo.teacher';
-  function teacher() {
+  function teacherLocal() {
     try { return JSON.parse(localStorage.getItem(TEACHER) || '{}'); } catch (e) { return {}; }
   }
   function saveTeacher(t) { try { localStorage.setItem(TEACHER, JSON.stringify(t)); } catch (e) {} }
+  function teacherName() {
+    return (S.load().profile.teacher || teacherLocal().name || '');
+  }
 
   function openReport() {
-    var t = teacher();
-    $('rpWho').value = t.name || '';
-    $('rpMail').value = t.email || '';
+    $('rpWho').value = teacherName();
+    $('rpMail').value = teacherLocal().email || '';
     paintReport();
     show('report');
   }
+  /* While the screen is up the field is the live value; the store is what it falls
+     back to when the screen opens. */
   function reportText() {
-    var t = teacher(), st = S.load();
+    var st = S.load();
+    var who = ($('rpWho').value || '').trim() || teacherName();
     var rep = GM.report(st.games || [], { name: st.profile.name || 'Leo' });
-    var head = t.name ? 'For ' + t.name + '\n' : '';
-    return rep.title + '\n' + head + '\n' + rep.lines.join('\n');
+    return rep.title + '\n' + (who ? 'For ' + who + '\n' : '') + '\n' + rep.lines.join('\n');
   }
   function paintReport() { $('rpText').textContent = reportText(); }
 
@@ -1509,11 +1519,16 @@
   $('grHome').addEventListener('click', function () { show('home'); paintHome(); });
 
   $('rpBack').addEventListener('click', function () { show('home'); paintHome(); });
-  $('rpWho').addEventListener('input', function () {
-    var t = teacher(); t.name = $('rpWho').value.trim().slice(0, 60); saveTeacher(t); paintReport();
+  $('rpWho').addEventListener('input', paintReport);
+  /* Kept on 'change' rather than every keystroke — typing a name is not eight
+     server calls. */
+  $('rpWho').addEventListener('change', function () {
+    var v = $('rpWho').value.trim().slice(0, 60);
+    var t = teacherLocal(); t.name = v; saveTeacher(t);      // so it survives with no server
+    S.patch({ profile: { teacher: v } });
   });
-  $('rpMail').addEventListener('input', function () {
-    var t = teacher(); t.email = $('rpMail').value.trim().slice(0, 120); saveTeacher(t);
+  $('rpMail').addEventListener('change', function () {
+    var t = teacherLocal(); t.email = $('rpMail').value.trim().slice(0, 120); saveTeacher(t);
   });
   $('rpCopy').addEventListener('click', function () {
     var txt = reportText();
@@ -1530,7 +1545,7 @@
     } else fallback();
   });
   $('rpMailBtn').addEventListener('click', function () {
-    var t = teacher(), st = S.load();
+    var t = teacherLocal(), st = S.load();
     var subject = (st.profile.name || 'Leo') + ' — numeracy games at home';
     location.href = 'mailto:' + encodeURIComponent(t.email || '') +
       '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(reportText());

@@ -571,6 +571,13 @@ check('games panel lists all nine', (await dash.locator('#gameTable tbody tr').c
   (await dash.locator('#gameTable tbody tr').count()) + ' rows');
 check('the dashboard carries the note for the teacher',
   /GAMES FROM THE SHEET/.test(await dash.locator('#gameReport').textContent()));
+/* The name is typed on the tablet and must reach the laptop: it rides in the
+   profile for exactly this reason, so a note printed from the dashboard is
+   addressed the same way. */
+check('the teacher’s name followed to the other device',
+  /For Mrs Smoke/.test(await dash.locator('#gameReport').textContent()) &&
+  (await dash.locator('#gameWho').inputValue()) === 'Mrs Smoke',
+  (await dash.locator('#gameWho').inputValue()));
 check('reading panel populated', (await dash.locator('#libTable tbody tr').count()) === 2,
   (await dash.locator('#libTable tbody tr').count()) + ' books listed');
 check('reading panel shows how he reads', /🎧/.test(await dash.locator('#libStats').textContent()));
