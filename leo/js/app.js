@@ -72,7 +72,8 @@
   }
 
   function show(id) {
-    ['home', 'quiz', 'coach', 'result', 'write', 'wResult', 'fluency', 'fResult', 'addBook', 'logRead', 'chapters', 'reader']
+    ['home', 'quiz', 'coach', 'result', 'write', 'wResult', 'fluency', 'fResult', 'addBook', 'logRead', 'chapters', 'reader',
+     'gIntro', 'games', 'gResult', 'report']
       .forEach(function (s) { $(s).classList.toggle('hide', s !== id); });
     window.scrollTo(0, 0);
   }
@@ -106,6 +107,7 @@
     }).join('');
 
     paintShelf();
+    paintGames();
 
     $('factCards').innerHTML = Object.keys(L.facts.TRACKS).map(function (k) {
       var T = L.facts.TRACKS[k], sum = L.facts.summary(st.facts || [], k);
@@ -1111,6 +1113,444 @@
     }
   });
 
+  /* ---------- games from school ----------
+   *
+   * The teacher's sheet, playable. The app is the dealer and the scorer; the child
+   * still plays it with somebody, which is why the first thing it asks is who.
+   *
+   * Four kinds of round, because the nine games genuinely need four:
+   *   num   — type the total (adding, times tables, subtracting from 100)
+   *   build — arrange four cards into two 2-digit numbers, then add them
+   *   pick  — choose the cards that make the target (Go Fish, Brainy Cards)
+   *   expr  — build a sum from five dice to hit a target
+   * Everything else — timing, marking, the log, the report — is shared.
+   */
+  var GM = L.games;
+  var gm = null;                         // the sitting in progress
+  var giGame = null, giWho = 'parent', giOpt = null;
+
+  function paintGames() {
+    var sum = GM.summary(S.load().games || []);
+    $('gamesN').textContent = sum.sittings ? sum.sittings + (sum.sittings === 1 ? ' sitting' : ' sittings') : '';
+    $('gameCards').innerHTML = sum.games.map(function (g) {
+      var note = g.plays
+        ? g.plays + (g.plays === 1 ? ' time · ' : ' times · ') + g.pct + '% right'
+        : (g.game.needs === 'dice' ? 'Dice · not played yet' : 'Cards · not played yet');
+      return '<button class="drill" data-game="' + g.id + '">' +
+        '<div class="e">' + g.game.emoji + '</div><div class="t">' + esc(g.game.title) + '</div>' +
+        (g.rounds ? '<div class="b"><i style="width:' + (g.pct || 0) + '%"></i></div>' : '') +
+        '<div class="n">' + note + '</div></button>';
+    }).join('');
+  }
+
+  function openGameIntro(id) {
+    var g = GM.byId(id);
+    if (!g) return;
+    giGame = g;
+    giOpt = g.options ? g.options.choices[0].v : null;
+    $('giEmoji').textContent = g.emoji;
+    $('giTitle').textContent = g.title;
+    $('giKid').textContent = g.kid;
+    $('giSheet').textContent = g.sheet;
+    $('giOpts').classList.toggle('hide', !g.options);
+    if (g.options) {
+      $('giOptLabel').textContent = g.options.label;
+      $('giOptNote').textContent = g.options.note || '';
+      $('giOptSeg').innerHTML = g.options.choices.map(function (c, i) {
+        return '<button data-opt="' + c.v + '"' + (i === 0 ? ' class="on"' : '') + '>' + c.label + '</button>';
+      }).join('');
+    }
+    $('giWho').innerHTML = Object.keys(GM.WHO).map(function (k) {
+      var w = GM.WHO[k];
+      return '<button data-who="' + k + '"' + (k === giWho ? ' class="on"' : '') + '>' + w.emoji + ' ' + w.label + '</button>';
+    }).join('');
+    show('gIntro');
+  }
+
+  function cardHTML(c, i, kind, cls) {
+    if (kind === 'die') {
+      /* Dice are drawn as pips, not digits: reading the pattern without counting it
+         is half of what "Dots and Numerals" is for. */
+      var spots = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]][c.v] || [];
+      var cells = '';
+      for (var p = 0; p < 9; p++) cells += spots.indexOf(p) >= 0 ? '<i></i>' : '<span></span>';
+      return '<button class="die ' + cls + '" data-i="' + i + '" aria-label="' + c.v + '">' + cells + '</button>';
+    }
+    if (kind === 'tile') return '<button class="pcard tile ' + cls + '" data-i="' + i + '">' + c.v + '</button>';
+    return '<button class="pcard ' + cls + (c.red ? ' red' : '') + '" data-i="' + i + '">' +
+      '<span class="s">' + c.s + '</span>' + c.v + '<span class="s2">' + c.s + '</span></button>';
+  }
+
+  function startGame() {
+    var g = giGame;
+    if (!g) return;
+    var run = Object.assign({ total: g.rounds, opt: giOpt }, g.start ? g.start() : {});
+    gm = { game: g, run: run, i: 0, done: [], who: giWho, opt: giOpt, started: Date.now(),
+           round: null, typed: '', shown: 0, firstKey: 0, locked: false, sel: [], tokens: [], usedIdx: [], slots: [] };
+    $('gName').textContent = g.title;
+    $('gWho').textContent = GM.WHO[giWho].label;
+    gRound();
+  }
+
+  function gRound() {
+    var g = gm.game;
+    gm.round = g.round(gm.i, gm.run, Math.random);
+    gm.typed = ''; gm.firstKey = 0; gm.locked = false; gm.sel = []; gm.tokens = []; gm.usedIdx = [];
+    gm.slots = [null, null, null, null];
+    gm.shown = Date.now();
+    var r = gm.round;
+
+    $('gPrompt').textContent = r.prompt;
+    $('gSent').textContent = r.mode === 'num' && r.sentence ? r.sentence + ' = ?' : '';
+    $('gDeal').className = 'deal' + (r.mode === 'pick' || r.mode === 'expr' || r.mode === 'build' ? ' tap' : '');
+    $('gDeal').innerHTML = r.items.map(function (c, i) { return cardHTML(c, i, r.kind, ''); }).join('');
+    $('gMark').innerHTML = '';
+    $('gStrat').classList.add('hide');
+    $('gNext').classList.add('hide');
+    $('gTyped').textContent = '';
+    $('gAns').className = 'fans' + (r.mode === 'num' ? '' : ' hide');
+    $('gPad').classList.toggle('hide', r.mode !== 'num');
+    $('gBuild').classList.toggle('hide', r.mode !== 'build');
+    $('gExpr').classList.toggle('hide', r.mode !== 'expr');
+    $('gOps').classList.toggle('hide', r.mode !== 'expr');
+    $('gDone').classList.toggle('hide', r.mode !== 'pick' && r.mode !== 'expr');
+    $('gDone').textContent = r.mode === 'pick' ? 'That is my pick →' : 'Check it →';
+    Array.prototype.forEach.call($('gPad').children, function (b) { b.disabled = false; });
+    if (r.mode === 'build') gPaintSlots();
+    if (r.mode === 'expr') gPaintExpr();
+
+    var ok = gm.done.filter(function (d) { return d.ok; }).length;
+    $('gScore').textContent = ok + '/' + gm.done.length;
+    $('gRun').textContent = 'Round ' + (gm.i + 1) + ' of ' + gm.game.rounds;
+    var h = '';
+    for (var i = 0; i < gm.game.rounds; i++) {
+      var d = gm.done[i];
+      h += '<i class="' + (d ? (d.ok ? 'ok' : 'no') : (i === gm.i ? 'now' : '')) + '"></i>';
+    }
+    $('gDots').innerHTML = h;
+    show('games');
+  }
+
+  /* ----- build: four cards into two 2-digit numbers ----- */
+  function gPaintSlots() {
+    var s = gm.slots;
+    $('gBuild').innerHTML =
+      '<button class="slot' + (s[0] != null ? ' full' : '') + '" data-slot="0">' + (s[0] != null ? gm.round.items[s[0]].v : '') + '</button>' +
+      '<button class="slot' + (s[1] != null ? ' full' : '') + '" data-slot="1">' + (s[1] != null ? gm.round.items[s[1]].v : '') + '</button>' +
+      '<span class="plus">+</span>' +
+      '<button class="slot' + (s[2] != null ? ' full' : '') + '" data-slot="2">' + (s[2] != null ? gm.round.items[s[2]].v : '') + '</button>' +
+      '<button class="slot' + (s[3] != null ? ' full' : '') + '" data-slot="3">' + (s[3] != null ? gm.round.items[s[3]].v : '') + '</button>';
+    Array.prototype.forEach.call($('gDeal').children, function (el, i) {
+      el.className = el.className.replace(/ used/g, '') + (s.indexOf(i) >= 0 ? ' used' : '');
+    });
+    var full = s.every(function (x) { return x != null; });
+    $('gPad').classList.toggle('hide', !full);
+    $('gAns').className = 'fans' + (full ? '' : ' hide');
+    if (full) {
+      var n1 = gm.round.items[s[0]].v * 10 + gm.round.items[s[1]].v;
+      var n2 = gm.round.items[s[2]].v * 10 + gm.round.items[s[3]].v;
+      $('gSent').textContent = n1 + ' + ' + n2 + ' = ?';
+    } else {
+      $('gSent').textContent = 'Tap the cards to fill the boxes.';
+    }
+  }
+  function gPlace(i) {
+    var s = gm.slots, at = s.indexOf(i);
+    if (at >= 0) { s[at] = null; gPaintSlots(); return; }
+    for (var k = 0; k < 4; k++) if (s[k] == null) { s[k] = i; break; }
+    gPaintSlots();
+  }
+
+  /* ----- expr: five dice and four operations ----- */
+  /* Which die is spent is tracked by POSITION, not by value. Tracking by value
+     looked identical on screen and worked until two dice came up the same: the app
+     would grey out one 3 while the child had tapped the other, and his tap did
+     nothing at all. */
+  function gPaintExpr() {
+    var t = gm.tokens;
+    $('gExpr').className = 'expr' + (t.length ? '' : ' empty');
+    $('gExpr').textContent = t.length ? GM.exprText(t) : 'Tap the dice and the signs to build a sum.';
+    Array.prototype.forEach.call($('gDeal').children, function (el, i) {
+      el.className = el.className.replace(/ used/g, '') + (gm.usedIdx.indexOf(i) >= 0 ? ' used' : '');
+    });
+  }
+
+  /* ----- pick: tap the ones that make the target ----- */
+  function gToggle(i) {
+    var at = gm.sel.indexOf(i);
+    if (at >= 0) gm.sel.splice(at, 1); else gm.sel.push(i);
+    Array.prototype.forEach.call($('gDeal').children, function (el, k) {
+      el.className = el.className.replace(/ on/g, '') + (gm.sel.indexOf(k) >= 0 ? ' on' : '');
+    });
+    var tot = gm.sel.reduce(function (n, k) { return n + gm.round.items[k].v; }, 0);
+    var vals = gm.sel.map(function (k) { return gm.round.items[k].v; });
+    // one card is not a sum: "4 = 4" reads like a mistake rather than a running total
+    $('gSent').textContent = vals.length > 1 ? vals.join(' + ') + ' = ' + tot : vals.join('');
+  }
+
+  /* ----- typing a number ----- */
+  function gKey(k) {
+    if (!gm || gm.locked) return;
+    var r = gm.round;
+    if (r.mode === 'build' && gm.slots.some(function (x) { return x == null; })) return;
+    if (k === 'ok') return gSubmitNum();
+    if (k === 'del') { gm.typed = gm.typed.slice(0, -1); $('gTyped').textContent = gm.typed; return; }
+    if (gm.typed.length >= 3) return;
+    if (!gm.firstKey) gm.firstKey = Date.now();
+    gm.typed += k;
+    $('gTyped').textContent = gm.typed;
+    beep('tick');
+  }
+
+  function gSubmitNum() {
+    if (!gm.typed.length) return;
+    var r = gm.round, want = r.answer;
+    if (r.mode === 'build') {
+      var s = gm.slots, it = r.items;
+      want = (it[s[0]].v * 10 + it[s[1]].v) + (it[s[2]].v * 10 + it[s[3]].v);
+      var best = it.map(function (c) { return c.v; }).sort(function (a, b) { return b - a; });
+      gm.bestTotal = (best[0] + best[1]) * 10 + best[2] + best[3];
+      gm.myTotal = want;
+    }
+    var ok = Number(gm.typed) === want;
+    var why = ok ? '' : 'It comes to ' + want + '.';
+    if (r.mode === 'num' && r.left != null) gm.run.left = r.answer;   // Card Friends carries the total on
+    if (r.mode === 'num') gm.run.lastTotal = r.answer;
+    $('gAns').className = 'fans done ' + (ok ? 'ok' : 'bad');
+    $('gTyped').textContent = ok ? gm.typed : gm.typed + '  →  ' + want;
+    gLand(ok, why);
+  }
+
+  function gConfirm() {
+    if (!gm || gm.locked) return;
+    var r = gm.round, res;
+    if (r.mode === 'pick') {
+      if (!gm.firstKey) gm.firstKey = Date.now();
+      res = GM.checkPick(gm.sel.map(function (i) { return r.items[i]; }), r.rule);
+    } else {
+      res = GM.checkExpr(gm.tokens, r);
+    }
+    gLand(res.ok, res.why);
+  }
+
+  function gLand(ok, why) {
+    var r = gm.round;
+    gm.locked = true;
+    Array.prototype.forEach.call($('gPad').children, function (b) { b.disabled = true; });
+    var ms = Math.max(0, (gm.firstKey || Date.now()) - gm.shown);
+    gm.done[gm.i] = { ok: ok, ms: ms, mode: r.mode, t: Date.now() };
+
+    var extra = '';
+    if (r.mode === 'build' && ok) {
+      /* The sheet's winner is whoever makes the biggest total, so the second thing
+         worth knowing is whether he put the big cards in the tens. */
+      extra = gm.myTotal === gm.bestTotal
+        ? 'And that is the biggest total those four cards can make.'
+        : 'The biggest possible was ' + gm.bestTotal + ' — big cards in the tens.';
+      gm.done[gm.i].best = gm.myTotal === gm.bestTotal;
+    }
+    if (r.mode === 'num' && r.last && ok) extra = 'Down to nothing. That is the whole game.';
+
+    $('gMark').innerHTML = '<div class="fmark ' + (ok ? 'ok' : 'bad') + '">' +
+      (ok ? pickPraise() : 'Not this time') + '</div>' +
+      (why ? '<div class="fhint">' + esc(why) + '</div>' : '') +
+      (extra ? '<div class="fhint">' + esc(extra) + '</div>' : '');
+    beep(ok ? 'ok' : 'no');
+    $('gDone').classList.add('hide');
+
+    if (r.strategy) {
+      $('gStrat').classList.remove('hide');
+      $('gStrat').innerHTML = '<div class="h">How did you work it out?</div><div class="row">' +
+        GM.STRATEGIES.map(function (s) {
+          return '<button data-strat="' + s.id + '">' + s.label + '</button>';
+        }).join('') + '</div>';
+    }
+    $('gNext').classList.remove('hide');
+    $('gNext').textContent = gm.i + 1 >= gm.game.rounds ? 'See how you went →' : 'Next →';
+    var h = '';
+    for (var i = 0; i < gm.game.rounds; i++) {
+      var d = gm.done[i];
+      h += '<i class="' + (d ? (d.ok ? 'ok' : 'no') : (i === gm.i ? 'now' : '')) + '"></i>';
+    }
+    $('gDots').innerHTML = h;
+  }
+
+  function gNext() {
+    if (gm.i + 1 >= gm.game.rounds) return gFinish(true);
+    gm.i++; gRound();
+  }
+
+  function gSave() {
+    if (!gm || !gm.done.length) return null;
+    var okN = gm.done.filter(function (d) { return d.ok; }).length;
+    var entry = {
+      id: gm.game.id + ':' + gm.started, kind: 'play', game: gm.game.id, t: gm.started,
+      mins: Math.max(1, Math.round((Date.now() - gm.started) / 60000)),
+      rounds: gm.done.length, ok: okN, who: gm.who, opt: gm.opt || null,
+      detail: gm.done.map(function (d) {
+        return { ok: d.ok ? 1 : 0, ms: d.ms, strategy: d.strategy || '', best: d.best ? 1 : 0 };
+      })
+    };
+    S.pushGames([entry]);
+    return entry;
+  }
+
+  function gFinish(full) {
+    var entry = gSave();
+    if (!entry) { show('home'); paintHome(); return; }
+    var g = gm.game, okN = entry.ok, n = entry.rounds;
+    var times = gm.done.filter(function (d) { return d.ok && d.ms; }).map(function (d) { return d.ms; })
+                       .sort(function (a, b) { return a - b; });
+    $('grTitle').textContent = okN === n ? 'Every round!' : okN + ' out of ' + n;
+    $('grSub').textContent = g.title + (full ? '' : ' — stopped early, and it still counts') +
+      '. Your teacher’s note now has this in it.';
+    $('grStats').innerHTML =
+      '<div><b>' + okN + '/' + n + '</b><span>right</span></div>' +
+      '<div><b>' + entry.mins + '</b><span>minutes</span></div>' +
+      '<div><b>' + (times.length ? (times[(times.length - 1) >> 1] / 1000).toFixed(1) + 's' : '–') + '</b><span>typical think</span></div>';
+    var sum = GM.statsFor(S.load().games || [], g.id);
+    $('grList').innerHTML = '<p class="sub" style="margin-top:14px">' +
+      esc(g.title + ': ' + sum.plays + (sum.plays === 1 ? ' sitting' : ' sittings') + ' so far, ' +
+          sum.ok + ' of ' + sum.rounds + ' rounds right.') + '</p>';
+    if (okN === n) confetti(3800);
+    gm = null;
+    show('gResult');
+    paintHome();
+  }
+
+  /* ----- the note for school ----- */
+  var TEACHER = 'leo.teacher';
+  function teacher() {
+    try { return JSON.parse(localStorage.getItem(TEACHER) || '{}'); } catch (e) { return {}; }
+  }
+  function saveTeacher(t) { try { localStorage.setItem(TEACHER, JSON.stringify(t)); } catch (e) {} }
+
+  function openReport() {
+    var t = teacher();
+    $('rpWho').value = t.name || '';
+    $('rpMail').value = t.email || '';
+    paintReport();
+    show('report');
+  }
+  function reportText() {
+    var t = teacher(), st = S.load();
+    var rep = GM.report(st.games || [], { name: st.profile.name || 'Leo' });
+    var head = t.name ? 'For ' + t.name + '\n' : '';
+    return rep.title + '\n' + head + '\n' + rep.lines.join('\n');
+  }
+  function paintReport() { $('rpText').textContent = reportText(); }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target.closest('[data-game]') : null;
+    if (t) openGameIntro(t.dataset.game);
+  });
+  $('btnReport').addEventListener('click', openReport);
+  $('giBack').addEventListener('click', function () { show('home'); paintHome(); });
+  $('giStart').addEventListener('click', startGame);
+  $('giWho').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-who]'); if (!b) return;
+    giWho = b.dataset.who;
+    Array.prototype.forEach.call($('giWho').children, function (x) { x.classList.toggle('on', x === b); });
+  });
+  $('giOptSeg').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-opt]'); if (!b) return;
+    giOpt = +b.dataset.opt;
+    Array.prototype.forEach.call($('giOptSeg').children, function (x) { x.classList.toggle('on', x === b); });
+  });
+
+  $('gDeal').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-i]');
+    if (!b || !gm || gm.locked) return;
+    var i = +b.dataset.i, mode = gm.round.mode;
+    if (mode === 'build') gPlace(i);
+    else if (mode === 'pick') gToggle(i);
+    else if (mode === 'expr') {
+      if (gm.usedIdx.indexOf(i) >= 0) return;           // that die is already in the sum
+      if (!gm.firstKey) gm.firstKey = Date.now();
+      gm.tokens.push(gm.round.items[i].v); gm.usedIdx.push(i);
+      gPaintExpr(); beep('tick');
+    }
+  });
+  $('gBuild').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-slot]');
+    if (!b || !gm || gm.locked) return;
+    var k = +b.dataset.slot;
+    if (gm.slots[k] != null) { gm.slots[k] = null; gPaintSlots(); }
+  });
+  $('gPad').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (b) gKey(b.dataset.k);
+  });
+  $('gOps').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-op]');
+    if (!b || !gm || gm.locked) return;
+    if (b.dataset.op === 'undo') {
+      if (typeof gm.tokens.pop() === 'number') gm.usedIdx.pop();
+    } else { if (!gm.firstKey) gm.firstKey = Date.now(); gm.tokens.push(b.dataset.op); }
+    gPaintExpr();
+  });
+  $('gDone').addEventListener('click', gConfirm);
+  $('gStrat').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-strat]');
+    if (!b || !gm || !gm.done[gm.i]) return;
+    gm.done[gm.i].strategy = b.dataset.strat;
+    Array.prototype.forEach.call(e.currentTarget.querySelectorAll('[data-strat]'), function (x) {
+      x.classList.toggle('on', x === b);
+    });
+  });
+  $('gNext').addEventListener('click', gNext);
+  $('gQuit').addEventListener('click', function () {
+    /* A sitting that stopped halfway is still something the teacher asked him to
+       do, so it is saved rather than thrown away. */
+    if (gm && gm.done.length) return gFinish(false);
+    gm = null; show('home'); paintHome();
+  });
+  $('grAgain').addEventListener('click', function () { if (giGame) startGame(); });
+  $('grReport').addEventListener('click', openReport);
+  $('grHome').addEventListener('click', function () { show('home'); paintHome(); });
+
+  $('rpBack').addEventListener('click', function () { show('home'); paintHome(); });
+  $('rpWho').addEventListener('input', function () {
+    var t = teacher(); t.name = $('rpWho').value.trim().slice(0, 60); saveTeacher(t); paintReport();
+  });
+  $('rpMail').addEventListener('input', function () {
+    var t = teacher(); t.email = $('rpMail').value.trim().slice(0, 120); saveTeacher(t);
+  });
+  $('rpCopy').addEventListener('click', function () {
+    var txt = reportText();
+    function fallback() {
+      var r = document.createRange(); r.selectNodeContents($('rpText'));
+      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      try { document.execCommand('copy'); } catch (e2) {}
+      popup('📋', 'Copied', 'Paste it into an email', 1600);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(function () {
+        popup('📋', 'Copied', 'Paste it into an email', 1600);
+      }).catch(fallback);
+    } else fallback();
+  });
+  $('rpMailBtn').addEventListener('click', function () {
+    var t = teacher(), st = S.load();
+    var subject = (st.profile.name || 'Leo') + ' — numeracy games at home';
+    location.href = 'mailto:' + encodeURIComponent(t.email || '') +
+      '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(reportText());
+  });
+  $('rpPrint').addEventListener('click', function () { window.print(); });
+
+  document.addEventListener('keydown', function (e) {
+    if (!gm || $('games').classList.contains('hide')) return;
+    if (gm.round.mode === 'num' || gm.round.mode === 'build') {
+      if (e.key >= '0' && e.key <= '9') { e.preventDefault(); gKey(e.key); }
+      else if (e.key === 'Backspace') { e.preventDefault(); gKey('del'); }
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!$('gNext').classList.contains('hide')) gNext();
+      else if (!$('gDone').classList.contains('hide')) gConfirm();
+      else gKey('ok');
+    }
+  });
+
   /* A read-only hook for the smoke test, so it can answer questions correctly or
      wrongly on purpose instead of guessing. It exposes nothing a child could not
      already read off the screen a moment later. */
@@ -1119,8 +1559,16 @@
     coachAnswerIndex: function () { return coach && coach.q ? coach.q.answer : null; },
     factAnswer: function () { return fl && fl.queue[fl.i] ? fl.queue[fl.i].answer : null; },
     factFact: function () { return fl && fl.queue[fl.i] ? fl.queue[fl.i].id : null; },
+    gameRound: function () {
+      if (!gm || !gm.round) return null;
+      var r = gm.round;
+      return { mode: r.mode, answer: r.answer, target: r.target,
+               items: r.items.map(function (c) { return c.v; }),
+               rule: r.rule || null, i: gm.i, rounds: gm.game.rounds };
+    },
     screen: function () {
-      return ['home', 'quiz', 'coach', 'result', 'write', 'wResult', 'fluency', 'fResult']
+      return ['home', 'quiz', 'coach', 'result', 'write', 'wResult', 'fluency', 'fResult',
+              'gIntro', 'games', 'gResult', 'report']
         .filter(function (id) { return !$(id).classList.contains('hide'); })[0] || null;
     }
   };

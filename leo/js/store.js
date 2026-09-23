@@ -29,8 +29,8 @@
       model: null,
       xp: 0, best: 0,
       streak: { days: 0, last: '' },
-      sessions: [], answers: [], writing: [], facts: [], library: [],
-      pending: { sessions: [], answers: [], writing: [], facts: [], library: [] }   // not yet acknowledged by the server
+      sessions: [], answers: [], writing: [], facts: [], library: [], games: [],
+      pending: { sessions: [], answers: [], writing: [], facts: [], library: [], games: [] }   // not yet acknowledged by the server
     };
   }
 
@@ -79,9 +79,11 @@
       if (!S.state.pending.writing) S.state.pending.writing = [];
       if (!S.state.pending.facts) S.state.pending.facts = [];
       if (!S.state.pending.library) S.state.pending.library = [];
+      if (!S.state.pending.games) S.state.pending.games = [];
       if (!S.state.writing) S.state.writing = [];
       if (!S.state.facts) S.state.facts = [];
       if (!S.state.library) S.state.library = [];
+      if (!S.state.games) S.state.games = [];
       // fact attempts written before ids existed still have to merge exactly once
       S.state.facts.forEach(function (f, i) { if (!f.fid) f.fid = (f.fact || 'f') + ':' + (f.t || i); });
       // v1 records predate answer ids; give them stable ones so they merge exactly once
@@ -130,6 +132,7 @@
       st.writing = mergeById(st.writing || [], rs.writing || [], function (x) { return x.id; });
       st.facts = mergeById(st.facts || [], rs.facts || [], factId);
       st.library = mergeById(st.library || [], rs.library || [], function (x) { return x.id; });
+      st.games = mergeById(st.games || [], rs.games || [], function (x) { return x.id; });
       // A blank field on the server must not clobber a value we already hold — an
       // older record with an empty date of birth would otherwise wipe the default
       // and silently switch the dashboard back to the year-group comparison.
@@ -154,11 +157,11 @@
         var p = st.pending;
         if ((p.answers && p.answers.length) || (p.sessions && p.sessions.length) ||
             (p.writing && p.writing.length) || (p.facts && p.facts.length) ||
-            (p.library && p.library.length)) {
+            (p.library && p.library.length) || (p.games && p.games.length)) {
           return S.call('POST', { answers: p.answers, sessions: p.sessions, writing: p.writing,
-                                  facts: p.facts, library: p.library })
+                                  facts: p.facts, library: p.library, games: p.games })
             .then(function (r2) {
-            if (r2.ok) { st.pending = { sessions: [], answers: [], writing: [], facts: [], library: [] }; S.applyRemote(r2); }
+            if (r2.ok) { st.pending = { sessions: [], answers: [], writing: [], facts: [], library: [], games: [] }; S.applyRemote(r2); }
             return st;
           });
         }
@@ -193,6 +196,17 @@
       var st = S.load();
       st.library = mergeById(st.library || [], entries || [], function (x) { return x.id; });
       st.pending.library = mergeById(st.pending.library, entries || [], function (x) { return x.id; });
+      S.save();
+      return S.sync();
+    },
+
+    /* one sitting of a game from the teacher's sheet. Same shape as the shelf: an
+       append-only entry per sitting, with the per-round detail inside it, so the
+       report is derived rather than kept up to date in two places. */
+    pushGames: function (entries) {
+      var st = S.load();
+      st.games = mergeById(st.games || [], entries || [], function (x) { return x.id; });
+      st.pending.games = mergeById(st.pending.games, entries || [], function (x) { return x.id; });
       S.save();
       return S.sync();
     },
@@ -281,6 +295,8 @@
       }), answerId);
       st.sessions = mergeById(st.sessions, o.sessions || [], function (x) { return x.id; });
       st.writing = mergeById(st.writing || [], o.writing || [], function (x) { return x.id; });
+      st.library = mergeById(st.library || [], o.library || [], function (x) { return x.id; });
+      st.games = mergeById(st.games || [], o.games || [], function (x) { return x.id; });
       st.facts = mergeById(st.facts || [], (o.facts || []).map(function (f, i) {
         if (!f.fid) f.fid = (f.fact || 'imp') + ':' + (f.t || i) + ':' + i;
         return f;
@@ -292,6 +308,7 @@
       st.pending.writing = st.writing.slice();
       st.pending.facts = (st.facts || []).slice();
       st.pending.library = (st.library || []).slice();
+      st.pending.games = (st.games || []).slice();
       S.save();
       return S.sync().then(function () { return st; });
     },

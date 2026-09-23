@@ -14,7 +14,7 @@
  * falls back to local-only storage rather than breaking.
  *
  * GET  /api/progress?profile=leo   -> { ok, configured, state }
- * POST /api/progress               -> merge { profile, answers[], sessions[], writing[], facts[], library[], patch{} }
+ * POST /api/progress               -> merge { profile, answers[], sessions[], writing[], facts[], library[], games[], patch{} }
  * DELETE /api/progress?profile=leo -> wipe that profile
  *
  * Merging is by id and is idempotent, so a retried or duplicated POST cannot
@@ -28,6 +28,7 @@ const MAX_SESSIONS = 2000;
 const MAX_WRITING = 500;
 const MAX_FACTS = 20000;
 const MAX_LIBRARY = 5000;
+const MAX_GAMES = 5000;
 
 function store() {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -61,7 +62,8 @@ function blankState() {
     answers: [],
     writing: [],
     facts: [],
-    library: []
+    library: [],
+    games: []
   };
 }
 
@@ -75,6 +77,7 @@ function derive(state) {
   if (!Array.isArray(state.writing)) state.writing = [];
   if (!Array.isArray(state.facts)) state.facts = [];
   if (!Array.isArray(state.library)) state.library = [];
+  if (!Array.isArray(state.games)) state.games = [];
   const a = state.answers;
   state.xp = a.reduce((sum, x) => sum + (x.ok ? 10 + (x.lv || 3) * 2 : 2), 0);
   state.best = state.sessions.reduce((m, s) => (s.n ? Math.max(m, Math.round(100 * s.ok / s.n)) : m), 0);
@@ -151,6 +154,7 @@ module.exports = async (req, res) => {
       state.writing = mergeById(state.writing || [], body.writing || [], w => w.id).slice(-MAX_WRITING);
       state.facts = mergeById(state.facts || [], body.facts || [], factId).slice(-MAX_FACTS);
       state.library = mergeById(state.library || [], body.library || [], e => e.id).slice(-MAX_LIBRARY);
+      state.games = mergeById(state.games || [], body.games || [], e => e.id).slice(-MAX_GAMES);
       if (body.patch && typeof body.patch === 'object') {
         if (body.patch.profile) Object.assign(state.profile, body.patch.profile);
         if (body.patch.settings) Object.assign(state.settings, body.patch.settings);
