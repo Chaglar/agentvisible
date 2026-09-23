@@ -90,19 +90,21 @@ Storage is an **append-only attempt log**. Box and fluency are derived on read r
 than written down, so two devices merge by id with no conflict resolution and no
 last-write-wins — the same property the answer log has.
 
-## Games from school
+## Games from school — "Leo's Numeracy Games"
 
 The teacher sent home a sheet of nine numeracy games to play with a deck of cards
 and some dice. They are in the app as a section of their own, with **her wording
 kept verbatim** on each game's opening screen, so what happens on screen can be
-checked against the paper.
+checked against the paper — down to her titles and her sheet's own name, so the
+section on screen, the paper on the fridge and the note that goes back to school
+all call the same nine games the same thing.
 
 | Game | What it drills | How it works here |
 |---|---|---|
 | Cards & Numbers | 2-digit addition, place value | Arrange four cards into two 2-digit numbers, then type the total. It also says whether that was the biggest total those cards could make. |
 | Highest/Lowest Number Wins | Adding several numbers | Four or five cards, seeded so a double or a pair making ten is always there to find. |
 | Card Count | Doubles, flexible ways to make a number | Double both cards and add; then pick two other numbers that make the same total. |
-| Go Fish — Friends of 20 | Friends of 20, 25, 30 | Find the cards that make the target. Played with a full deck: J 11, Q 12, K 13. |
+| Go Fish | Friends of 20, 25, 30 | Find the cards that make the target. Played with a full deck: J 11, Q 12, K 13. |
 | Brainy Cards Friends to 20 | Friends of 20, adding 3+ numbers | Three or more cards, exactly 20, bust if you go over. |
 | Card Friends | Subtraction from 100 | Add two cards, take them off the running total, down to nought. |
 | Times Table | Tables | The sheet's 2s, 5s, 10s and 3s, plus the 4s, 6s, 7s, 8s and 9s as the harder set. |

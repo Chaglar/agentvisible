@@ -146,7 +146,7 @@
     var name = opts.name || 'Leo';
     var head = '<header class="rhead">' +
       '<div class="who"><span class="av">' + (opts.avatar || '🦁') + '</span>' +
-      '<div><h2>' + esc(name) + ' — maths games at home</h2>' +
+      '<div><h2>' + esc(name) + '’s Numeracy Games</h2>' +
       '<p>The nine games from the sheet, played at the kitchen table</p></div></div>' +
       '<div class="for">' + (opts.teacher ? '<b>For ' + esc(opts.teacher) + '</b>' : '') +
       '<span>' + (sum.sittings ? dmy(sum.first) + ' – ' + dmy(sum.last) : dmy(Date.now())) + '</span></div>' +

@@ -246,6 +246,7 @@
       id: 'highlow', title: 'Highest/Lowest Number Wins', emoji: '🎴', needs: 'cards', rounds: 6,
       sheet: 'Turn 4 or 5 cards. Use strategies such as doubles, friends of 10 etc.',
       kid: 'Add up all the cards. Look for doubles and pairs that make ten — they are quicker.',
+      note: 'Playing against someone: agree before you turn the cards whether the highest total wins this round or the lowest does.',
       skills: ['adding several numbers', 'friends of ten', 'doubles'],
       round: function (i, run, rng) {
         var n = i % 2 ? 5 : 4;
@@ -286,7 +287,7 @@
       }
     },
     {
-      id: 'gofish20', title: 'Go Fish — Friends of 20', emoji: '🐟', needs: 'cards', rounds: 6,
+      id: 'gofish20', title: 'Go Fish', emoji: '🐟', needs: 'cards', rounds: 6,
       sheet: 'Friends of 20 Go Fish (and higher)',
       kid: 'Find the cards that add up to the number at the top. Two or three of them.',
       note: 'A whole deck, so the picture cards are in: J is 11, Q is 12, K is 13, and an ace is 1.',
@@ -485,7 +486,7 @@
     var name = opts.name || 'Leo';
     var s = summary(log);
     var lines = [];
-    var title = name + ' — numeracy games at home';
+    var title = name + '’s Numeracy Games — played at home';
 
     if (!s.sittings) {
       lines.push('No games played yet.');

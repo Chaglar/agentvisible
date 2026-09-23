@@ -1130,7 +1130,12 @@
   var giGame = null, giWho = 'parent', giOpt = null;
 
   function paintGames() {
-    var sum = GM.summary(S.load().games || []);
+    var st0 = S.load();
+    /* Her sheet is headed "<name>'s Numeracy Games". Using her title rather than
+       one of mine means the section on screen, the sheet on the fridge and the note
+       that goes back all call the same nine games the same thing. */
+    $('gamesTitle').textContent = (st0.profile.name || 'Leo') + '’s Numeracy Games';
+    var sum = GM.summary(st0.games || []);
     $('gamesN').textContent = sum.sittings ? sum.sittings + (sum.sittings === 1 ? ' sitting' : ' sittings') : '';
     $('gameCards').innerHTML = sum.games.map(function (g) {
       var note = g.plays
