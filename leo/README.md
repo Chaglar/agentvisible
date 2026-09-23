@@ -90,6 +90,67 @@ Storage is an **append-only attempt log**. Box and fluency are derived on read r
 than written down, so two devices merge by id with no conflict resolution and no
 last-write-wins — the same property the answer log has.
 
+## Games from school
+
+The teacher sent home a sheet of nine numeracy games to play with a deck of cards
+and some dice. They are in the app as a section of their own, with **her wording
+kept verbatim** on each game's opening screen, so what happens on screen can be
+checked against the paper.
+
+| Game | What it drills | How it works here |
+|---|---|---|
+| Cards & Numbers | 2-digit addition, place value | Arrange four cards into two 2-digit numbers, then type the total. It also says whether that was the biggest total those cards could make. |
+| Highest/Lowest Number Wins | Adding several numbers | Four or five cards, seeded so a double or a pair making ten is always there to find. |
+| Card Count | Doubles, flexible ways to make a number | Double both cards and add; then pick two other numbers that make the same total. |
+| Go Fish — Friends of 20 | Friends of 20, 25, 30 | Find the cards that make the target. |
+| Brainy Cards Friends to 20 | Friends of 20, adding 3+ numbers | Three or more cards, exactly 20, bust if you go over. |
+| Card Friends | Subtraction from 100 | Add two cards, take them off the running total, down to nought. |
+| Times Table | Tables | The sheet's 2s, 5s, 10s and 3s, plus the 4s, 6s, 7s, 8s and 9s as the harder set. |
+| Dots and Numerals | Adding, subitising | Four dice, drawn as pips rather than digits. |
+| Target Number | All four operations | Five dice and a target; tap dice and signs to build a sum that hits it. |
+
+The app does the two jobs a parent at the kitchen table does badly: **it deals and
+it remembers**. It does not replace the partner — the first thing each game asks is
+who is playing, because these are partner games and the talk is half of them.
+
+**Every hand is built around a solution before the rest of the cards go in.** A
+randomly dealt hand often has no way to make 20 at all, and a child who cannot find
+one concludes he is the problem rather than the deal. The same goes for Target
+Number: the target is chosen *from* what the five dice can actually reach, never
+picked first and hoped for. Both of those were wrong on the first attempt — Go Fish
+asked for three cards to make 40, which a ten-card deck cannot do — and the smoke
+test now brute-forces 1,440 dealt hands and 240 targets every run.
+
+Card Friends steers its own deal so the last round lands exactly on nought. Two
+cards can only take away 2 to 20, so a random deal from 100 either overshoots or
+strands him at 7 with no rounds left, and "continue until 0" is the whole game.
+
+Four of the nine ask for the strategy out loud ("describe strategy to partner",
+"discuss quickest way"). Those rounds offer one tap — partitioning, doubles,
+bridging to ten, counting on, just knew it — and that is the part of the report the
+teacher cannot get from a score.
+
+### The note that goes back to school
+
+She asked for these to be played at home and has no way of seeing any of it, so the
+app writes the note: dates, sittings, rounds, accuracy and typical thinking time per
+game, the strategies he reported, **what has not been played yet**, and a short
+"coming quickly / still being worked out" split. It is on the practice page under
+*Note for your teacher* and on the dashboard, with copy, email and print.
+
+It contains **only the games** — no percentiles, no writing, no reading, nothing
+about the app's own assessment.
+
+The teacher's **name** is typed once and rides along in the profile, so a note
+printed from the dashboard on the laptop is addressed the same way as one sent from
+the tablet. Her **email** stays in `localStorage` on the device that sends the mail
+and is never synced: it is a contact detail belonging to someone who never agreed to
+be in this record, and nothing here needs it except the mail button. Neither is in
+this repository.
+
+Storage is one append-only entry per sitting, with the per-round detail inside it.
+The report is derived on read, like everything else here.
+
 ## The reading shelf
 
 The single thing that will decide how Leo reads in two years is not this question
@@ -115,9 +176,12 @@ Four decisions, each from his profile rather than from what was easy:
   visible on the thing that earned it.
 - **The suggestions are chosen for this reader** — Jacobs' *English Fairy Tales*
   because the OC paper drew a passage straight from it, Banjo Paterson because it
-  is 1890s language a boy will actually finish, *Double Helix* because it is the
-  exact shape of the NAPLAN Year 3 reading magazine, and field guides to rocks and
+  is 1890s language a boy will actually finish, a science magazine because the NAPLAN Year 3
+  reading test *is* a magazine of mixed short texts, and field guides to rocks and
   fungi because that is where his background knowledge already runs deepest.
+  (The original suggestion here was CSIRO's *Double Helix*; it stopped publishing
+  in June 2025. Back issues still stand, but the live alternatives are National
+  Geographic Kids or Aquila.)
 
 ### Reading the books in the app
 
@@ -465,6 +529,7 @@ leo/
     bank.js               generators: number, add/sub, mult/div, fractions, patterns
     bank-measure.js       generators: measurement, geometry, data & chance
     bank-verbal.js        generators: reading, language, thinking skills, maths reasoning
+    games.js              the nine games from the teacher's sheet, and the note back to her
     store.js              server sync plus a local cache and an offline queue
     norms.js              item response model, ability estimation, age percentiles
     engine.js             session construction and the adaptive rule
@@ -494,13 +559,14 @@ npm run smoke
 `test/smoke.mjs` drives the real app in Chromium: it sits a 12-question NAPLAN
 test answering 9 right and 3 wrong on purpose, checks the score, checks the
 difficulty ladder actually climbed, works the fix-up round, drills a set of number
-facts through the keypad, submits a piece of
+facts through the keypad, plays four of the games from school — one of each kind of
+round — submits a piece of
 writing both typed and as a photo of the page, and then opens the dashboard in a
 **separate browser profile**. That last part matters — a second profile shares no
-localStorage, so if the answers, sessions, writing and fact attempts all show up
-there, the record genuinely came back from the server.
+localStorage, so if the answers, sessions, writing, fact attempts and games all show
+up there, the record genuinely came back from the server.
 
-It asserts 63 things and exits non-zero if any of them fail, so it can gate a
+It asserts 81 things and exits non-zero if any of them fail, so it can gate a
 deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
 
 It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and
@@ -508,7 +574,7 @@ wipes that profile before and after, so runs are independent and it can never
 touch Leo's real record — including when `SMOKE_BASE` points at the deployed site.
 That isolation is what lets the counts be exact rather than "at least": a
 12-question test plus 3 fix-ups must leave exactly 15 answers, 2 sessions, 2
-pieces of writing and 20 fact attempts. Without the wipe, a dev-server left running from a previous run
+pieces of writing, 20 fact attempts and 4 games. Without the wipe, a dev-server left running from a previous run
 carries its answers over and every count quietly asserts against stale data.
 
 To answer deliberately rather than by guessing, the test reads `LEO.debug`, a

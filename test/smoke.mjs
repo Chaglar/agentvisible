@@ -297,6 +297,193 @@ check('slow and wrong facts are listed for another go',
 await shot(page, '14-fact-result');
 await page.click('#frHome');            // this already returns to the home screen
 
+/* ---------------- the games from school ---------------- */
+await page.waitForSelector('#home:not(.hide)');
+check('all nine games from the sheet are offered', (await page.locator('[data-game]').count()) === 9,
+  (await page.locator('[data-game]').count()) + ' games');
+
+/* Two hands the app deals must be solvable by construction, or the child meets a
+   round he cannot win however well he thinks. Both were wrong first time: Go Fish
+   asked for three cards to make 40, which a 1-10 deck cannot do. */
+const dealt = await page.evaluate(() => {
+  const G = window.LEO.games;
+  function solvable(items, rule) {
+    const v = items.map(i => i.v), n = v.length;
+    for (let m = 1; m < (1 << n); m++) {
+      const idx = []; for (let i = 0; i < n; i++) if (m & (1 << i)) idx.push(i);
+      if (idx.length < rule.min || (rule.max && idx.length > rule.max)) continue;
+      if (idx.reduce((a, i) => a + v[i], 0) === rule.target) return true;
+    }
+    return false;
+  }
+  let hands = 0, stuck = 0, targets = 0, unreachable = 0, zero = 0, notZero = 0;
+  ['gofish20', 'brainy20'].forEach(id => {
+    const g = G.byId(id);
+    for (let s = 0; s < 120; s++) {
+      const run = { total: g.rounds };
+      for (let i = 0; i < g.rounds; i++) {
+        const r = g.round(i, run, Math.random);
+        hands++;
+        if (!solvable(r.items, r.rule)) stuck++;
+      }
+    }
+  });
+  const tg = G.byId('target');
+  for (let s = 0; s < 60; s++) {
+    const run = { total: tg.rounds };
+    for (let i = 0; i < tg.rounds; i++) {
+      const r = tg.round(i, run, Math.random);
+      targets++;
+      const reach = G.reachable(r.items.map(d => d.v));
+      if (r.target == null || reach[r.target] == null) unreachable++;
+    }
+  }
+  const cf = G.byId('cardfriends');
+  for (let s = 0; s < 120; s++) {
+    const run = Object.assign({ total: cf.rounds }, cf.start());
+    let last = null;
+    for (let i = 0; i < cf.rounds; i++) {
+      const r = cf.round(i, run, Math.random);
+      run.left = r.answer; last = r.answer;
+      if (r.answer < 0) notZero++;
+    }
+    if (last === 0) zero++; else notZero++;
+  }
+  return { hands, stuck, targets, unreachable, zero, notZero };
+});
+check('every hand the app deals can actually be solved',
+  dealt.stuck === 0, `${dealt.hands} hands, ${dealt.stuck} with no answer in them`);
+check('Target Number targets are reachable from the dice on the table',
+  dealt.unreachable === 0, `${dealt.targets} targets, ${dealt.unreachable} impossible`);
+check('Card Friends counts down to exactly nought',
+  dealt.notZero === 0, `${dealt.zero} of ${dealt.zero + dealt.notZero} games ended on 0`);
+
+/* An expression that hits the target, found the way a person would: combine two
+   numbers, then carry on with what is left. */
+function solveTarget(dice, target) {
+  const seen = new Set();
+  function go(list) {
+    for (const e of list) if (Math.abs(e.v - target) < 1e-9) return e.toks;
+    if (list.length === 1) return null;
+    for (let i = 0; i < list.length; i++) for (let j = 0; j < list.length; j++) {
+      if (i === j) continue;
+      const a = list[i], b = list[j], rest = list.filter((_, k) => k !== i && k !== j);
+      const cands = [
+        { v: a.v + b.v, t: ['(', ...a.toks, '+', ...b.toks, ')'] },
+        { v: a.v * b.v, t: ['(', ...a.toks, '×', ...b.toks, ')'] },
+        { v: a.v - b.v, t: ['(', ...a.toks, '-', ...b.toks, ')'] }
+      ];
+      if (b.v && a.v % b.v === 0) cands.push({ v: a.v / b.v, t: ['(', ...a.toks, '÷', ...b.toks, ')'] });
+      for (const c of cands) {
+        if (c.v < 0 || c.v > 500) continue;
+        const key = rest.map(r => r.v).sort().join(',') + '|' + c.v;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const r = go([...rest, { v: c.v, toks: c.t }]);
+        if (r) return r;
+      }
+    }
+    return null;
+  }
+  return go(dice.map(d => ({ toks: [d], v: d })));
+}
+function subsetFor(items, rule) {
+  const n = items.length;
+  for (let m = 1; m < (1 << n); m++) {
+    const idx = []; for (let i = 0; i < n; i++) if (m & (1 << i)) idx.push(i);
+    if (idx.length < rule.min || (rule.max && idx.length > rule.max)) continue;
+    if (idx.reduce((a, i) => a + items[i], 0) === rule.target) return idx;
+  }
+  return null;
+}
+async function tapNumber(n) {
+  for (const ch of String(n)) await page.click(`#gPad [data-k="${ch}"]`);
+  await page.click('#gPad [data-k="ok"]');
+}
+
+/* Play one game of each kind: typing a total, arranging cards, picking a set, and
+   building a sum out of dice. */
+let gamesPlayed = 0, gameRounds = 0, gameRight = 0, sawStrategy = false;
+for (const id of ['cards2digit', 'gofish20', 'cardfriends', 'target']) {
+  await page.click(`[data-game="${id}"]`);
+  await page.waitForSelector('#gIntro:not(.hide)');
+  if (id === 'cards2digit') {
+    check("the teacher's own wording is on the screen",
+      /Each student takes 4 cards/.test(await page.locator('#giSheet').textContent()));
+    check('it asks who he is playing with', (await page.locator('#giWho [data-who]').count()) === 3);
+  }
+  await page.click('#giWho [data-who="parent"]');
+  await page.click('#giStart');
+  await page.waitForSelector('#games:not(.hide)');
+  if (id === 'cards2digit') await shot(page, '18-game-cards');
+
+  const rounds = await page.evaluate(() => window.LEO.debug.gameRound().rounds);
+  for (let r = 0; r < rounds; r++) {
+    const rd = await page.evaluate(() => window.LEO.debug.gameRound());
+    /* One deliberate mistake, to prove a wrong answer is actually refused. */
+    const wrongOnPurpose = (id === 'gofish20' && r === 0);
+    if (rd.mode === 'num') await tapNumber(rd.answer);
+    else if (rd.mode === 'build') {
+      for (let i = 0; i < 4; i++) await page.click(`#gDeal [data-i="${i}"]`);
+      await tapNumber((rd.items[0] * 10 + rd.items[1]) + (rd.items[2] * 10 + rd.items[3]));
+    } else if (rd.mode === 'pick') {
+      const idx = wrongOnPurpose ? [0, 1, 2].slice(0, rd.rule.min) : subsetFor(rd.items, rd.rule);
+      if (!idx) { check('a Go Fish hand had no answer in it', false, JSON.stringify(rd)); break; }
+      for (const i of idx) await page.click(`#gDeal [data-i="${i}"]`);
+      await page.click('#gDone');
+    } else if (rd.mode === 'expr') {
+      const toks = solveTarget(rd.items, rd.target);
+      if (!toks) { check('a Target Number round was impossible', false, JSON.stringify(rd)); break; }
+      const pool = rd.items.slice();
+      for (const t of toks) {
+        if (typeof t === 'number') { const i = pool.indexOf(t); pool[i] = null; await page.click(`#gDeal [data-i="${i}"]`); }
+        else await page.click(`#gOps [data-op="${t}"]`);
+      }
+      await page.click('#gDone');
+    }
+    await page.waitForSelector('#gNext:not(.hide)');
+    const marked = (await page.locator('#gMark .fmark').getAttribute('class')) || '';
+    if (/ok/.test(marked)) gameRight++;
+    if (wrongOnPurpose) {
+      check('a pick that does not make the target is refused', /bad/.test(marked),
+        (await page.locator('#gMark').textContent()).trim().slice(0, 60));
+    }
+    if (await page.locator('#gStrat:not(.hide) [data-strat]').count()) {
+      await page.click('#gStrat [data-strat="split"]');
+      sawStrategy = true;
+    }
+    gameRounds++;
+    await page.click('#gNext');
+  }
+  await page.waitForSelector('#gResult:not(.hide)', { timeout: 8000 });
+  gamesPlayed++;
+  if (id === 'target') await shot(page, '19-game-result');
+  await page.click('#grHome');
+  await page.waitForSelector('#home:not(.hide)');
+}
+check('a game of each kind plays through', gamesPlayed === 4 && gameRounds === 23,
+  `${gamesPlayed} games, ${gameRounds} rounds, ${gameRight} right`);
+check('all but the deliberate mistake are marked right', gameRight === gameRounds - 1,
+  `${gameRight} of ${gameRounds}`);
+check('the games that ask for a strategy record it', sawStrategy);
+
+/* The note that goes back to school. */
+await page.click('#btnReport');
+await page.waitForSelector('#report:not(.hide)');
+await page.fill('#rpWho', 'Mrs Smoke');
+await page.waitForTimeout(150);
+const note = await page.locator('#rpText').textContent();
+check('the teacher note names the games played',
+  /Cards & Numbers/.test(note) && /Card Friends/.test(note) && /Target Number/.test(note));
+check('the teacher note says what has NOT been played', /Not played yet: .*Dots and Numerals/.test(note),
+  (note.match(/Not played yet:[^\n]*/) || [''])[0].slice(0, 80));
+check('the teacher note is addressed to the teacher', /For Mrs Smoke/.test(note));
+check('nothing but the games is in the note',
+  !/NAPLAN|writing|percentile|reading/i.test(note));
+await shot(page, '20-teacher-note');
+await page.click('#rpBack');
+await page.waitForSelector('#home:not(.hide)');
+
 /* ---------------- writing: typed ---------------- */
 await page.waitForSelector('#home:not(.hide)');
 await page.click('[data-write="spark"]');
@@ -332,21 +519,23 @@ await shot(page, '10-writing-photo');
 const kidState = await page.evaluate(() => {
   const st = window.LEO.store.load();
   return { answers: st.answers.length, sessions: st.sessions.length, writing: st.writing.length,
-           facts: st.facts.length, library: st.library.length,
+           facts: st.facts.length, library: st.library.length, games: st.games.length,
            pendingAnswers: st.pending.answers.length, pendingWriting: st.pending.writing.length,
-           pendingFacts: st.pending.facts.length, pendingLibrary: st.pending.library.length };
+           pendingFacts: st.pending.facts.length, pendingLibrary: st.pending.library.length,
+           pendingGames: st.pending.games.length };
 });
 check('nothing left unsynced',
   kidState.pendingAnswers === 0 && kidState.pendingWriting === 0 && kidState.pendingFacts === 0 &&
-  kidState.pendingLibrary === 0,
+  kidState.pendingLibrary === 0 && kidState.pendingGames === 0,
   JSON.stringify(kidState));
 // The record was wiped at the start, so these are exact, not "at least".
-const want = { answers: 12 + fixups, sessions: 2, writing: 2, facts: FACTS_N };
+const want = { answers: 12 + fixups, sessions: 2, writing: 2, facts: FACTS_N, games: gamesPlayed };
 check('the record holds exactly what was done',
   kidState.answers === want.answers && kidState.sessions === want.sessions &&
-  kidState.writing === want.writing && kidState.facts === want.facts,
-  `got ${kidState.answers}/${kidState.sessions}/${kidState.writing}/${kidState.facts}, ` +
-  `want ${want.answers}/${want.sessions}/${want.writing}/${want.facts} (answers/sessions/writing/facts)`);
+  kidState.writing === want.writing && kidState.facts === want.facts && kidState.games === want.games,
+  `got ${kidState.answers}/${kidState.sessions}/${kidState.writing}/${kidState.facts}/${kidState.games}, ` +
+  `want ${want.answers}/${want.sessions}/${want.writing}/${want.facts}/${want.games} ` +
+  `(answers/sessions/writing/facts/games)`);
 
 /* ---------------- the parent's device: a DIFFERENT browser profile ---------------- */
 const parent = await browser.newContext({ viewport: { width: 1200, height: 1000 }, deviceScaleFactor: 2 });
@@ -360,7 +549,7 @@ await dash.waitForTimeout(1500);
 const seen = await dash.evaluate(() => {
   const st = window.LEO.store.load();
   return { answers: st.answers.length, sessions: st.sessions.length, writing: st.writing.length,
-           facts: st.facts.length, library: st.library.length };
+           facts: st.facts.length, library: st.library.length, games: st.games.length };
 });
 check('fresh device sees the answers', seen.answers === kidState.answers, `${seen.answers} vs ${kidState.answers}`);
 check('fresh device sees the sessions', seen.sessions === kidState.sessions, `${seen.sessions} vs ${kidState.sessions}`);
@@ -377,10 +566,24 @@ check('accuracy-by-difficulty chart drawn', (await dash.locator('#chartLevels sv
 check('writing section populated', (await dash.locator('#writeTable tbody tr').count()) >= 2);
 check('writing score chart drawn', (await dash.locator('#chartWriting svg').count()) === 1);
 check('session log lists the rounds', (await dash.locator('#sessionTable tbody tr').count()) >= 2);
+check('fresh device sees the games from school', seen.games === kidState.games, `${seen.games} vs ${kidState.games}`);
+check('games panel lists all nine', (await dash.locator('#gameTable tbody tr').count()) === 9,
+  (await dash.locator('#gameTable tbody tr').count()) + ' rows');
+check('the dashboard carries the note for the teacher',
+  /GAMES FROM THE SHEET/.test(await dash.locator('#gameReport').textContent()));
+/* The name is typed on the tablet and must reach the laptop: it rides in the
+   profile for exactly this reason, so a note printed from the dashboard is
+   addressed the same way. */
+check('the teacher’s name followed to the other device',
+  /For Mrs Smoke/.test(await dash.locator('#gameReport').textContent()) &&
+  (await dash.locator('#gameWho').inputValue()) === 'Mrs Smoke',
+  (await dash.locator('#gameWho').inputValue()));
 check('reading panel populated', (await dash.locator('#libTable tbody tr').count()) === 2,
   (await dash.locator('#libTable tbody tr').count()) + ' books listed');
 check('reading panel shows how he reads', /🎧/.test(await dash.locator('#libStats').textContent()));
-check('number-fact section populated', (await dash.locator('.ftrack').count()) === 6);
+// scoped to the facts panel: reading and the games panel use the same tile class
+check('number-fact section populated', (await dash.locator('#factTracks .ftrack').count()) === 3,
+  (await dash.locator('#factTracks .ftrack').count()) + ' tracks');
 check('fact heatmap drawn', (await dash.locator('#factGrid .fcell').count()) === 44);
 check('heatmap separates wrong from slow',
   (await dash.locator('#factGrid .fcell:not(.new)').count()) > 0,

@@ -216,6 +216,54 @@
 
   var libBlockHTML = null;
 
+  /* ---------------- games from school ---------------- */
+  /* The teacher sent nine games home and has no way of seeing any of them played.
+     This panel is what she gets back: what was played, how it went, and the note
+     itself, ready to copy. Deliberately only the games — nothing else in this
+     dashboard is anyone else's business. */
+  var gamesBlockHTML = null;
+  function paintGames() {
+    var block = $('gamesBlock');
+    if (gamesBlockHTML === null) gamesBlockHTML = block.innerHTML;
+    var G = L.games, log = S.load().games || [], sum = G.summary(log);
+    $('gamesN').textContent = sum.sittings ? sum.sittings + (sum.sittings === 1 ? ' sitting' : ' sittings') : '';
+    if (!sum.sittings) {
+      block.innerHTML = '<div class="card empty">None of the nine games played yet. On the practice page, ' +
+        '<b>Games from school</b> deals the cards and keeps the score.</div>';
+      return;
+    }
+    if (!$('gameTable')) block.innerHTML = gamesBlockHTML;
+
+    var pct = Math.round(100 * sum.ok / Math.max(1, sum.rounds));
+    $('gameStats').innerHTML =
+      '<div class="ftrack"><div class="t">🎲 Games played</div><div class="v">' + sum.played.length +
+        ' <em>of ' + sum.games.length + '</em></div></div>' +
+      '<div class="ftrack"><div class="t">Rounds</div><div class="v">' + sum.rounds +
+        ' <em>· ' + pct + '% right</em></div></div>' +
+      '<div class="ftrack"><div class="t">⏱ Time played</div><div class="v">' +
+        (sum.mins >= 60 ? Math.round(sum.mins / 60) + ' <em>hours</em>' : sum.mins + ' <em>minutes</em>') +
+        '</div></div>';
+
+    $('gameTable').innerHTML =
+      '<thead><tr><th>Game</th><th class="num">Sittings</th><th class="num">Rounds</th><th class="num">Right</th>' +
+      '<th class="num">Typical think</th><th>Last played</th></tr></thead><tbody>' +
+      sum.games.slice().sort(function (a, b) { return b.rounds - a.rounds; }).map(function (g) {
+        return '<tr' + (g.plays ? '' : ' class="dim"') + '><td><b>' + esc(g.game.title) + '</b>' +
+          '<div class="sub">' + esc(g.game.skills.join(' · ')) + '</div></td>' +
+          '<td class="num">' + (g.plays || '–') + '</td>' +
+          '<td class="num">' + (g.rounds || '–') + '</td>' +
+          '<td class="num">' + (g.rounds ? g.pct + '%' : '–') + '</td>' +
+          '<td class="num">' + (g.med ? (g.med / 1000).toFixed(1) + 's' : '–') + '</td>' +
+          '<td>' + (g.last ? fmtDate(g.last) : 'not yet') + '</td></tr>';
+      }).join('') + '</tbody>';
+
+    var st = S.load();
+    var rep = G.report(log, { name: st.profile.name || 'Leo' });
+    var who = st.profile.teacher || '';
+    if (document.activeElement !== $('gameWho')) $('gameWho').value = who;
+    $('gameReport').textContent = rep.title + '\n' + (who ? 'For ' + who + '\n' : '') + '\n' + rep.lines.join('\n');
+  }
+
   function paintLibrary() {
     var block = $('libBlock');
     if (libBlockHTML === null) libBlockHTML = block.innerHTML;
@@ -503,15 +551,30 @@
     var hasWriting = (st.writing || []).length > 0;
     var hasFacts = (st.facts || []).length > 0;
     var hasBooks = (st.library || []).length > 0;
-    $('empty').classList.toggle('hide', has || hasWriting || hasFacts || hasBooks);
-    $('dash').style.display = (has || hasWriting || hasFacts || hasBooks) ? '' : 'none';
-    if (!has) { paintLibrary(); paintFacts(); paintWriting(); paintSettings(); return; }
+    var hasGames = (st.games || []).length > 0;
+    $('empty').classList.toggle('hide', has || hasWriting || hasFacts || hasBooks || hasGames);
+    $('dash').style.display = (has || hasWriting || hasFacts || hasBooks || hasGames) ? '' : 'none';
+    if (!has) { paintGames(); paintLibrary(); paintFacts(); paintWriting(); paintSettings(); return; }
 
     var stats = topicStats();
-    paintKpis(); paintAbility(); paintTopics(stats); paintLevels(); paintLibrary(); paintFacts(); paintDays(); paintWriting(); paintRecs(stats); paintSessions(); paintSettings();
+    paintKpis(); paintAbility(); paintTopics(stats); paintLevels(); paintGames(); paintLibrary(); paintFacts(); paintDays(); paintWriting(); paintRecs(stats); paintSessions(); paintSettings();
   }
 
   /* ---------------- wiring ---------------- */
+  /* The same field as the practice page: the name rides in the profile so it is
+     typed once, not once per device. */
+  document.addEventListener('change', function (e) {
+    if (!e.target.closest || !e.target.closest('#gameWho')) return;
+    S.patch({ profile: { teacher: $('gameWho').value.trim().slice(0, 60) } }).then(paintGames);
+  });
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest || !e.target.closest('#btnCopyReport')) return;
+    var txt = $('gameReport').textContent;
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).catch(function () {});
+    $('btnCopyReport').textContent = 'Copied';
+    setTimeout(function () { $('btnCopyReport').textContent = 'Copy the text'; }, 1600);
+  });
+
   $('rangeTabs').addEventListener('click', function (e) {
     var b = e.target.closest('[data-range]'); if (!b) return;
     range = +b.dataset.range;
