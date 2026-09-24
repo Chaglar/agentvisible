@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<title>A short video</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50' font-size='50'>🎬</text></svg>">
+<style>
+/* The page a QR code opens. One video, a line of context, nothing else: whoever
+   scans it is reading an application, not browsing a site. */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#f7f8fa;--card:#fff;--ink:#0b0b0b;--mut:#52514e;--line:#e3e6ec;--acc:#2a78d6}
+@media (prefers-color-scheme:dark){:root{--bg:#101418;--card:#1a1a19;--ink:#fff;--mut:#c3c2b7;--line:#2b2f36;--acc:#3987e5}}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,"Segoe UI",Roboto,system-ui,sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:28px 16px 40px}
+main{width:100%;max-width:860px}
+h1{font-size:24px;letter-spacing:-.02em;line-height:1.25;margin-bottom:14px}
+.frame{background:#000;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.08),0 14px 36px -22px rgba(0,0,0,.55)}
+video{display:block;width:100%;max-height:78vh;background:#000}
+.note{margin-top:16px;white-space:pre-line;font-size:15.5px}
+footer{margin-top:22px;padding-top:12px;border-top:1px solid var(--line);font-size:13px;color:var(--mut)}
+.msg{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:34px 22px;text-align:center;color:var(--mut)}
+.msg b{display:block;color:var(--ink);font-size:18px;margin-bottom:6px}
+.hide{display:none}
+</style>
+</head>
+<body>
+<main>
+  <div id="wait" class="msg">Loading…</div>
+  <div id="gone" class="msg hide"><b>This link is no longer active.</b>The family who shared it has withdrawn it.</div>
+  <div id="show" class="hide">
+    <h1 id="title"></h1>
+    <div class="frame"><video id="vid" controls playsinline preload="metadata"></video></div>
+    <p class="note" id="note"></p>
+    <footer>Shared privately by the family. Please do not forward this link — it can be withdrawn at any time.</footer>
+  </div>
+</main>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  // The code rides in the #fragment, which browsers never send to a server.
+  var code = (location.hash || '').replace(/^#/, '').replace(/[^A-Za-z0-9_-]/g, '');
+  var vid = $('vid'), refreshing = false;
+
+  function fetchSrc() {
+    return fetch('/api/video?v=' + encodeURIComponent(code), { cache: 'no-store' })
+      .then(function (r) { return r.json(); });
+  }
+  function gone() { $('wait').classList.add('hide'); $('show').classList.add('hide'); $('gone').classList.remove('hide'); }
+
+  if (!code) return gone();
+  fetchSrc().then(function (j) {
+    if (!j.ok) return gone();
+    document.title = j.title;
+    $('title').textContent = j.title;
+    $('note').textContent = j.note || '';
+    vid.src = j.src;
+    $('wait').classList.add('hide');
+    $('show').classList.remove('hide');
+  }).catch(gone);
+
+  /* The address is signed for two hours. A tab left open longer than that gets a
+     fresh one here, at the same point in the video, instead of a dead player. */
+  vid.addEventListener('error', function () {
+    if (refreshing || !vid.src) return;
+    refreshing = true;
+    var at = vid.currentTime || 0, playing = !vid.paused;
+    fetchSrc().then(function (j) {
+      if (!j.ok) return gone();
+      vid.src = j.src;
+      vid.addEventListener('loadedmetadata', function once() {
+        vid.removeEventListener('loadedmetadata', once);
+        vid.currentTime = at; if (playing) vid.play();
+        refreshing = false;
+      });
+    }).catch(function () { refreshing = false; });
+  });
+})();
+</script>
+</body>
+</html>

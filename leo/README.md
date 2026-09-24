@@ -513,6 +513,43 @@ at about +1.72, so at the extremes real ability is slightly *higher* than shown.
 standard error band is drawn on the ability chart. Topics with fewer than 8 answers show
 no percentile.
 
+## A video behind a QR code
+
+For an application: one video of Leo, opened from a QR code printed on paper. The
+dashboard's **Video for an application** panel uploads it, makes the code, prints a
+card, and can switch the code off again.
+
+Because it is a child's video on a link that leaves the house, it is built so that
+the paper can be cancelled:
+
+- **The file is in a *private* Vercel Blob store.** Its own address returns nothing.
+  It never goes into this repository — the repository is public.
+- **The QR code carries a random code, not the file's address.** `/v/#CODE` asks
+  `api/video.js` for the video, and gets back a URL signed for **two hours**.
+- **New link** issues a fresh code and kills the old one; **Delete** removes the file
+  too. Either way, every printed card stops working within two hours — including
+  for someone who copied the video address out of the page.
+- **The code is in the `#fragment`,** which browsers never send to a server, so it is
+  not in access logs or referrer headers. The page is `noindex` and `no-referrer`.
+- **Uploading needs `LEO_ACCESS_KEY`.** Without it the endpoint refuses, since an open
+  upload route on a public site is an invitation to fill the store.
+
+The file goes from the browser straight to Blob (`api/video.js` only issues a
+one-off upload permit), so a phone-sized video never passes through a function.
+The limit is 1 GB, MP4 / MOV / WebM.
+
+**Setup:** Vercel → Storage → Create → **Blob**, choose **Private**, connect it to
+this project (that sets `BLOB_READ_WRITE_TOKEN`), make sure `LEO_ACCESS_KEY` is set,
+redeploy.
+
+**Recording:** on an iPhone set *Settings → Camera → Formats → Most Compatible*
+first. The default (HEVC) plays on Apple devices but often not on a school's
+Windows PC.
+
+The two browser libraries (the Blob upload client and the QR encoder) are bundled
+once into `leo/js/vendor/video-kit.js` — the site has no build step. Rebuild with
+`npm run vendor`.
+
 ## Server-side storage
 
 `api/progress.js` is a single serverless function over a Redis-compatible REST store.
@@ -545,6 +582,9 @@ than one child; the value is scrubbed to `[a-z0-9_-]`.
 ```
 api/progress.js           server-side record
 api/writing.js            marks a photographed piece of writing
+api/video.js              the private video: upload permit, codes, signed URLs
+v/index.html              the page a QR code opens
+tools/video-kit.entry.mjs entry for the one bundled browser file
 leo/
   index.html              student app
   app.css
@@ -566,6 +606,8 @@ leo/
     charts.js             dashboard charts
     app.js                student controller
     admin.js              dashboard controller
+    video.js              the video + QR code panel
+    vendor/video-kit.js   Blob upload client + QR encoder, bundled (npm run vendor)
 ```
 
 ## Local development
@@ -596,7 +638,13 @@ writing both typed and as a photo of the page, and then opens the dashboard in a
 localStorage, so if the answers, sessions, writing, fact attempts and games all show
 up there, the record genuinely came back from the server.
 
-It asserts 87 things and exits non-zero if any of them fail, so it can gate a
+With `LEO_ACCESS_KEY=secret123` (and `WITH_KEY=1 node dev-server.js`) it also puts
+a video through the panel — Vercel's side of the upload is faked in the browser —
+**decodes the QR code** back from its pixels to check it scans to the link, opens
+the link, prints the card, and checks that *New link* and *Delete* really switch
+the old code off. Without a key it checks that uploading is refused.
+
+It asserts 94 things (90 without a key) and exits non-zero if any of them fail, so it can gate a
 deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
 
 It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and

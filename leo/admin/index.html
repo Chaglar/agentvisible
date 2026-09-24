@@ -155,6 +155,23 @@
     <div class="card scroll"><table id="sessionTable"></table></div>
   </div>
 
+  <h2>Video for an application</h2>
+  <div class="card" id="vidPanel">
+    <div id="vidStatus" class="vstatus">Checking the video service…</div>
+    <div id="vidForm" class="hide">
+      <div class="grid two" style="margin-top:12px">
+        <div class="field"><label for="vidTitle">Title</label><input id="vidTitle" type="text" maxlength="120"></div>
+        <div class="field"><label for="vidFile">Video file</label><input id="vidFile" type="file" accept="video/mp4,video/quicktime,video/webm,video/x-m4v"></div>
+      </div>
+      <div class="field"><label for="vidNote">A line under the video <span style="text-transform:none;font-weight:400">— optional</span></label>
+        <textarea id="vidNote" rows="2" maxlength="600"></textarea></div>
+      <button class="btn pri" id="vidGo">Upload and make the QR code</button>
+      <div id="vidBar" class="vbar hide"><i></i></div>
+      <div class="sub" style="margin-top:10px">On an iPhone, set <b>Settings → Camera → Formats → Most Compatible</b> before recording, so the video also plays on a school's Windows PC. Keep it short — two or three minutes — and at 1080p.</div>
+    </div>
+    <div id="vidList" style="margin-top:16px"></div>
+  </div>
+
   <h2>Settings</h2>
   <div class="grid two">
     <div class="card">
@@ -231,6 +248,7 @@
     <a href="../">Practice page</a>
   </div>
 </div>
+<div id="qrPrint"></div>
 
 <script src="../js/visuals.js"></script>
 <script src="../js/curriculum.js"></script>
@@ -252,5 +270,7 @@
 <script src="../js/engine.js"></script>
 <script src="../js/charts.js"></script>
 <script src="../js/admin.js"></script>
+<script src="../js/vendor/video-kit.js"></script>
+<script src="../js/video.js"></script>
 </body>
 </html>

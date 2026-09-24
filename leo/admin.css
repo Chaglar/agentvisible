@@ -132,11 +132,39 @@ label.rpWho input:focus{outline:none;border-color:var(--acc)}
 
 /* printing the note: only the sheet goes on the paper */
 @media print{
-  body>*:not(.wrap){display:none !important}
-  .wrap>*:not(#dash){display:none !important}
+  body:not(.pq)>*:not(.wrap){display:none !important}
+  body:not(.pq) .wrap>*:not(#dash){display:none !important}
   #dash>*:not(#gamesBlock){display:none !important}
   #gamesBlock>*:not(#reportCard){display:none !important}
   #reportCard{border:0;box-shadow:none;padding:0}
   #reportCard>*:not(#gameSlide){display:none !important}
   .wrap{padding:0;max-width:none}
+}
+
+/* ---- video + QR code ---- */
+.vstatus{font-size:13.5px;color:var(--mut)}
+.vstatus.ok{color:var(--ink)} .vstatus.warn{color:var(--critical)}
+.vbar{height:6px;border-radius:99px;background:var(--faint);overflow:hidden;margin-top:12px}
+.vbar i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
+.vitem{display:grid;grid-template-columns:132px 1fr;gap:16px;align-items:start;padding:14px 0;border-top:1px solid var(--line)}
+.vqr{background:#fff;border-radius:10px;padding:4px;border:1px solid var(--line)}
+.vqr svg{display:block;width:100%;height:auto}
+.vbody{display:grid;gap:7px;min-width:0}
+.vtitle{font-weight:700}
+.vlink{font-size:12.5px;word-break:break-all}
+.vbtns{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:560px){.vitem{grid-template-columns:96px 1fr;gap:12px}}
+#qrPrint{display:none}
+
+/* The QR card prints alone, centred, big enough to scan off a desk. The QR stays
+   black on white whatever the screen theme — a light-on-dark code often won't read. */
+@media print{
+  body.pq>*:not(#qrPrint){display:none !important}
+  body.pq{background:#fff}
+  body.pq #qrPrint{display:flex;justify-content:center;padding-top:18mm}
+  .qcard{width:120mm;text-align:center;color:#000;border:1px solid #ccc;border-radius:6mm;padding:10mm}
+  .qcard .qq svg{width:80mm;height:80mm;display:block;margin:0 auto}
+  .qcard .qt{font-size:18pt;font-weight:700;margin-top:6mm;line-height:1.25}
+  .qcard .qs{font-size:12pt;margin-top:3mm}
+  .qcard .qu{font-size:8.5pt;color:#555;margin-top:4mm;word-break:break-all}
 }
