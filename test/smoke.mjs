@@ -730,13 +730,17 @@ if (!KEY) {
   await dash.waitForSelector('#vidForm:not(.hide)');
   await dash.setInputFiles('#vidFile', { name: 'Leo intro.mp4', mimeType: 'video/mp4', buffer: Buffer.alloc(4096, 1) });
   await dash.fill('#vidNote', 'Recorded at home, September.');
+  // A video left over from an earlier run must not pass for this one.
+  const before = await dash.evaluate(() => [...document.querySelectorAll('#vidList .vitem')].map(e => e.dataset.code));
   await dash.click('#vidGo');
-  await dash.waitForSelector('#vidList .vitem', { timeout: 15000 }).catch(() => {});
-  const first = await dash.evaluate(() => {
-    const it = document.querySelector('#vidList .vitem');
+  await dash.waitForFunction(old => [...document.querySelectorAll('#vidList .vitem')].some(e => !old.includes(e.dataset.code)),
+    before, { timeout: 15000 }).catch(() => {});
+  const first = await dash.evaluate(old => {
+    const it = [...document.querySelectorAll('#vidList .vitem')].find(e => !old.includes(e.dataset.code));
     return it ? { code: it.dataset.code, link: it.querySelector('.vlink').textContent,
       svg: !!it.querySelector('.vqr svg'), status: document.getElementById('vidStatus').textContent } : null;
-  });
+  }, before);
+  const mine = `#vidList .vitem[data-code="${first && first.code}"]`;
   check('a video uploads and gets a link', !!first && /\/v\/#[A-Za-z0-9_-]{16}$/.test(first.link),
     first ? first.link : await dash.textContent('#vidStatus'));
 
@@ -744,8 +748,8 @@ if (!KEY) {
     /* Read the QR back the way a phone would: rasterise it and decode it. A code
        that renders but does not scan would look perfect in every other check. */
     await dash.addScriptTag({ path: 'node_modules/jsqr/dist/jsQR.js' });
-    const scanned = await dash.evaluate(() => new Promise(done => {
-      const svg = document.querySelector('#vidList .vitem .vqr svg').outerHTML;
+    const scanned = await dash.evaluate(sel => new Promise(done => {
+      const svg = document.querySelector(sel + ' .vqr svg').outerHTML;
       const img = new Image();
       img.onload = () => {
         const c = document.createElement('canvas'); c.width = c.height = 400;
@@ -754,7 +758,7 @@ if (!KEY) {
         done(r ? r.data : null);
       };
       img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-    }));
+    }), mine);
     check('the QR code scans to the link', scanned === first.link, String(scanned));
 
     const viewer = await parent.newPage();
@@ -776,7 +780,7 @@ if (!KEY) {
     await shot(viewer, '30-video-viewer');
 
     // The printed card: one page, the code on it, nothing else from the dashboard.
-    await dash.click('#vidList .vitem [data-act=print]');
+    await dash.click(mine + ' [data-act=print]');
     await dash.emulateMedia({ media: 'print' });
     await shot(dash, '31-qr-card-print');
     // Read before pdf(): printing fires afterprint, which takes the card back off.
@@ -788,16 +792,16 @@ if (!KEY) {
     await dash.evaluate(() => document.body.classList.remove('pq'));
     check('the QR card prints alone on one page', pages === 1 && onCard, pages + ' page(s)');
 
-    await dash.click('#vidList .vitem [data-act=rotate]');
-    await dash.waitForFunction(old => {
-      const it = document.querySelector('#vidList .vitem'); return it && it.dataset.code !== old;
-    }, first.code);
+    await dash.click(mine + ' [data-act=rotate]');
+    await dash.waitForFunction(old => !document.querySelector(`#vidList .vitem[data-code="${old}"]`), first.code);
+    const renewed = await dash.evaluate(old => [...document.querySelectorAll('#vidList .vitem')]
+      .map(e => e.dataset.code).find(c => !old.includes(c)), before);
     await viewer.goto(first.link.replace('#', '?r=1#'));
     await viewer.waitForSelector('#show:not(.hide), #gone:not(.hide)');
     check('"New link" switches the old QR code off', await viewer.isVisible('#gone'));
 
-    await dash.click('#vidList .vitem [data-act=del]');
-    await dash.waitForFunction(() => !document.querySelector('#vidList .vitem'));
+    await dash.click(`#vidList .vitem[data-code="${renewed}"] [data-act=del]`);
+    await dash.waitForFunction(c => !document.querySelector(`#vidList .vitem[data-code="${c}"]`), renewed);
     const removed = await (await fetch(`${BASE}/dev-video/deleted`)).json();
     check('"Delete" removes the file, not just the link', removed.some(u => /leo-intro-Ab12Cd\.mp4$/.test(u)), removed.join(', '));
     await viewer.close();
