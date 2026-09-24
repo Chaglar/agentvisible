@@ -1130,7 +1130,12 @@
   var giGame = null, giWho = 'parent', giOpt = null;
 
   function paintGames() {
-    var sum = GM.summary(S.load().games || []);
+    var st0 = S.load();
+    /* Her sheet is headed "<name>'s Numeracy Games". Using her title rather than
+       one of mine means the section on screen, the sheet on the fridge and the note
+       that goes back all call the same nine games the same thing. */
+    $('gamesTitle').textContent = (st0.profile.name || 'Leo') + '’s Numeracy Games';
+    var sum = GM.summary(st0.games || []);
     $('gamesN').textContent = sum.sittings ? sum.sittings + (sum.sittings === 1 ? ' sitting' : ' sittings') : '';
     $('gameCards').innerHTML = sum.games.map(function (g) {
       var note = g.plays
@@ -1152,6 +1157,8 @@
     $('giTitle').textContent = g.title;
     $('giKid').textContent = g.kid;
     $('giSheet').textContent = g.sheet;
+    $('giNote').textContent = g.note || '';
+    $('giNote').classList.toggle('hide', !g.note);
     $('giOpts').classList.toggle('hide', !g.options);
     if (g.options) {
       $('giOptLabel').textContent = g.options.label;
@@ -1177,8 +1184,14 @@
       return '<button class="die ' + cls + '" data-i="' + i + '" aria-label="' + c.v + '">' + cells + '</button>';
     }
     if (kind === 'tile') return '<button class="pcard tile ' + cls + '" data-i="' + i + '">' + c.v + '</button>';
+    /* Picture cards carry their number big and their letter small. The number is
+       what he is adding; the letter is so the card matches the one in his hand at
+       the kitchen table. */
+    var face = { 11: 'J', 12: 'Q', 13: 'K' }[c.v] || '';
     return '<button class="pcard ' + cls + (c.red ? ' red' : '') + '" data-i="' + i + '">' +
-      '<span class="s">' + c.s + '</span>' + c.v + '<span class="s2">' + c.s + '</span></button>';
+      '<span class="s">' + c.s + '</span>' + c.v +
+      (face ? '<span class="face">' + face + '</span>' : '') +
+      '<span class="s2">' + c.s + '</span></button>';
   }
 
   function startGame() {
@@ -1448,7 +1461,13 @@
     var rep = GM.report(st.games || [], { name: st.profile.name || 'Leo' });
     return rep.title + '\n' + (who ? 'For ' + who + '\n' : '') + '\n' + rep.lines.join('\n');
   }
-  function paintReport() { $('rpText').textContent = reportText(); }
+  function paintReport() {
+    var st = S.load();
+    var who = ($('rpWho').value || '').trim() || teacherName();
+    $('rpSlide').innerHTML = L.report.render(st.games || [],
+      { name: st.profile.name || 'Leo', avatar: st.profile.avatar || '🦁', teacher: who });
+    $('rpText').textContent = reportText();          // the plain version, for email and copy
+  }
 
   document.addEventListener('click', function (e) {
     var t = e.target.closest ? e.target.closest('[data-game]') : null;

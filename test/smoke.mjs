@@ -316,7 +316,8 @@ const dealt = await page.evaluate(() => {
     }
     return false;
   }
-  let hands = 0, stuck = 0, targets = 0, unreachable = 0, zero = 0, notZero = 0;
+  let hands = 0, stuck = 0, forced = 0, targets = 0, unreachable = 0, zero = 0, notZero = 0;
+  const pairs20 = {};
   ['gofish20', 'brainy20'].forEach(id => {
     const g = G.byId(id);
     for (let s = 0; s < 120; s++) {
@@ -325,6 +326,14 @@ const dealt = await page.evaluate(() => {
         const r = g.round(i, run, Math.random);
         hands++;
         if (!solvable(r.items, r.rule)) stuck++;
+        // one possible move is not a choice: the first Go Fish dealt 10+10 every time
+        if (G.countWins(r.items, r.rule) < 2) forced++;
+        if (id === 'gofish20' && r.rule.target === 20 && r.rule.min === 2) {
+          const v = r.items.map(c => c.v);
+          for (let x = 0; x < v.length; x++) for (let y = x + 1; y < v.length; y++) {
+            if (v[x] + v[y] === 20) pairs20[[v[x], v[y]].sort((a, b) => a - b).join('+')] = 1;
+          }
+        }
       }
     }
   });
@@ -349,10 +358,16 @@ const dealt = await page.evaluate(() => {
     }
     if (last === 0) zero++; else notZero++;
   }
-  return { hands, stuck, targets, unreachable, zero, notZero };
+  return { hands, stuck, forced, targets, unreachable, zero, notZero, pairs20: Object.keys(pairs20) };
 });
 check('every hand the app deals can actually be solved',
   dealt.stuck === 0, `${dealt.hands} hands, ${dealt.stuck} with no answer in them`);
+/* Two cards making 20 out of a 1-10 deck has exactly one answer, so the first
+   version of Go Fish dealt 10 + 10 every round and called it a game. */
+check('no hand is a forced move',
+  dealt.forced === 0, `${dealt.hands} hands, ${dealt.forced} with only one possible answer`);
+check('friends of 20 is more than 10 + 10',
+  dealt.pairs20.length >= 4, dealt.pairs20.sort().join(', '));
 check('Target Number targets are reachable from the dice on the table',
   dealt.unreachable === 0, `${dealt.targets} targets, ${dealt.unreachable} impossible`);
 check('Card Friends counts down to exactly nought',
@@ -396,6 +411,15 @@ function subsetFor(items, rule) {
   }
   return null;
 }
+function wrongSubset(items, rule) {
+  const n = items.length;
+  for (let m = 1; m < (1 << n); m++) {
+    const idx = []; for (let i = 0; i < n; i++) if (m & (1 << i)) idx.push(i);
+    if (idx.length !== rule.min) continue;
+    if (idx.reduce((a, i) => a + items[i], 0) !== rule.target) return idx;
+  }
+  return null;
+}
 async function tapNumber(n) {
   for (const ch of String(n)) await page.click(`#gPad [data-k="${ch}"]`);
   await page.click('#gPad [data-k="ok"]');
@@ -427,7 +451,10 @@ for (const id of ['cards2digit', 'gofish20', 'cardfriends', 'target']) {
       for (let i = 0; i < 4; i++) await page.click(`#gDeal [data-i="${i}"]`);
       await tapNumber((rd.items[0] * 10 + rd.items[1]) + (rd.items[2] * 10 + rd.items[3]));
     } else if (rd.mode === 'pick') {
-      const idx = wrongOnPurpose ? [0, 1, 2].slice(0, rd.rule.min) : subsetFor(rd.items, rd.rule);
+      /* The mistake has to be a real one. Taking "the first two cards" used to do,
+         but every hand now holds at least two winning pairs, and sometimes the first
+         two are one of them — the test then failed on a correct game. */
+      const idx = wrongOnPurpose ? wrongSubset(rd.items, rd.rule) : subsetFor(rd.items, rd.rule);
       if (!idx) { check('a Go Fish hand had no answer in it', false, JSON.stringify(rd)); break; }
       for (const i of idx) await page.click(`#gDeal [data-i="${i}"]`);
       await page.click('#gDone');
@@ -480,7 +507,34 @@ check('the teacher note says what has NOT been played', /Not played yet: .*Dots 
 check('the teacher note is addressed to the teacher', /For Mrs Smoke/.test(note));
 check('nothing but the games is in the note',
   !/NAPLAN|writing|percentile|reading/i.test(note));
+
+/* The note is a sheet, not a wall of monospace: nine tiles, a ring, four weeks of
+   days. The day squares are checked for COLOUR because a CSS specificity slip once
+   painted every one of them the empty shade — a fortnight of playing looked like
+   none, and nothing else on the page showed it. */
+const sheet = await page.evaluate(() => ({
+  tiles: document.querySelectorAll('#rpSlide .rtile').length,
+  played: document.querySelectorAll('#rpSlide .rtile:not(.off)').length,
+  ring: document.querySelectorAll('#rpSlide .rg circle').length,
+  cells: document.querySelectorAll('#rpSlide .strip i').length,
+  lit: [...document.querySelectorAll('#rpSlide .strip i')]
+    .filter(i => getComputedStyle(i).backgroundColor !== getComputedStyle(document.querySelector('#rpSlide .strip i.d0')).backgroundColor).length,
+  columns: document.querySelectorAll('#rpSlide .rcol').length
+}));
+check('the note is a sheet, not a wall of text',
+  sheet.tiles === 9 && sheet.ring === 2 && sheet.columns === 2 && sheet.cells === 28,
+  JSON.stringify(sheet));
+check('the games played have their own tile', sheet.played === 4, sheet.played + ' tiles with a score');
+check('a day that was played is actually coloured in', sheet.lit >= 1, sheet.lit + ' days lit');
 await shot(page, '20-teacher-note');
+
+/* One page. The first print stylesheet hid the rest of the app with
+   visibility:hidden, which keeps its height — the sheet came out on page one of
+   two, with a blank sheet of A4 behind it. */
+const pdfPath = path.join(SHOTS, 'teacher-note.pdf');
+await page.pdf({ path: pdfPath, format: 'A4', landscape: true, printBackground: true });
+const pdfPages = (fs.readFileSync(pdfPath).toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+check('the note prints on one page', pdfPages === 1, pdfPages + ' page(s)');
 await page.click('#rpBack');
 await page.waitForSelector('#home:not(.hide)');
 
@@ -570,7 +624,9 @@ check('fresh device sees the games from school', seen.games === kidState.games, 
 check('games panel lists all nine', (await dash.locator('#gameTable tbody tr').count()) === 9,
   (await dash.locator('#gameTable tbody tr').count()) + ' rows');
 check('the dashboard carries the note for the teacher',
-  /GAMES FROM THE SHEET/.test(await dash.locator('#gameReport').textContent()));
+  (await dash.locator('#gameSlide .rtile').count()) === 9 &&
+  /GAMES FROM THE SHEET/.test(await dash.locator('#gameReport').textContent()),
+  (await dash.locator('#gameSlide .rtile').count()) + ' tiles on the dashboard sheet');
 /* The name is typed on the tablet and must reach the laptop: it rides in the
    profile for exactly this reason, so a note printed from the dashboard is
    addressed the same way. */
@@ -644,6 +700,113 @@ check('generated thinking questions are self-consistent',
   generated.nbad === 0 && generated.spatial > 20 && generated.argue > 100,
   `${generated.spatial} spatial, ${generated.argue} argument, ${generated.nbad} bad` +
   (generated.bad.length ? ' — ' + generated.bad.join('; ') : ''));
+
+/* ---------------- the video + QR code ----------------
+   The file is a child's video on a link printed on paper, so what matters is:
+   the QR actually scans to the link, the link opens the video, and "New link" /
+   "Delete" really switch the old paper off. Vercel's side of the upload is faked
+   in the browser; everything of ours runs for real. Only against the dev server:
+   pointed at the live site this would leave an entry behind. */
+const LOCAL = /localhost|127\.0\.0\.1/.test(BASE);
+const nobody = await (await fetch(`${BASE}/api/video?v=doesnotexist123`)).json();
+check('an unknown video code opens nothing', nobody.ok === false && !nobody.src, nobody.reason);
+
+if (!KEY) {
+  const r = await fetch(`${BASE}/api/video`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: 'save', pathname: 'leo-video/x.mp4' }) });
+  check('video upload is refused while no access key is set', r.status === 403 || r.status === 401, 'HTTP ' + r.status);
+  await dash.waitForFunction(() => /LEO_ACCESS_KEY|access key/i.test(document.getElementById('vidStatus').textContent));
+  check('the panel says why it cannot upload', true, await dash.textContent('#vidStatus'));
+} else if (LOCAL) {
+  await dash.route('https://vercel.com/api/blob**', route => {
+    const u = new URL(route.request().url());
+    const pathname = (u.searchParams.get('pathname') || 'leo-video/x.mp4').replace(/\.mp4$/, '-Ab12Cd.mp4');
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      url: 'https://devstore.private.blob.vercel-storage.com/' + pathname,
+      downloadUrl: 'https://devstore.private.blob.vercel-storage.com/' + pathname + '?download=1',
+      pathname, contentType: 'video/mp4', contentDisposition: 'inline' }) });
+  });
+  await dash.evaluate(() => { window.print = () => {}; window.confirm = () => true; });
+  await dash.waitForSelector('#vidForm:not(.hide)');
+  await dash.setInputFiles('#vidFile', { name: 'Leo intro.mp4', mimeType: 'video/mp4', buffer: Buffer.alloc(4096, 1) });
+  await dash.fill('#vidNote', 'Recorded at home, September.');
+  // A video left over from an earlier run must not pass for this one.
+  const before = await dash.evaluate(() => [...document.querySelectorAll('#vidList .vitem')].map(e => e.dataset.code));
+  await dash.click('#vidGo');
+  await dash.waitForFunction(old => [...document.querySelectorAll('#vidList .vitem')].some(e => !old.includes(e.dataset.code)),
+    before, { timeout: 15000 }).catch(() => {});
+  const first = await dash.evaluate(old => {
+    const it = [...document.querySelectorAll('#vidList .vitem')].find(e => !old.includes(e.dataset.code));
+    return it ? { code: it.dataset.code, link: it.querySelector('.vlink').textContent,
+      svg: !!it.querySelector('.vqr svg'), status: document.getElementById('vidStatus').textContent } : null;
+  }, before);
+  const mine = `#vidList .vitem[data-code="${first && first.code}"]`;
+  check('a video uploads and gets a link', !!first && /\/v\/#[A-Za-z0-9_-]{16}$/.test(first.link),
+    first ? first.link : await dash.textContent('#vidStatus'));
+
+  if (first) {
+    /* Read the QR back the way a phone would: rasterise it and decode it. A code
+       that renders but does not scan would look perfect in every other check. */
+    await dash.addScriptTag({ path: 'node_modules/jsqr/dist/jsQR.js' });
+    const scanned = await dash.evaluate(sel => new Promise(done => {
+      const svg = document.querySelector(sel + ' .vqr svg').outerHTML;
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas'); c.width = c.height = 400;
+        const g = c.getContext('2d'); g.drawImage(img, 0, 0, 400, 400);
+        const r = window.jsQR(g.getImageData(0, 0, 400, 400).data, 400, 400);
+        done(r ? r.data : null);
+      };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }), mine);
+    check('the QR code scans to the link', scanned === first.link, String(scanned));
+
+    const viewer = await parent.newPage();
+    viewer.on('console', m => { if (m.type() === 'error' && !/dev-video|Failed to load resource/.test(m.text())) errors.push('viewer console: ' + m.text()); });
+    viewer.on('pageerror', e => errors.push('viewer pageerror: ' + e.message));
+    await viewer.goto(first.link);
+    await viewer.waitForSelector('#show:not(.hide), #gone:not(.hide)');
+    const seen = await viewer.evaluate(() => ({
+      title: document.getElementById('title').textContent,
+      note: document.getElementById('note').textContent,
+      src: document.getElementById('vid').getAttribute('src') || '',
+      robots: document.querySelector('meta[name=robots]').content
+    }));
+    check('the link opens the video with a short-lived address',
+      /introduction/.test(seen.title) && /leo-video\/leo-intro-Ab12Cd\.mp4\?until=\d+/.test(seen.src) &&
+      seen.note === 'Recorded at home, September.' && /noindex/.test(seen.robots),
+      seen.title + ' · ' + seen.src.slice(0, 60));
+    await viewer.setViewportSize({ width: 390, height: 844 });
+    await shot(viewer, '30-video-viewer');
+
+    // The printed card: one page, the code on it, nothing else from the dashboard.
+    await dash.click(mine + ' [data-act=print]');
+    await dash.emulateMedia({ media: 'print' });
+    await shot(dash, '31-qr-card-print');
+    // Read before pdf(): printing fires afterprint, which takes the card back off.
+    const onCard = await dash.evaluate(() => document.querySelector('#qrPrint .qcard svg') !== null &&
+      getComputedStyle(document.querySelector('.wrap')).display === 'none');
+    const pdf = await dash.pdf({ format: 'A4' });
+    const pages = (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+    await dash.emulateMedia({ media: 'screen' });
+    await dash.evaluate(() => document.body.classList.remove('pq'));
+    check('the QR card prints alone on one page', pages === 1 && onCard, pages + ' page(s)');
+
+    await dash.click(mine + ' [data-act=rotate]');
+    await dash.waitForFunction(old => !document.querySelector(`#vidList .vitem[data-code="${old}"]`), first.code);
+    const renewed = await dash.evaluate(old => [...document.querySelectorAll('#vidList .vitem')]
+      .map(e => e.dataset.code).find(c => !old.includes(c)), before);
+    await viewer.goto(first.link.replace('#', '?r=1#'));
+    await viewer.waitForSelector('#show:not(.hide), #gone:not(.hide)');
+    check('"New link" switches the old QR code off', await viewer.isVisible('#gone'));
+
+    await dash.click(`#vidList .vitem[data-code="${renewed}"] [data-act=del]`);
+    await dash.waitForFunction(c => !document.querySelector(`#vidList .vitem[data-code="${c}"]`), renewed);
+    const removed = await (await fetch(`${BASE}/dev-video/deleted`)).json();
+    check('"Delete" removes the file, not just the link', removed.some(u => /leo-intro-Ab12Cd\.mp4$/.test(u)), removed.join(', '));
+    await viewer.close();
+  }
+}
 
 check('no console or page errors anywhere', errors.length === 0, errors.slice(0, 3).join(' | '));
 

@@ -90,19 +90,21 @@ Storage is an **append-only attempt log**. Box and fluency are derived on read r
 than written down, so two devices merge by id with no conflict resolution and no
 last-write-wins — the same property the answer log has.
 
-## Games from school
+## Games from school — "Leo's Numeracy Games"
 
 The teacher sent home a sheet of nine numeracy games to play with a deck of cards
 and some dice. They are in the app as a section of their own, with **her wording
 kept verbatim** on each game's opening screen, so what happens on screen can be
-checked against the paper.
+checked against the paper — down to her titles and her sheet's own name, so the
+section on screen, the paper on the fridge and the note that goes back to school
+all call the same nine games the same thing.
 
 | Game | What it drills | How it works here |
 |---|---|---|
 | Cards & Numbers | 2-digit addition, place value | Arrange four cards into two 2-digit numbers, then type the total. It also says whether that was the biggest total those cards could make. |
 | Highest/Lowest Number Wins | Adding several numbers | Four or five cards, seeded so a double or a pair making ten is always there to find. |
 | Card Count | Doubles, flexible ways to make a number | Double both cards and add; then pick two other numbers that make the same total. |
-| Go Fish — Friends of 20 | Friends of 20, 25, 30 | Find the cards that make the target. |
+| Go Fish | Friends of 20, 25, 30 | Find the cards that make the target. Played with a full deck: J 11, Q 12, K 13. |
 | Brainy Cards Friends to 20 | Friends of 20, adding 3+ numbers | Three or more cards, exactly 20, bust if you go over. |
 | Card Friends | Subtraction from 100 | Add two cards, take them off the running total, down to nought. |
 | Times Table | Tables | The sheet's 2s, 5s, 10s and 3s, plus the 4s, 6s, 7s, 8s and 9s as the harder set. |
@@ -113,9 +115,15 @@ The app does the two jobs a parent at the kitchen table does badly: **it deals a
 it remembers**. It does not replace the partner — the first thing each game asks is
 who is playing, because these are partner games and the talk is half of them.
 
-**Every hand is built around a solution before the rest of the cards go in.** A
-randomly dealt hand often has no way to make 20 at all, and a child who cannot find
-one concludes he is the problem rather than the deal. The same goes for Target
+**Every hand is built around a solution before the rest of the cards go in** — and
+where it matters, around *more than one*. A randomly dealt hand often has no way to
+make 20 at all, and a child who cannot find one concludes he is the problem rather
+than the deal. The opposite failure is just as bad and is the one that actually
+shipped: two cards making 20 out of a 1–10 deck has exactly **one** answer, so Go
+Fish dealt 10 + 10 every single round. It is now played with a full deck, where 20
+is 7+13, 8+12, 9+11 or 10+10, and every hand is checked to hold at least two winning
+selections before it is dealt. (25 is dealt as three cards for the same reason: with
+two it is 12+13 and nothing else.) The same goes for Target
 Number: the target is chosen *from* what the five dice can actually reach, never
 picked first and hoped for. Both of those were wrong on the first attempt — Go Fish
 asked for three cards to make 40, which a ten-card deck cannot do — and the smoke
@@ -137,6 +145,27 @@ app writes the note: dates, sittings, rounds, accuracy and typical thinking time
 game, the strategies he reported, **what has not been played yet**, and a short
 "coming quickly / still being worked out" split. It is on the practice page under
 *Note for your teacher* and on the dashboard, with copy, email and print.
+
+**It is laid out to be glanced at, not read.** The first version was a block of
+monospace text — accurate, and nobody would have read it: a teacher with thirty of
+these has about twenty seconds per child. The sheet now leads with a ring (the
+proportion of rounds right), three numbers, and four weeks of days as squares, then
+nine tiles — one per game, each with a labelled bar — then the two columns and the
+strategies he reported. **It prints to exactly one A4 landscape page**, which the
+smoke test checks by printing it to PDF and counting the pages.
+
+The chart rules it follows, because they are the ones that go wrong:
+
+- **One measure per mark.** Accuracy is the bar; thinking time is a number beside
+  it. Two measures on one axis makes a chart that looks richer and says less.
+- **One hue, not a palette.** Nothing on the sheet is a category — it is all "how
+  much" — so it is a single blue ramp, light to dark, the steps validated against
+  both the light and the dark surface.
+- **Status never means anything by colour alone.** The two columns carry an icon
+  and a word as well, because a third of men read those two hues alike and half of
+  these sheets come out of a black-and-white printer.
+- **Every bar is labelled.** There is no axis to read off; the number sits with its
+  own bar. Nobody should have to measure anything.
 
 It contains **only the games** — no percentiles, no writing, no reading, nothing
 about the app's own assessment.
@@ -484,6 +513,43 @@ at about +1.72, so at the extremes real ability is slightly *higher* than shown.
 standard error band is drawn on the ability chart. Topics with fewer than 8 answers show
 no percentile.
 
+## A video behind a QR code
+
+For an application: one video of Leo, opened from a QR code printed on paper. The
+dashboard's **Video for an application** panel uploads it, makes the code, prints a
+card, and can switch the code off again.
+
+Because it is a child's video on a link that leaves the house, it is built so that
+the paper can be cancelled:
+
+- **The file is in a *private* Vercel Blob store.** Its own address returns nothing.
+  It never goes into this repository — the repository is public.
+- **The QR code carries a random code, not the file's address.** `/v/#CODE` asks
+  `api/video.js` for the video, and gets back a URL signed for **two hours**.
+- **New link** issues a fresh code and kills the old one; **Delete** removes the file
+  too. Either way, every printed card stops working within two hours — including
+  for someone who copied the video address out of the page.
+- **The code is in the `#fragment`,** which browsers never send to a server, so it is
+  not in access logs or referrer headers. The page is `noindex` and `no-referrer`.
+- **Uploading needs `LEO_ACCESS_KEY`.** Without it the endpoint refuses, since an open
+  upload route on a public site is an invitation to fill the store.
+
+The file goes from the browser straight to Blob (`api/video.js` only issues a
+one-off upload permit), so a phone-sized video never passes through a function.
+The limit is 1 GB, MP4 / MOV / WebM.
+
+**Setup:** Vercel → Storage → Create → **Blob**, choose **Private**, connect it to
+this project (that sets `BLOB_READ_WRITE_TOKEN`), make sure `LEO_ACCESS_KEY` is set,
+redeploy.
+
+**Recording:** on an iPhone set *Settings → Camera → Formats → Most Compatible*
+first. The default (HEVC) plays on Apple devices but often not on a school's
+Windows PC.
+
+The two browser libraries (the Blob upload client and the QR encoder) are bundled
+once into `leo/js/vendor/video-kit.js` — the site has no build step. Rebuild with
+`npm run vendor`.
+
 ## Server-side storage
 
 `api/progress.js` is a single serverless function over a Redis-compatible REST store.
@@ -516,6 +582,9 @@ than one child; the value is scrubbed to `[a-z0-9_-]`.
 ```
 api/progress.js           server-side record
 api/writing.js            marks a photographed piece of writing
+api/video.js              the private video: upload permit, codes, signed URLs
+v/index.html              the page a QR code opens
+tools/video-kit.entry.mjs entry for the one bundled browser file
 leo/
   index.html              student app
   app.css
@@ -530,12 +599,15 @@ leo/
     bank-measure.js       generators: measurement, geometry, data & chance
     bank-verbal.js        generators: reading, language, thinking skills, maths reasoning
     games.js              the nine games from the teacher's sheet, and the note back to her
+    report.js             that note, laid out as a one-page sheet
     store.js              server sync plus a local cache and an offline queue
     norms.js              item response model, ability estimation, age percentiles
     engine.js             session construction and the adaptive rule
     charts.js             dashboard charts
     app.js                student controller
     admin.js              dashboard controller
+    video.js              the video + QR code panel
+    vendor/video-kit.js   Blob upload client + QR encoder, bundled (npm run vendor)
 ```
 
 ## Local development
@@ -566,7 +638,13 @@ writing both typed and as a photo of the page, and then opens the dashboard in a
 localStorage, so if the answers, sessions, writing, fact attempts and games all show
 up there, the record genuinely came back from the server.
 
-It asserts 81 things and exits non-zero if any of them fail, so it can gate a
+With `LEO_ACCESS_KEY=secret123` (and `WITH_KEY=1 node dev-server.js`) it also puts
+a video through the panel — Vercel's side of the upload is faked in the browser —
+**decodes the QR code** back from its pixels to check it scans to the link, opens
+the link, prints the card, and checks that *New link* and *Delete* really switch
+the old code off. Without a key it checks that uploading is refused.
+
+It asserts 94 things (90 without a key) and exits non-zero if any of them fail, so it can gate a
 deploy. Screenshots of every step land in `test/screenshots/` (git-ignored).
 
 It runs on its own throwaway profile (`SMOKE_PROFILE`, default `smoke-test`) and

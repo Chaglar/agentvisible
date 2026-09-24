@@ -5,6 +5,10 @@
  *   node dev-server.js          then open http://localhost:8788/leo/
  *   WITH_KEY=1 node dev-server.js   to also require the access key ("secret123")
  *
+ * api/video.js runs for real too, with Vercel Blob stood in for: the upload permit
+ * is a dummy and the "signed" address points back at /dev-video/ here. The browser
+ * side of the upload is intercepted by the smoke test, so nothing leaves the machine.
+ *
  * Vercel only executes files under api/, so this file is never deployed as a function.
  */
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -27,6 +31,17 @@ kv.listen(0, () => {
   process.env.KV_REST_API_TOKEN = 'dev';
   if (process.env.WITH_KEY) process.env.LEO_ACCESS_KEY = 'secret123';
   const api = require('./api/progress.js');
+  process.env.BLOB_READ_WRITE_TOKEN = process.env.BLOB_READ_WRITE_TOKEN || 'dev';
+  const video = require('./api/video.js');
+  const deleted = [];
+  Object.assign(video.blob, {
+    handleUpload: async ({ body }) => ({ type: 'blob.generate-client-token',
+      clientToken: 'vercel_blob_client_devstore_' + Buffer.from(JSON.stringify({
+        pathname: body.payload && body.payload.pathname, validUntil: Date.now() + 3600e3 })).toString('base64') }),
+    issueSignedToken: async ({ pathname, validUntil }) => ({ pathname, validUntil }),
+    presignUrl: async (tok, { pathname }) => ({ presignedUrl: '/dev-video/' + pathname + '?until=' + tok.validUntil }),
+    del: async url => { deleted.push(url); }
+  });
 
   const TYPES = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.json': 'application/json' };
   http.createServer((req, res) => {
@@ -43,6 +58,23 @@ kv.listen(0, () => {
         });
       });
       return;
+    }
+    if (u.pathname.replace(/\/+$/, '').endsWith('/api/video')) {
+      let body = ''; req.on('data', c => body += c);
+      req.on('end', () => {
+        let parsed = {};
+        try { parsed = body ? JSON.parse(body) : {}; } catch (e) {}
+        video({ method: req.method, query: Object.fromEntries(u.searchParams), body: parsed, headers: req.headers }, {
+          _s: 200,
+          setHeader() {}, status(c) { this._s = c; return this; },
+          json(o) { res.writeHead(this._s, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(o)); }
+        });
+      });
+      return;
+    }
+    if (u.pathname === '/dev-video/deleted') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify(deleted));
     }
     if (u.pathname.replace(/\/+$/, '').endsWith('/api/writing')) {
       let body = ''; req.on('data', c => body += c);

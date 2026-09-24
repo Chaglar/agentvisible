@@ -261,6 +261,8 @@
     var rep = G.report(log, { name: st.profile.name || 'Leo' });
     var who = st.profile.teacher || '';
     if (document.activeElement !== $('gameWho')) $('gameWho').value = who;
+    $('gameSlide').innerHTML = L.report.render(log,
+      { name: st.profile.name || 'Leo', avatar: st.profile.avatar || '🦁', teacher: who });
     $('gameReport').textContent = rep.title + '\n' + (who ? 'For ' + who + '\n' : '') + '\n' + rep.lines.join('\n');
   }
 
@@ -568,6 +570,7 @@
     S.patch({ profile: { teacher: $('gameWho').value.trim().slice(0, 60) } }).then(paintGames);
   });
   document.addEventListener('click', function (e) {
+    if (e.target.closest && e.target.closest('#btnPrintReport')) { window.print(); return; }
     if (!e.target.closest || !e.target.closest('#btnCopyReport')) return;
     var txt = $('gameReport').textContent;
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).catch(function () {});

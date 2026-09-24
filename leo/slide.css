@@ -1,0 +1,177 @@
+/* slide.css — the one-page report that goes to school.
+ *
+ * Shared by the practice page and the dashboard, and written against its own local
+ * tokens rather than either page's, so the sheet looks the same wherever it is
+ * rendered and survives being printed on a school printer.
+ *
+ * The blue ramp is the validated ordinal one — steps 250 / 350 / 450 on light,
+ * 600 / 500 / 400 on dark — so the day squares read light-to-dark as "how much"
+ * without turning into a set of unrelated colours. Status keeps an icon and a word
+ * beside it: a third of men cannot separate those two hues, and half of these pages
+ * will come out of a black-and-white printer anyway.
+ */
+.slide{
+  --sInk:#0b0b0b; --sMut:#52514e; --sLine:#e3e6ec; --sCard:#ffffff; --sFaint:#f3f5f9;
+  --rgInk:#2a78d6; --rgTrack:#e6ecf5;
+  --sq0:#eef1f6; --sq1:#86b6ef; --sq2:#5598e7; --sq3:#2a78d6;
+  --ok:#0ca30c; --slow:#ec835a;
+  background:var(--sCard); color:var(--sInk); border:1px solid var(--sLine); border-radius:16px;
+  padding:20px 22px; display:block;
+  font:14px/1.5 -apple-system,"Segoe UI",Roboto,system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .slide{
+  --sInk:#ffffff; --sMut:#c3c2b7; --sLine:#2b2f36; --sCard:#1a1a19; --sFaint:#22262c;
+  --rgInk:#3987e5; --rgTrack:#2b3138;
+  --sq0:#22262c; --sq1:#184f95; --sq2:#256abf; --sq3:#3987e5;
+}}
+:root[data-theme="dark"] .slide{
+  --sInk:#ffffff; --sMut:#c3c2b7; --sLine:#2b2f36; --sCard:#1a1a19; --sFaint:#22262c;
+  --rgInk:#3987e5; --rgTrack:#2b3138;
+  --sq0:#22262c; --sq1:#184f95; --sq2:#256abf; --sq3:#3987e5;
+}
+
+.slide h2,.slide h3{margin:0;letter-spacing:-.01em}
+.slide p{margin:0}
+
+.rhead{display:flex;align-items:flex-start;gap:14px;border-bottom:2px solid var(--sLine);padding-bottom:13px}
+.rhead .who{display:flex;align-items:center;gap:11px;flex:1;min-width:0}
+.rhead .av{width:42px;height:42px;border-radius:11px;background:var(--sFaint);display:grid;place-items:center;
+  font-size:23px;flex:none}
+.rhead h2{font-size:19px;font-weight:800}
+.rhead .who p{font-size:12.5px;color:var(--sMut);margin-top:2px}
+.rhead .for{text-align:right;font-size:12.5px;color:var(--sMut);line-height:1.5;flex:none}
+.rhead .for b{display:block;font-size:14px;color:var(--sInk)}
+
+/* ---- headline row: one ring, three numbers, four weeks of days ---- */
+.rstats{display:grid;grid-template-columns:auto 1fr auto;gap:22px;align-items:center;
+  padding:16px 0;border-bottom:1px solid var(--sLine)}
+.rgWrap{display:flex;align-items:center;gap:12px}
+.rg{width:92px;height:92px;flex:none}
+.rgN{font:800 25px/1 -apple-system,"Segoe UI",Roboto,system-ui,sans-serif;fill:var(--sInk)}
+.rgL{min-width:104px}
+.rgL b{display:block;font-size:14px;font-weight:800;line-height:1.25}
+.rgL span{display:block;font-size:12.5px;color:var(--sMut);margin-top:2px}
+.rkpis{display:flex;gap:10px}
+.rkpi{background:var(--sFaint);border-radius:11px;padding:10px 13px;min-width:82px}
+.rkpi b{display:block;font-size:22px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.rkpi b em{font-style:normal;font-size:13px;font-weight:700;color:var(--sMut)}
+.rkpi span{font-size:11.5px;color:var(--sMut)}
+.rdays h3{font-size:11.5px;font-weight:800;color:var(--sMut);text-transform:uppercase;letter-spacing:.06em;
+  margin-bottom:6px}
+.rdays{min-width:0}
+.rdays .strip{display:grid;grid-template-rows:repeat(7,9px);grid-auto-flow:column;gap:2.5px}
+.rdays .strip i,.rlegend i{width:9px;height:9px;border-radius:2.5px;display:block;background:var(--sq0)}
+/* Specificity, not order: `.rdays .strip i` outranked a bare `.strip .d1`, so every
+   day came out the empty colour and a fortnight of playing looked like none. */
+.rdays .strip i.d1,.rlegend i.d1{background:var(--sq1)}
+.rdays .strip i.d2,.rlegend i.d2{background:var(--sq2)}
+.rdays .strip i.d3,.rlegend i.d3{background:var(--sq3)}
+.rlegend{display:flex;gap:9px;margin-top:7px;font-size:10.5px;color:var(--sMut);white-space:nowrap}
+.rlegend span{display:flex;align-items:center;gap:3px}
+
+/* ---- the nine games ---- */
+.rsec{padding:13px 0 0}
+.rsec h3{font-size:11.5px;font-weight:800;color:var(--sMut);text-transform:uppercase;letter-spacing:.06em;
+  margin-bottom:9px}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.rtile{border:1px solid var(--sLine);border-radius:11px;padding:9px 11px;background:var(--sCard);min-width:0}
+.rtile .hd{display:flex;align-items:baseline;gap:7px;margin-bottom:6px}
+.rtile .e{font-size:15px;line-height:1;flex:none}
+.rtile .t{font-size:12.5px;font-weight:800;line-height:1.25;flex:1;min-width:0}
+.rtile .hd b{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;flex:none}
+.rtile .n{font-size:11px;color:var(--sMut);margin-top:5px}
+.rtile .n em{font-style:normal;color:var(--slow);font-weight:700}
+.rtile.off{border-style:dashed;background:transparent}
+.rtile.off .e{opacity:.45}
+.rtile.off .t{color:var(--sMut);font-weight:700}
+.rtile.off .n{margin-top:6px}
+
+/* 4px rounded data-end, anchored to the start of the track */
+.rbar{height:7px;border-radius:99px;background:var(--sFaint);overflow:hidden}
+.rbar i{display:block;height:100%;background:var(--rgInk);border-radius:0 4px 4px 0}
+
+/* ---- the two columns ---- */
+.rcols{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:12px}
+.rcol{border:1px solid var(--sLine);border-left-width:3px;border-radius:11px;padding:11px 13px}
+.rcol.good{border-left-color:var(--ok)} .rcol.work{border-left-color:var(--slow)}
+.rcol h3{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:800;color:var(--sInk);
+  text-transform:none;letter-spacing:0;margin-bottom:7px}
+.rcol .ic{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;color:#fff;flex:none}
+.rcol.good .ic{background:var(--ok)} .rcol.work .ic{background:var(--slow)}
+.rcol ul{list-style:none;display:grid;gap:6px}
+.rcol li b{display:block;font-size:12.5px;font-weight:700}
+.rcol li span{display:block;font-size:11.5px;color:var(--sMut)}
+
+/* ---- strategies ---- */
+.rstrat{display:grid;gap:5px}
+.rrow2{display:grid;grid-template-columns:150px 1fr 26px;gap:9px;align-items:center;min-height:19px}
+.rrow2 .k{font-size:12.5px}
+.rrow2 b{font-size:12.5px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+.rfine{font-size:11.5px;color:var(--sMut);margin-top:6px}
+.rfoot{margin-top:14px;padding-top:10px;border-top:1px solid var(--sLine);font-size:11px;color:var(--sMut);
+  line-height:1.5}
+.rempty{text-align:center;padding:40px 10px;color:var(--sMut)}
+.rempty .e{font-size:40px;margin-bottom:8px}
+
+/* On a phone this stops being a sheet of paper and becomes a column. The header
+   stacks rather than wrapping the title underneath the address, and the tiles go
+   one across so a long name and its score stop fighting over the same line. */
+@media (max-width:720px){
+  .rstats{grid-template-columns:1fr;gap:14px}
+  .rgrid{grid-template-columns:1fr 1fr}
+  .rcols{grid-template-columns:1fr}
+  .rrow2{grid-template-columns:120px 1fr 24px}
+  .rhead{flex-direction:column;gap:9px}
+  .rhead .for{text-align:left}
+  .rhead .for b{display:inline}
+  .rhead .for span::before{content:' · '}
+}
+@media (max-width:560px){
+  .rgrid{grid-template-columns:1fr}
+  .rtile .hd{gap:6px}
+}
+
+/* ---- print: one landscape page, on paper that may be black and white ---- */
+@media print{
+  @page{size:A4 landscape;margin:8mm}
+  .slide{
+    --sInk:#0b0b0b; --sMut:#52514e; --sLine:#d8dce4; --sCard:#fff; --sFaint:#f1f3f7;
+    --rgInk:#2a78d6; --rgTrack:#e6ecf5; --sq0:#eef1f6; --sq1:#86b6ef; --sq2:#5598e7; --sq3:#2a78d6;
+    border:0;padding:0;border-radius:0;font-size:12.5px;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+    /* One page means one page. Everything below is the difference between a sheet a
+     teacher picks up and a two-page printout with four tiles stranded on page two. */
+  #rpSlide{padding:0 !important;margin:0 !important}
+  #rpSlide .slide,#gameSlide .slide{max-width:none}
+  .slide .rhead{padding-bottom:9px}
+  .slide .rhead .av{width:34px;height:34px;font-size:19px}
+  .slide .rhead h2{font-size:17px}
+  .slide .rgrid{gap:6px}
+  .slide .rtile{padding:5px 9px}
+  .slide .rtile .hd{margin-bottom:5px}
+  .slide .rtile .n{margin-top:4px;font-size:10.5px}
+  .slide .rsec{padding-top:7px}
+  .slide .rsec h3{margin-bottom:6px}
+  .slide .rcols{padding-top:8px;gap:8px}
+  .slide .rcol{padding:8px 11px}
+  .slide .rcol ul{gap:4px}
+  .slide .rcol li span{font-size:10.5px}
+  .slide .rstats{padding:9px 0}
+  .slide .rg{width:68px;height:68px}
+  .slide .rgN{font-size:23px}
+  .slide .rkpi{padding:7px 10px}
+  .slide .rkpi b{font-size:19px}
+  .slide .rdays .strip{grid-template-rows:repeat(7,8px);gap:2px}
+  .slide .rdays .strip i,.slide .rlegend i{width:8px;height:8px}
+  .slide .rrow2{min-height:16px;gap:8px}
+  .slide .rstrat{gap:3px}
+  .slide .rrow2 .k,.slide .rrow2 b{font-size:11.5px}
+  .slide .rfine{font-size:10.5px;margin-top:4px}
+  .slide .rfoot{margin-top:7px;padding-top:6px;font-size:10px;line-height:1.45}
+  .slide .rdays h3{margin-bottom:4px}
+  .slide .rlegend{margin-top:4px}
+  .slide .rtile .t{line-height:1.2}
+  .slide .rcol h3{margin-bottom:5px}
+  .slide .rcol li b{line-height:1.25}
+}

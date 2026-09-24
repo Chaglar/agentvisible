@@ -7,6 +7,7 @@
 <meta name="description" content="Age-referenced progress tracking for Leo's NAPLAN and OC practice.">
 <meta name="robots" content="noindex,nofollow">
 <link rel="stylesheet" href="../admin.css">
+<link rel="stylesheet" href="../slide.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50' font-size='50'>📊</text></svg>">
 </head>
 <body>
@@ -81,11 +82,15 @@
       <h3 class="sub2">Each game</h3>
       <div class="card scroll"><table id="gameTable"></table></div>
       <h3 class="sub2">The note for the teacher</h3>
-      <div class="card">
+      <div class="card" id="reportCard">
         <label class="rpWho">Addressed to <input id="gameWho" type="text" placeholder="the teacher’s name" autocomplete="off"></label>
-        <pre class="rpText" id="gameReport"></pre>
-        <button class="btn" id="btnCopyReport">Copy the text</button>
-        <span class="sub" style="margin-left:10px">The same note the practice page produces. Nothing else from the app is in it.</span>
+        <div id="gameSlide"></div>
+        <div style="margin-top:12px">
+          <button class="btn pri" id="btnPrintReport">🖨 Print or save as PDF</button>
+          <button class="btn" id="btnCopyReport">Copy as text</button>
+          <span class="sub" style="margin-left:10px">Only the games are in it — nothing else from this dashboard.</span>
+        </div>
+        <pre class="rpText" id="gameReport" hidden></pre>
       </div>
     </div>
 
@@ -148,6 +153,23 @@
 
     <h2>Session history</h2>
     <div class="card scroll"><table id="sessionTable"></table></div>
+  </div>
+
+  <h2>Video for an application</h2>
+  <div class="card" id="vidPanel">
+    <div id="vidStatus" class="vstatus">Checking the video service…</div>
+    <div id="vidForm" class="hide">
+      <div class="grid two" style="margin-top:12px">
+        <div class="field"><label for="vidTitle">Title</label><input id="vidTitle" type="text" maxlength="120"></div>
+        <div class="field"><label for="vidFile">Video file</label><input id="vidFile" type="file" accept="video/mp4,video/quicktime,video/webm,video/x-m4v"></div>
+      </div>
+      <div class="field"><label for="vidNote">A line under the video <span style="text-transform:none;font-weight:400">— optional</span></label>
+        <textarea id="vidNote" rows="2" maxlength="600"></textarea></div>
+      <button class="btn pri" id="vidGo">Upload and make the QR code</button>
+      <div id="vidBar" class="vbar hide"><i></i></div>
+      <div class="sub" style="margin-top:10px">On an iPhone, set <b>Settings → Camera → Formats → Most Compatible</b> before recording, so the video also plays on a school's Windows PC. Keep it short — two or three minutes — and at 1080p.</div>
+    </div>
+    <div id="vidList" style="margin-top:16px"></div>
   </div>
 
   <h2>Settings</h2>
@@ -226,6 +248,7 @@
     <a href="../">Practice page</a>
   </div>
 </div>
+<div id="qrPrint"></div>
 
 <script src="../js/visuals.js"></script>
 <script src="../js/curriculum.js"></script>
@@ -240,11 +263,14 @@
   <script src="../js/bank-spatial.js"></script>
 <script src="../js/books.js"></script>
 <script src="../js/games.js"></script>
+<script src="../js/report.js"></script>
 <script src="../js/facts.js"></script>
 <script src="../js/store.js"></script>
 <script src="../js/norms.js"></script>
 <script src="../js/engine.js"></script>
 <script src="../js/charts.js"></script>
 <script src="../js/admin.js"></script>
+<script src="../js/vendor/video-kit.js"></script>
+<script src="../js/video.js"></script>
 </body>
 </html>

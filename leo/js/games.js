@@ -63,14 +63,34 @@
     return target === 0 ? out : null;
   }
 
-  /* A hand that is guaranteed to contain at least one winning selection. */
-  function solvableHand(target, k, handSize, rng, lo, hi) {
-    var sol = null, tries = 0;
-    while (!sol && tries++ < 40) sol = partition(target, k, lo, hi, rng);
-    if (!sol) return null;
-    var vals = sol.slice();
-    while (vals.length < handSize) vals.push(pickInt(rng, lo, hi));
-    return shuffle(vals.map(function (v) { return card(v, rng); }), rng);
+  /* How many different selections in this hand win. One is not enough: a hand with
+     a single answer is a hand where finding it is luck or elimination, and a game
+     whose every round has exactly one possible move is not a thinking game. */
+  function countWins(items, rule) {
+    var v = items.map(function (c) { return c.v; }), n = v.length, wins = 0, m, i, pick, tot;
+    for (m = 1; m < (1 << n); m++) {
+      pick = 0; tot = 0;
+      for (i = 0; i < n; i++) if (m & (1 << i)) { pick++; tot += v[i]; }
+      if (pick < rule.min || (rule.max && pick > rule.max)) continue;
+      if (tot === rule.target) wins++;
+    }
+    return wins;
+  }
+
+  /* A hand guaranteed to contain a winning selection — and, where asked, more than
+     one, so he has to look rather than take the only move on the table. */
+  function solvableHand(target, k, handSize, rng, lo, hi, wantWins) {
+    var sol = null, tries = 0, best = null;
+    while (tries++ < 60) {
+      sol = partition(target, k, lo, hi, rng);
+      if (!sol) break;
+      var vals = sol.slice();
+      while (vals.length < handSize) vals.push(pickInt(rng, lo, hi));
+      var hand = shuffle(vals.map(function (v) { return card(v, rng); }), rng);
+      if (!best) best = hand;
+      if (!wantWins || countWins(hand, { target: target, min: k, max: k }) >= wantWins) return hand;
+    }
+    return best;
   }
 
   /* ---------- Target Number: what can five dice actually reach? ---------- */
@@ -226,6 +246,7 @@
       id: 'highlow', title: 'Highest/Lowest Number Wins', emoji: '🎴', needs: 'cards', rounds: 6,
       sheet: 'Turn 4 or 5 cards. Use strategies such as doubles, friends of 10 etc.',
       kid: 'Add up all the cards. Look for doubles and pairs that make ten — they are quicker.',
+      note: 'Playing against someone: agree before you turn the cards whether the highest total wins this round or the lowest does.',
       skills: ['adding several numbers', 'friends of ten', 'doubles'],
       round: function (i, run, rng) {
         var n = i % 2 ? 5 : 4;
@@ -266,17 +287,21 @@
       }
     },
     {
-      id: 'gofish20', title: 'Go Fish — Friends of 20', emoji: '🐟', needs: 'cards', rounds: 6,
+      id: 'gofish20', title: 'Go Fish', emoji: '🐟', needs: 'cards', rounds: 6,
       sheet: 'Friends of 20 Go Fish (and higher)',
       kid: 'Find the cards that add up to the number at the top. Two or three of them.',
-      skills: ['friends of 20', 'friends of 50', 'adding to a target'],
-      /* How many cards a target needs is arithmetic, not taste: three cards from a
-         1-10 deck cannot make 40, and a hand that cannot be solved is a hand that
-         teaches a child he is stuck. The count comes from the target. */
+      note: 'A whole deck, so the picture cards are in: J is 11, Q is 12, K is 13, and an ace is 1.',
+      skills: ['friends of 20', 'adding to a target', 'picture-card values'],
+      /* THE PICTURE CARDS ARE THE GAME. Two cards making 20 out of a 1-10 deck has
+         exactly one answer — 10 + 10 — so the first version asked him to find the
+         only move on the table, every single round. With a full deck, 20 is
+         7+13, 8+12, 9+11 or 10+10, and he has to look.
+         Each (target, cards) pairing below has several answers in the deck: 25 with
+         two cards would be 12+13 and nothing else, so 25 is dealt as three. */
+      ROUNDS: [[20, 2], [20, 2], [30, 3], [25, 3], [20, 2], [30, 3]],
       round: function (i, run, rng) {
-        var target = [20, 20, 25, 30, 20, 30][i % 6];
-        var k = Math.max(2, Math.ceil(target / 10));
-        var hand = solvableHand(target, k, 8, rng, 1, 10);
+        var spec = this.ROUNDS[i % this.ROUNDS.length], target = spec[0], k = spec[1];
+        var hand = solvableHand(target, k, 8, rng, 1, 13, 2);
         return { mode: 'pick', kind: 'card', items: hand,
                  prompt: 'Find ' + k + ' cards that make ' + target + '.',
                  rule: { target: target, min: k, max: k } };
@@ -289,7 +314,7 @@
       skills: ['friends of 20', 'adding three or more numbers', 'checking before committing'],
       round: function (i, run, rng) {
         var k = 3 + (i % 3 === 2 ? 1 : 0);
-        var hand = solvableHand(20, k, 7, rng, 1, 9) || deal(7, rng, 1, 9);
+        var hand = solvableHand(20, k, 7, rng, 1, 9, 2) || deal(7, rng, 1, 9);
         return { mode: 'pick', kind: 'card', items: hand,
                  prompt: 'Pick 3 or more cards that make exactly 20.',
                  rule: { target: 20, min: 3, max: 7, bust: true } };
@@ -461,7 +486,7 @@
     var name = opts.name || 'Leo';
     var s = summary(log);
     var lines = [];
-    var title = name + ' — numeracy games at home';
+    var title = name + '’s Numeracy Games — played at home';
 
     if (!s.sittings) {
       lines.push('No games played yet.');
@@ -529,6 +554,7 @@
     GAMES: GAMES, STRATEGIES: STRATEGIES, WHO: WHO, SLOW_MS: SLOW_MS,
     byId: byId, deal: deal, shuffle: shuffle, partition: partition, solvableHand: solvableHand,
     reachable: reachable, targetFor: targetFor, evalExpr: evalExpr, usesOnlyDice: usesOnlyDice,
+    countWins: countWins,
     exprText: exprText, checkPick: checkPick, checkExpr: checkExpr,
     plays: plays, statsFor: statsFor, summary: summary, report: report
   };

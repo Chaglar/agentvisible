@@ -445,9 +445,24 @@ h2{font-size:18px;margin:26px 0 10px;letter-spacing:-.01em}
 .rpText{white-space:pre-wrap;font:13.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--bg);
   border:1px solid var(--line);border-radius:12px;padding:14px;margin:0 0 12px;overflow-x:auto;color:var(--ink)}
 
+/* The report is the one screen that wants to be wider than the reading column:
+   it is a sheet of paper, not a phone view. Full-bleed out of the 640px wrap, then
+   back to a page-shaped 1000px in the middle. */
+#rpSlide{margin-left:calc(-50vw + 50%);margin-right:calc(-50vw + 50%);padding:0 16px}
+#rpSlide .slide{max-width:1040px;margin:0 auto}
+
+/* Printing means printing the sheet and nothing else. The usual visibility trick
+   is wrong here: hidden-but-present content keeps its height, so the sheet came out
+   on page one of two with a blank page behind it. Each step of the chain down to
+   the slide is kept and every sibling is taken out of the flow entirely. */
 @media print{
-  .top,.footlink,#report .big,#report .rpfields,#report .sub{display:none !important}
-  .wrap>section:not(#report){display:none !important}
-  .card{box-shadow:none;border:0;padding:0}
-  .rpText{border:0;background:none;padding:0;font-size:12px}
+  body>*:not(.wrap){display:none !important}
+  .wrap>*:not(#report){display:none !important}
+  #report{display:block !important}
+  #report>*:not(#rpSlide){display:none !important}
+  .wrap{padding:0;max-width:none}
 }
+.gnote{font-size:14.5px;line-height:1.5;color:var(--mut);margin-top:10px;padding-left:2px}
+.gnote::before{content:'🂡 ';}
+.pcard .face{position:absolute;bottom:14px;left:0;right:0;text-align:center;font-size:11px;font-weight:800;
+  letter-spacing:.06em;opacity:.65}
