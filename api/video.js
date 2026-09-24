@@ -18,7 +18,7 @@
  *     LEO_ACCESS_KEY          REQUIRED here. Without it anyone could upload to the store,
  *                             so uploading is refused until it is set.
  *
- * GET    /api/video?v=CODE        public: { ok, title, note, src, until }  (src is signed)
+ * GET    /api/video?v=CODE        public: { ok, title, note, kind, src, until }  (src is signed; kind is 'video' or 'pdf')
  * GET    /api/video               key:    { ok, configured, videos[] }
  * POST   /api/video  {type:'blob.generate-client-token', ...}   key: upload handshake
  * POST   /api/video  {op:'save', pathname, url, title, note, size}   key: -> { code }
@@ -32,7 +32,9 @@ const crypto = require('crypto');
 const INDEX = 'leo:videos';
 const WATCH_MS = 2 * 3600 * 1000;
 const MAX_BYTES = 1024 * 1024 * 1024;
-const TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v'];
+const TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v', 'application/pdf'];
+/* A PDF (a report, say) travels the same road as a video: private file, withdrawable code. */
+function kindOf(pathname) { return /\.pdf$/i.test(pathname || '') ? 'pdf' : 'video'; }
 
 /* The Blob SDK is reached through here so dev-server.js can stand in for it. */
 const blob = {
@@ -95,7 +97,7 @@ async function signedSrc(pathname) {
 }
 
 function publicView(code, v) {
-  return { code, title: v.title, note: v.note, size: v.size || 0, t: v.t, rotated: v.rotated || 0 };
+  return { code, title: v.title, note: v.note, size: v.size || 0, t: v.t, rotated: v.rotated || 0, kind: kindOf(v.pathname) };
 }
 
 async function main(req, res) {
@@ -122,7 +124,7 @@ async function main(req, res) {
     // existed looks exactly like one that was withdrawn.
     if (!v) return res.status(200).json({ ok: false, reason: 'This link has been withdrawn or never existed.' });
     const s = await signedSrc(v.pathname);
-    return res.status(200).json({ ok: true, title: v.title, note: v.note, src: s.src, until: s.until });
+    return res.status(200).json({ ok: true, title: v.title, note: v.note, kind: kindOf(v.pathname), src: s.src, until: s.until });
   }
 
   /* ---- everything else is the parent's, and needs the key. A GET is the panel

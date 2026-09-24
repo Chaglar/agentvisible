@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="referrer" content="no-referrer">
-<title>A short video</title>
+<title>Shared privately</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50' font-size='50'>🎬</text></svg>">
 <style>
 /* The page a QR code opens. One video, a line of context, nothing else: whoever
@@ -19,6 +19,8 @@ main{width:100%;max-width:860px}
 h1{font-size:24px;letter-spacing:-.02em;line-height:1.25;margin-bottom:14px}
 .frame{background:#000;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.08),0 14px 36px -22px rgba(0,0,0,.55)}
 video{display:block;width:100%;max-height:78vh;background:#000}
+iframe.pdf{display:block;width:100%;height:82vh;border:0;background:#fff}
+.open{display:inline-block;margin-top:14px;padding:10px 16px;border-radius:10px;background:var(--acc);color:#fff;text-decoration:none;font-weight:600}
 .note{margin-top:16px;white-space:pre-line;font-size:15.5px}
 footer{margin-top:22px;padding-top:12px;border-top:1px solid var(--line);font-size:13px;color:var(--mut)}
 .msg{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:34px 22px;text-align:center;color:var(--mut)}
@@ -32,7 +34,9 @@ footer{margin-top:22px;padding-top:12px;border-top:1px solid var(--line);font-si
   <div id="gone" class="msg hide"><b>This link is no longer active.</b>The family who shared it has withdrawn it.</div>
   <div id="show" class="hide">
     <h1 id="title"></h1>
-    <div class="frame"><video id="vid" controls playsinline preload="metadata"></video></div>
+    <div class="frame" id="vframe"><video id="vid" controls playsinline preload="metadata"></video></div>
+    <div class="frame hide" id="pframe"><iframe class="pdf" id="pdf" title="Document"></iframe></div>
+    <a class="open hide" id="open" target="_blank" rel="noopener">Open the document</a>
     <p class="note" id="note"></p>
     <footer>Shared privately by the family. Please do not forward this link — it can be withdrawn at any time.</footer>
   </div>
@@ -56,7 +60,15 @@ footer{margin-top:22px;padding-top:12px;border-top:1px solid var(--line);font-si
     document.title = j.title;
     $('title').textContent = j.title;
     $('note').textContent = j.note || '';
-    vid.src = j.src;
+    if (j.kind === 'pdf') {
+      // A report rather than a video: shown inline where the browser can, with a
+      // plain button for phones that only render the first page in a frame.
+      $('vframe').classList.add('hide');
+      $('pframe').classList.remove('hide'); $('pdf').src = j.src;
+      $('open').href = j.src; $('open').classList.remove('hide');
+    } else {
+      vid.src = j.src;
+    }
     $('wait').classList.add('hide');
     $('show').classList.remove('hide');
   }).catch(gone);
