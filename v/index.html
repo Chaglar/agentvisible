@@ -54,6 +54,11 @@ footer{margin-top:22px;padding-top:12px;border-top:1px solid var(--line);font-si
   }
   function gone() { $('wait').classList.add('hide'); $('show').classList.add('hide'); $('gone').classList.remove('hide'); }
 
+  /* A second QR code scanned while this page is already open only changes the
+     #fragment, which browsers treat as the same page: nothing reloads, and the
+     first video stays on screen. So a changed fragment starts the page over. */
+  window.addEventListener('hashchange', function () { location.reload(); });
+
   if (!code) return gone();
   fetchSrc().then(function (j) {
     if (!j.ok) return gone();
